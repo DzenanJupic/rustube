@@ -1,0 +1,30 @@
+[package]
+name = "rustube"
+version = "0.1.0"
+authors = ["Dzenan Jupic <info@dzenanjupic.de>"]
+edition = "2018"
+
+# todo: add features to opt in/out of deserialization of some data (title, view_count, ...)
+# Currently uses tokio 2.2.24, since reqwest is currently depending on it 😢
+
+[dependencies]
+async-stream = "0.3.0"
+bytes = "0.5.0"
+chrono = "0.4.19"
+derive_more = "0.99.11"
+futures = "0.3.8"
+log = "0.4.11"
+maplit = "1.0.2"
+mime = "0.3.16"
+percent-encoding = "2.1.0"
+regex = "1.4.2"
+reqwest = { version = "0.10.9", features = ["cookies", "gzip", "brotli", "json", "stream"] }
+serde = "1.0.118"
+serde_qs = "0.8.2"
+serde_json = "1.0.60"
+serde_with = { version = "1.6.0", features = ["json", "macros"] }
+tokio = { version = "0.2.24", features = ["fs", "io-util", "io-driver"] }
+url = { version = "2.2.0", features = ["serde"] }
+
+[dev-dependencies]
+tokio = { version = "0.2.24", features = ["full"] }
