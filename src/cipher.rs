@@ -21,9 +21,15 @@ impl Cipher {
         let transform_plan = get_transform_plan(js)?;
 
         let (var, _): (&str, &str) = transform_plan
-            .get(0)?
+            .get(0)
+            .ok_or_else(|| Error::UnexpectedResponse(
+                "the provided JavaScript has an empty transform-plan".into()
+            ))?
             .split('.')
-            .try_collect()?;
+            .try_collect()
+            .ok_or_else(|| Error::UnexpectedResponse(
+                "the transform-plan function call contains more then one dot".into()
+            ))?;
 
         let transform_map = get_transform_map(js, var)?;
 
@@ -42,15 +48,20 @@ impl Cipher {
 
         for js_fun_name in self.transform_plan.iter() {
             let (name, argument) = self.parse_function(&js_fun_name)?;
-            let js_fun = self.transform_map.get(name)?.0;
+            let js_fun = self.transform_map
+                .get(name)
+                .ok_or_else(|| Error::UnexpectedResponse(format!(
+                    "no matching transform function for `{}`", js_fun_name
+                ).into()))?
+                .0;
             js_fun(signature, argument);
         }
 
         if let Err(_) = std::str::from_utf8(signature) {
-            self.print_invalid_utf8_err(signature);
+            let err = self.invalid_utf8_err(signature);
             // signature **must** be cleared, it does not contain valid utf-8
             signature.clear();
-            return Err(Error::Other);
+            return Err(Error::Fatal(err));
         }
 
         Ok(())
@@ -58,19 +69,38 @@ impl Cipher {
 
     fn parse_function<'a>(&self, js_func: &'a str) -> Result<(&'a str, Option<isize>)> {
         let (fn_name, fn_arg) = JS_FUNCTION_REGEX
-            .captures(js_func)?
+            .captures(js_func)
+            .ok_or_else(|| Error::UnexpectedResponse(format!(
+                "the JS_FUNCTION_REGEX `{}` did not match the JavaScript function {}",
+                *JS_FUNCTION_REGEX, js_func
+            ).into()))?
             .iter()
             .skip(1)
-            .try_collect()?;
+            .try_collect()
+            .expect("JS_FUNCTION_REGEX must only contain two capture groups");
 
         match (fn_name, fn_arg) {
-            (Some(name), Some(arg)) => Ok((name.as_str(), Some(arg.as_str().parse::<isize>()?))),
-            _ => Err(Error::Other)
+            (Some(name), Some(arg)) => Ok((
+                name.as_str(),
+                Some(
+                    arg
+                        .as_str()
+                        .parse::<isize>()
+                        .map_err(|_| Error::UnexpectedResponse(format!(
+                            "expected the JavaScript transformer function `{}` argument to be an int, but found: `{}`",
+                            name.as_str(), arg.as_str()
+                        ).into()))?
+                )
+            )),
+            (name, arg) => Err(Error::UnexpectedResponse(format!(
+                "expected a Javascript transformer function and an argument, got: `{:?}` and `{:?}`",
+                name, arg
+            ).into()))
         }
     }
 
     #[inline]
-    fn print_invalid_utf8_err(&self, signature: &Vec<u8>) {
+    fn invalid_utf8_err(&self, signature: &Vec<u8>) -> String {
         let error = format!(
             "`decrypt_signature` produced invalid utf-8!\
             Please open an issue on GitHub and paste the whole error message in.\n\
@@ -81,6 +111,7 @@ impl Cipher {
         );
         log::error!("{}", error);
         eprintln!("{}", error);
+        error
     }
 
     #[inline]
@@ -106,8 +137,13 @@ fn get_transform_plan(js: &str) -> Result<Vec<String>> {
     let pattern = Regex::new(&format!(r#"{}=function\(\w\)\{{[a-z=.(")]*;(.*);(?:.+)}}"#, name)).unwrap();
     Ok(
         pattern
-            .captures(js)?
-            .get(1)?
+            .captures(js)
+            .ok_or_else(|| Error::UnexpectedResponse(format!(
+                "could not extract the initial JavaScript function: {}",
+                js
+            ).into()))?
+            .get(1)
+            .expect("the pattern must contain at least one capture group")
             .as_str()
             .split(';')
             .map(str::to_owned)
@@ -115,7 +151,7 @@ fn get_transform_plan(js: &str) -> Result<Vec<String>> {
     )
 }
 
-fn get_initial_function_name(js: &str) -> Option<&str> {
+fn get_initial_function_name(js: &str) -> Result<&str> {
     static FUNCTION_PATTERNS: SyncLazy<[Regex; 12]> = SyncLazy::new(|| [
         Regex::new(r"\b[cs]\s*&&\s*[adf]\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(").unwrap(),
         Regex::new(r"\b[a-zA-Z0-9]+\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(").unwrap(),
@@ -135,15 +171,25 @@ fn get_initial_function_name(js: &str) -> Option<&str> {
         .iter()
         .find_map(|pattern| pattern.captures(js))
         .map(|c| c.get(1).unwrap().as_str())
+        .ok_or_else(|| Error::UnexpectedResponse(format!(
+            "could not find the JavaScript function name: `{}`",
+            js
+        ).into()))
 }
 
 fn get_transform_map(js: &str, var: &str) -> Result<HashMap<String, TransformerFn>> {
+    // todo: why am I returning a Vec<String>, and not a Vec<&str>?
     let transform_object = get_transform_object(js, var)?;
     let mut mapper = HashMap::new();
 
     for obj in transform_object {
         // AJ:function(a){a.reverse()} => AJ, function(a){a.reverse()}
-        let (name, function) = obj.split_once(':')?;
+        let (name, function) = obj
+            .split_once(':')
+            .ok_or_else(|| Error::UnexpectedResponse(format!(
+                "expected the transform-object to contain at least one ':', got {}",
+                obj
+            ).into()))?;
         let fun = map_functions(function)?;
         mapper.insert(name.to_owned(), fun);
     }
@@ -151,16 +197,16 @@ fn get_transform_map(js: &str, var: &str) -> Result<HashMap<String, TransformerF
     Ok(mapper)
 }
 
-fn map_functions(js_func: &str) -> Option<TransformerFn> {
+fn map_functions(js_func: &str) -> Result<TransformerFn> {
     static MAPPER: SyncLazy<[(Regex, TransformerFn); 4]> = SyncLazy::new(|| [
         // function(a){a.reverse()}
         (Regex::new(r"\{\w\.reverse\(\)}").unwrap(), (reverse, "reverse")),
         // function(a,b){a.splice(0,b)}
-        (Regex::new(r"\{\w\.splice\(0,\w\)}").unwrap(), (swap, "swap")),
+        (Regex::new(r"\{\w\.splice\(0,\w\)}").unwrap(), (splice, "splice")),
         // function(a,b){var c=a[0];a[0]=a[b%a.length];a[b%a.length]=c}
         (Regex::new(r"\{var\s\w=\w\[0];\w\[0]=\w\[\w%\w.length];\w\[\w%\w.length]=\w}").unwrap(), (swap, "swap")),
         // function(a,b){var c=a[0];a[0]=a[b%a.length];a[b]=c}
-        (Regex::new(r"\{var\s\w=\w\[0];\w\[0]=\w\[\w%\w.length];\w\[\w]=\w}").unwrap(), (splice, "splice")),
+        (Regex::new(r"\{var\s\w=\w\[0];\w\[0]=\w\[\w%\w.length];\w\[\w]=\w}").unwrap(), (swap, "swap")),
     ]);
 
     fn reverse(vec: &mut Vec<u8>, _: Option<isize>) {
@@ -202,14 +248,23 @@ fn map_functions(js_func: &str) -> Option<TransformerFn> {
         .iter()
         .find(|(pattern, _fun)| pattern.is_match(js_func))
         .map(|(_pattern, fun)| *fun)
+        .ok_or_else(|| Error::UnexpectedResponse(format!(
+            "could not map the JavaScript function `{}` to any Rust equivalent",
+            js_func
+        ).into()))
 }
 
 fn get_transform_object(js: &str, var: &str) -> Result<Vec<String>> {
     Ok(
         Regex::new(&format!(r"var {}=\{{((?s).*?)}};", regex::escape(var)))
             .unwrap()
-            .captures(js)?
-            .get(1)?
+            .captures(js)
+            .ok_or_else(|| Error::UnexpectedResponse(format!(
+                "could not extract the transform-object `{}` from: `{}`",
+                var, js
+            ).into()))?
+            .get(1)
+            .expect("the regex pattern must contain at least one capture group")
             .as_str()
             .replace('\n', " ")
             .split(", ")

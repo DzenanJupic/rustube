@@ -4,7 +4,7 @@ use regex::Regex;
 use serde::Deserialize;
 use url::Url;
 
-use crate::{Id, Result, StreamMap};
+use crate::{Id, Result};
 use crate::cipher::Cipher;
 use crate::error::Error;
 use crate::parser;
@@ -85,68 +85,10 @@ pub(crate) fn js_url_player_response(html: &str) -> Result<(Url, PlayerResponse)
     };
 
 
-    Url::parse(&format!("https://youtube.com{}", base_js))
-        .map(|url| (url, player_response))
-        .map_err(|_| Error::Other)
-}
-
-/// Get the YouTube player configuration data from the watch html.
-/// 
-/// Extract the ``ytplayer_config``, which is json data embedded within the
-/// watch html and serves as the primary source of obtaining the stream
-/// manifest data.
-/// 
-/// :param str html:
-///     The html contents of the watch page.
-/// :rtype: str
-/// :returns:
-///     Substring of the html containing the encoded manifest data.
-pub(crate) fn get_ytplayer_config(html: &str) -> Result<PlayerResponse> {
-    static CONFIG_PATTERNS: SyncLazy<[Regex; 2]> = SyncLazy::new(|| [
-        Regex::new(r"ytplayer\.config\s*=\s*").unwrap(),
-        Regex::new(r"ytInitialPlayerResponse\s*=\s*").unwrap(),
-    ]);
-
-    let player_response = CONFIG_PATTERNS
-        .iter()
-        .find_map(|pattern| {
-            let json = parser::parse_for_object(html, pattern).ok()?;
-
-            if json.contains("args") {
-                #[derive(Deserialize)]
-                struct ArgsWrapper { args: Args }
-                #[derive(Deserialize)]
-                struct Args { player_response: PlayerResponse }
-
-                Some(
-                    serde_json::from_str::<ArgsWrapper>(json).ok()?
-                        .args
-                        .player_response
-                )
-            } else {
-                serde_json::from_str::<PlayerResponse>(json).ok()
-            }
-        });
-
-    if let Some(player_response) = player_response {
-        return Ok(player_response);
-    }
-
-    // todo
-    // // setConfig() needs to be handled a little differently.
-    // // We want to parse the entire argument to setConfig()
-    // // and use then load that as json to find PLAYER_CONFIG
-    // // inside of it.
-    // static SET_CONFIG_PATTERNS: SyncLazy<Regex> = SyncLazy::new(
-    //     || Regex::new(r#"yt\.setConfig\(.*['"]PLAYER_CONFIG['"]:\s*"#).unwrap()
-    // );
-    // 
-    // match parser::parse_for_object(html, &SET_CONFIG_PATTERNS) {
-    //     Ok(player_config) => Ok(player_config),
-    //     Err(e) => Err(e)
-    // }
-
-    Err(Error::Other)
+    Ok(
+        Url::parse(&format!("https://youtube.com{}", base_js))
+            .map(|url| (url, player_response))?
+    )
 }
 
 /// Get the YouTube player base JavaScript path.
@@ -163,70 +105,98 @@ fn get_ytplayer_js(html: &str) -> Result<&str> {
 
     match JS_URL_PATTERNS.captures(html) {
         Some(function_match) => Ok(function_match.get(1).unwrap().as_str()),
-        None => Err(Error::UnexpectedResponse)
+        None => Err(Error::UnexpectedResponse(format!(
+            "could not extract the ytplayer-javascript from: {}",
+            html
+        ).into()))
     }
+}
+
+/// Get the YouTube player configuration data from the watch html.
+/// 
+/// Extract the ``ytplayer_config``, which is json data embedded within the
+/// watch html and serves as the primary source of obtaining the stream
+/// manifest data.
+/// 
+/// :param str html:
+///     The html contents of the watch page.
+/// :rtype: str
+/// :returns:
+///     Substring of the html containing the encoded manifest data.
+#[inline]
+pub(crate) fn get_ytplayer_config(html: &str) -> Result<PlayerResponse> {
+    static CONFIG_PATTERNS: SyncLazy<[Regex; 3]> = SyncLazy::new(|| [
+        Regex::new(r"ytplayer\.config\s*=\s*").unwrap(),
+        Regex::new(r"ytInitialPlayerResponse\s*=\s*").unwrap(),
+        // fixme
+        // pytube handles `setConfig` little bit differently. It parses the entire argument 
+        // to `setConfig()` and then uses load json to find `PlayerResponse` inside of it.
+        // We currently handle both the same way, and just deserialize into the `PlayerConfig` enum.
+        // This *should* have the same effect.
+        //
+        // In the future, it may be a good idea, to also handle both cases differently, so we don't
+        // loose performance on deserializing into an enum, but deserialize `CONFIG_PATTERNS` directly 
+        // into `PlayerResponse`, and `SET_CONFIG_PATTERNS` into `Args`. The problem currently is, that
+        // I don't know, if CONFIG_PATTERNS can also contain `Args`.
+        Regex::new(r#"yt\.setConfig\(.*['"]PLAYER_CONFIG['"]:\s*"#).unwrap()
+    ]);
+
+    CONFIG_PATTERNS
+        .iter()
+        .find_map(|pattern| {
+            let json = parser::parse_for_object(html, pattern).ok()?;
+            deserialize_ytplayer_config(json).ok()
+        })
+        .ok_or_else(|| Error::UnexpectedResponse(
+            "Could not find ytplayer_config in the watch html.".into()
+        ))
 }
 
 #[inline]
-pub(crate) fn apply_descrambler(
-    streaming_data: &mut StreamingData,
-    adaptive_fmts_raw: Option<&String>,
-    key: StreamMap,
-) -> Result<()> {
-    match key {
-        StreamMap::UrlEncodedFmtStream => apply_descrambler_url_encoded_fmt_stream(streaming_data),
-        StreamMap::AdaptiveFmts => apply_descrambler_adaptive_fmts(
-            streaming_data,
-            adaptive_fmts_raw?,
-        )
-    }
+fn deserialize_ytplayer_config(json: &str) -> Result<PlayerResponse> {
+    #[derive(Deserialize)]
+    struct Args { player_response: PlayerResponse }
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum PlayerConfig { Args { args: Args }, Response(PlayerResponse) }
+
+    Ok(
+        match serde_json::from_str::<PlayerConfig>(json)? {
+            PlayerConfig::Args { args } => args.player_response,
+            PlayerConfig::Response(pr) => pr
+        }
+    )
 }
 
-fn apply_descrambler_url_encoded_fmt_stream(streaming_data: &mut StreamingData) -> Result<()> {
-    streaming_data
-        .formats
-        .iter_mut()
-        .chain(
-            streaming_data.adaptive_formats.iter_mut()
-        )
-        .for_each(|format| {
-            if let Some(url) = format.url.take() {
-                format.signature_cipher.url = url;
-            }
-        });
-
-    Ok(())
-}
-
-fn apply_descrambler_adaptive_fmts(streaming_data: &mut StreamingData, adaptive_fmts_raw: &str) -> Result<()> {
+#[inline]
+pub fn apply_descrambler_adaptive_fmts(streaming_data: &mut StreamingData, adaptive_fmts_raw: &str) -> Result<()> {
     for raw_fmt in adaptive_fmts_raw.split(',') {
-        // fixme: this implementation is likely wrong.
+        // fixme: this implementation is likely wrong. 
+        // main question: is adaptive_fmts_raw a list of normal RawFormats?
         // To make is correct, I would need sample data for adaptive_fmts_raw
         log::warn!(
             "`apply_descrambler_adaptive_fmts` is probaply broken!\
-             Please open an issue on GitHub and paste in the warning message.\
-             adaptive_fmts_raw: `{}`", adaptive_fmts_raw
+             Please open an issue on GitHub and paste in the whole warning message (it may be quite long).\
+             adaptive_fmts_raw: `{}`", raw_fmt
         );
         let raw_format = serde_qs::from_str::<RawFormat>(raw_fmt)?;
-        streaming_data.adaptive_formats.push(raw_format);
+        streaming_data.formats.push(raw_format);
     }
 
     Ok(())
 }
 
-pub(crate) fn apply_signature(streaming_data: &mut StreamingData, fmt: StreamMap, js: &str) -> Result<()> {
-    let raw_formats = match fmt {
-        StreamMap::UrlEncodedFmtStream => &mut streaming_data.formats,
-        StreamMap::AdaptiveFmts => &mut streaming_data.adaptive_formats,
-    };
+pub(crate) fn apply_signature(streaming_data: &mut StreamingData, js: &str) -> Result<()> {
     let cipher = Cipher::from_js(js)?;
 
-    for raw_format in raw_formats {
+    for raw_format in streaming_data.formats.iter_mut().chain(streaming_data.adaptive_formats.iter_mut()) {
         let url = &mut raw_format.signature_cipher.url;
         let s = match raw_format.signature_cipher.s {
             Some(ref mut s) => s,
             None if url_already_contains_signature(url) => continue,
-            None => return Err(Error::Other)
+            None => return Err(Error::UnexpectedResponse(
+                "RawFormat did not contain a signature (s), nor did the url".into()
+            ))
         };
 
         cipher.decrypt_signature(s)?;
@@ -241,5 +211,5 @@ pub(crate) fn apply_signature(streaming_data: &mut StreamingData, fmt: StreamMap
 #[inline]
 fn url_already_contains_signature(url: &Url) -> bool {
     let url = url.as_str();
-    url.contains("signature") || (url.contains("&sig=") || url.contains("&lsig"))
+    url.contains("signature") || (url.contains("&sig=") || url.contains("&lsig="))
 }

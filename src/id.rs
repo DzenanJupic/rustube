@@ -2,10 +2,13 @@ use std::borrow::Cow;
 use std::lazy::SyncLazy;
 use std::ops::Deref;
 
+use derive_more::Display;
 use regex::Regex;
-use serde::{Deserialize, Deserializer};
-use serde::de::{Error, Unexpected};
+use serde::{Deserialize, Deserializer, Serialize};
+use serde::de::{Error as SerdeError, Unexpected};
 use url::Url;
+
+use crate::{Error, Result};
 
 pub type IdBuf = Id<'static>;
 
@@ -59,11 +62,11 @@ pub static ID_PATTERN: SyncLazy<Regex> = SyncLazy::new(||
 /// If you require [`Id`] to be owned (`Id<'static`>), you can use [`Id::as_owned`] or 
 /// [`Id::into_owned`], which both can easily be chained. You can also use [`IdBuf`], which is
 /// an alias for `Id<'static>`, to make functions and types less verbose. 
-#[derive(Clone, Debug, serde::Serialize, PartialOrd, Ord, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Display, Serialize, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct Id<'a>(Cow<'a, str>);
 
 impl<'a> Id<'a> {
-    pub fn from_raw(raw: &'a str) -> Option<Self> {
+    pub fn from_raw(raw: &'a str) -> Result<Self> {
         ID_PATTERNS
             .iter()
             .find_map(|pattern|
@@ -75,6 +78,7 @@ impl<'a> Id<'a> {
                         Self(Cow::Borrowed(id))
                     })
             )
+            .ok_or(Error::BadIdFormat)
     }
 
     #[inline]
@@ -176,7 +180,7 @@ impl<'de> Deserialize<'de> for Id<'de> {
         D: Deserializer<'de> {
         let raw = <&'de str>::deserialize(deserializer)?;
         Self::from_raw(raw)
-            .ok_or(D::Error::invalid_value(
+            .map_err(|_| D::Error::invalid_value(
                 Unexpected::Str(raw),
                 &"expected a valid youtube video identifier",
             ))

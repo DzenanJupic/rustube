@@ -10,6 +10,7 @@ use url::Url;
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StreamingData {
+    // todo: remove the field adaptive_formats, and deserialize all formats into formats
     pub adaptive_formats: Vec<RawFormat>,
     #[serde_as(as = "JsonString")]
     pub expires_in_seconds: u64,
@@ -20,7 +21,6 @@ pub struct StreamingData {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawFormat {
-    pub url: Option<Url>,
     #[serde(rename = "type")]
     pub format_type: Option<FormatType>,
     #[serde_as(as = "JsonString")]
@@ -33,8 +33,9 @@ pub struct RawFormat {
     pub average_bitrate: Option<u64>,
     pub bitrate: Option<u64>,
     pub color_info: Option<ColorInfo>,
-    #[serde_as(as = "JsonString")]
-    pub content_length: u64,
+    #[serde(default)]
+    #[serde_as(as = "Option<JsonString>")]
+    pub content_length: Option<u64>,
     #[serde(default)]
     pub fps: u8,
     pub height: Option<u64>,
@@ -54,15 +55,14 @@ pub struct RawFormat {
     pub projection_type: ProjectionType,
     pub quality: Quality,
     pub quality_label: Option<QualityLabel>,
-    #[serde(alias = "cipher")]
-    #[serde(with = "crate::serde::signature_cypher")]
-    pub signature_cipher: SignatureCypher,
+    #[serde(flatten)]
+    #[serde(with = "crate::serde::signature_cipher")]
+    pub signature_cipher: SignatureCipher,
     pub width: Option<u64>,
-
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub struct SignatureCypher {
+pub struct SignatureCipher {
     pub url: Url,
     pub s: Option<String>,
 }

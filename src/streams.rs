@@ -1,17 +1,16 @@
 use std::ops::Range;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
-use futures::StreamExt;
 use mime::Mime;
 use reqwest::Client;
 use tokio::io::AsyncWriteExt;
+use tokio::stream::StreamExt;
 
 use crate::{Result, TryCollect};
 use crate::error::Error;
 use crate::itags::ItagProfile;
-use crate::player_response::streaming_data::{AudioQuality, ColorInfo, FormatType, MimeType, ProjectionType, Quality, QualityLabel, RawFormat, SignatureCypher};
+use crate::player_response::streaming_data::{AudioQuality, ColorInfo, FormatType, MimeType, ProjectionType, Quality, QualityLabel, RawFormat, SignatureCipher};
 
 #[derive(Clone, Debug)]
 pub struct Stream {
@@ -19,7 +18,6 @@ pub struct Stream {
     pub codecs: Vec<String>,
     pub video_codec: Option<String>,
     pub audio_codec: Option<String>,
-    pub bit_rate: Option<u64>,
     pub is_dash: bool,
     pub abr: Option<&'static str>,
     pub resolution: Option<&'static str>,
@@ -34,7 +32,7 @@ pub struct Stream {
     pub average_bitrate: Option<u64>,
     pub bitrate: Option<u64>,
     pub color_info: Option<ColorInfo>,
-    pub content_length: u64,
+    pub content_length: Option<u64>,
     pub fps: u8,
     pub height: Option<u64>,
     pub high_replication: Option<bool>,
@@ -47,15 +45,14 @@ pub struct Stream {
     pub projection_type: ProjectionType,
     pub quality: Quality,
     pub quality_label: Option<QualityLabel>,
-    pub signature_cipher: SignatureCypher,
+    pub signature_cipher: SignatureCipher,
     pub width: Option<u64>,
-    client: Arc<Client>,
+    client: Client,
 }
 
 
 impl Stream {
-    pub fn from_raw_format(raw_format: RawFormat, client: Arc<Client>) -> Result<Self> {
-        // let url = raw_format.url?;
+    pub fn from_raw_format(raw_format: RawFormat, client: Client) -> Result<Self> {
         let (video_codec, audio_codec) = Self::parse_codecs(
             &raw_format.mime_type
         )?;
@@ -66,7 +63,6 @@ impl Stream {
             codecs: raw_format.mime_type.codecs,
             video_codec,
             audio_codec,
-            bit_rate: raw_format.bitrate,
             is_dash: itag_profile.is_dash,
             abr: itag_profile.abr,
             resolution: itag_profile.resolution,
@@ -103,7 +99,6 @@ impl Stream {
     pub async fn download(&self) -> Result<PathBuf> {
         let path = self.file_path();
         let mut file = tokio::fs::File::create(&path).await?;
-        file.set_len(0).await?;
 
         let res = self.client
             .get(self.signature_cipher.url.as_str())
@@ -126,13 +121,19 @@ impl Stream {
         // todo: download in ranges
         // todo: blocking download
 
-        Err(Error::Other)
+        Err(Error::DownloadFailed)
     }
 
     #[inline]
     fn parse_codecs(MimeType { mime, codecs }: &MimeType) -> Result<(Option<String>, Option<String>)> {
         if !Self::is_adaptive(codecs) {
-            let (video, audio) = codecs.iter().try_collect()?;
+            let (video, audio) = codecs
+                .iter()
+                .try_collect()
+                .ok_or(Error::UnexpectedResponse(format!(
+                    "expected codecs to contains 2 elements, got {}, `{:?}`",
+                    codecs.len(), codecs
+                ).into()))?;
             Ok((Some(video.to_owned()), Some(audio.to_owned())))
         } else if Self::includes_video_track(codecs, mime) {
             Ok((codecs.get(0).cloned(), None))

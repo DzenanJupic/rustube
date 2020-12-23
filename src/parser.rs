@@ -3,27 +3,25 @@ use regex::Regex;
 use crate::error::Error;
 use crate::Result;
 
-/// Parses input html to find the end of a JavaScript object.
-/// 
-///     :param str html:
-///         HTML to be parsed for an object.
-///     :param str preceding_regex:
-///         Regex to find the string preceding the object.
-///     :rtype dict:
-///     :returns:
-///         A dict created from parsing the object.
 pub(crate) fn parse_for_object<'a>(html: &'a str, regex: &Regex) -> Result<&'a str> {
     let json_obj_start = regex
-        .find(html)?
+        .find(html)
+        .ok_or(Error::Internal("The regex does not match"))?
         .end();
 
-    Ok(json_object(html.get(json_obj_start..)?)?)
+    Ok(json_object(
+        html
+            .get(json_obj_start..)
+            .ok_or(Error::Internal("The regex does not match meaningful"))?
+    )?)
 }
 
 #[inline]
 fn json_object(mut html: &str) -> Result<&str> {
     html = html.trim_start_matches(|c| c != '{');
-    if html.is_empty() { return Err(Error::UnexpectedResponse); }
+    if html.is_empty() {
+        return Err(Error::Internal("cannot parse a json object from an empty string"));
+    }
 
     let mut stack = vec![b'{'];
     let mut skip = false;
@@ -35,11 +33,12 @@ fn json_object(mut html: &str) -> Result<&str> {
         .skip(1)
         .find(
             |(_i, &curr_char)| find_json_object(curr_char, &mut skip, &mut stack)
-        )?;
+        )
+        .ok_or(Error::Internal("could not find a closing delimiter"))?;
 
     let full_obj = html
         .get(..=i)
-        .expect("i must always mark the position of a '}' char");
+        .expect("i must always mark the position of a valid '}' char");
 
     Ok(full_obj)
 }

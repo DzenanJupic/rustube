@@ -2,7 +2,6 @@ use serde::Deserialize;
 use serde_with::{json::JsonString, serde_as};
 
 use crate::player_response::PlayerResponse;
-use crate::streams::Stream;
 
 #[serde_as]
 #[derive(Clone, Debug, Deserialize)]
@@ -14,6 +13,4 @@ pub struct VideoInfo {
 
     #[serde(skip)]
     pub is_age_restricted: bool,
-    #[serde(skip)]
-    pub adaptive_fmts: Option<Vec<Stream>>,
 }
