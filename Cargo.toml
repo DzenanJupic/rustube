@@ -5,13 +5,15 @@ authors = ["Dzenan Jupic <info@dzenanjupic.de>"]
 edition = "2018"
 
 # todo: add features to opt in/out of deserialization of some data (title, view_count, ...)
-# Currently uses tokio 2.2.24, since reqwest is currently depending on it 😢
 
 [dependencies]
+# Currently uses bytes 0.5.0, since reqwest is currently depending on it 😢
 bytes = "0.5.0"
 chrono = "0.4.19"
 derive_more = "0.99.11"
 futures = "0.3.8"
+# Currently uses hyper 0.13.9, since reqwest is currently depending on it 😢
+hyper = "0.13.9"
 log = "0.4.11"
 mime = "0.3.16"
 percent-encoding = "2.1.0"
@@ -22,6 +24,7 @@ serde_qs = "0.8.2"
 serde_json = "1.0.60"
 serde_with = { version = "1.6.0", features = ["json", "macros"] }
 thiserror = "1.0.22"
+# Currently uses tokio 2.2.24, since reqwest is currently depending on it 😢
 tokio = { version = "0.2.24", features = ["fs", "io-util", "io-driver", "stream", "rt-core"] }
 url = { version = "2.2.0", features = ["serde"] }
 

@@ -3,6 +3,8 @@ async_closure, bool_to_option, cow_is_borrowed, once_cell, box_syntax,
 str_split_as_str, str_split_once, try_trait, option_result_contains
 )]
 
+use std::path::PathBuf;
+
 use derive_more::Display;
 use reqwest::Client;
 use url::Url;
@@ -443,6 +445,18 @@ impl YouTube {
             .fetch()
             .await?
             .descramble()
+    }
+
+    #[inline]
+    pub async fn download_best_resolution(&self) -> Result<PathBuf> {
+        self
+            .streams
+            .iter()
+            .filter(|stream| stream.includes_video_track && stream.includes_audio_track)
+            .max_by_key(|stream| stream.resolution)
+            .ok_or(Error::NoStreams)?
+            .download()
+            .await
     }
 
     #[inline]

@@ -2,10 +2,13 @@ use std::ops::Range;
 use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
+use futures::Stream as FuturesStream;
 use mime::Mime;
-use reqwest::Client;
+use reqwest::{Client, Response};
+use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::stream::StreamExt;
+use url::Url;
 
 use crate::{Result, TryCollect};
 use crate::error::Error;
@@ -19,8 +22,11 @@ pub struct Stream {
     pub video_codec: Option<String>,
     pub audio_codec: Option<String>,
     pub is_dash: bool,
-    pub abr: Option<&'static str>,
-    pub resolution: Option<&'static str>,
+    pub abr: Option<u64>,
+    pub resolution: Option<u64>,
+    pub is_progressive: bool,
+    pub includes_video_track: bool,
+    pub includes_audio_track: bool,
     pub is_3d: bool,
     pub is_hdr: bool,
     pub is_live: bool,
@@ -59,6 +65,9 @@ impl Stream {
         let itag_profile = ItagProfile::from_itag(raw_format.itag);
 
         Ok(Self {
+            is_progressive: is_progressive(&raw_format.mime_type.codecs),
+            includes_video_track: includes_video_track(&raw_format.mime_type.codecs, &raw_format.mime_type.mime),
+            includes_audio_track: includes_audio_track(&raw_format.mime_type.codecs, &raw_format.mime_type.mime),
             mime: raw_format.mime_type.mime,
             codecs: raw_format.mime_type.codecs,
             video_codec,
@@ -96,37 +105,135 @@ impl Stream {
         })
     }
 
+    // todo: download in ranges
+    // todo: blocking download
+
     pub async fn download(&self) -> Result<PathBuf> {
         let path = self.file_path();
-        let mut file = tokio::fs::File::create(&path).await?;
+        let mut file = File::create(&path).await?;
 
-        let res = self.client
-            .get(self.signature_cipher.url.as_str())
-            .send()
-            .await?;
 
-        if res.status().is_success() {
-            let mut stream = res.bytes_stream();
-
-            while let Some(chunk) = stream.next().await {
-                file
-                    .write_all(&chunk?)
-                    .await?;
+        match self.download_full(self.signature_cipher.url.as_str(), &mut file).await {
+            Err(Error::Request(e)) if e.status().contains(&reqwest::StatusCode::NOT_FOUND) => {
+                // Some adaptive streams need to be requested with sequence numbers
+                self.download_full_seq(&mut file)
+                    .await
+                    .map(|_| path)
             }
+            Err(e) => {
+                drop(file);
+                tokio::fs::remove_file(path).await?;
+                Err(e)
+            }
+            Ok(_) => Ok(path)
+        }
+    }
 
-            return Ok(path);
+    async fn download_full_seq(&self, file: &mut File) -> Result<()> {
+        // fixme: this implementation is **not** tested yet!
+        // To test it, I would need an url of a video, which does require sequenced downloading.
+        log::warn!(
+            "`download_full_seq` is not tested yet and probably broken!\n\
+            Please open a GitHub issue and paste the whole warning message plus the videos Id in:\n\
+            url: {}", self.signature_cipher.url.as_str()
+        );
+
+        let mut url = self.signature_cipher.url.clone();
+        let base_query = url
+            .query()
+            .map(str::to_owned)
+            .unwrap_or_else(|| String::new());
+
+        // The 0th sequential request provides the file headers, which tell us
+        // information about how the file is segmented.
+        Self::set_url_seq_query(&mut url, &base_query, 0);
+        let res = self.get(url.as_str()).await?;
+        let segment_count = Stream::extract_segment_count(&res)?;
+        Self::write_stream_to_file(res.bytes_stream(), file).await?;
+
+        for i in 1..segment_count {
+            Self::set_url_seq_query(&mut url, &base_query, i);
+            self.download_full(url.as_str(), file).await?;
         }
 
-        // todo: seq_download
-        // todo: download in ranges
-        // todo: blocking download
+        Ok(())
+    }
 
-        Err(Error::DownloadFailed)
+    #[inline]
+    async fn download_full<U: reqwest::IntoUrl>(&self, url: U, file: &mut File) -> Result<()> {
+        let res = self.get(url).await?;
+        Self::write_stream_to_file(res.bytes_stream(), file).await
+    }
+
+    #[inline]
+    async fn get<U: reqwest::IntoUrl>(&self, url: U) -> Result<Response> {
+        Ok(
+            self.client
+                .get(url)
+                .send()
+                .await?
+                .error_for_status()?
+        )
+    }
+
+    #[inline]
+    async fn write_stream_to_file(mut stream: impl FuturesStream<Item=reqwest::Result<bytes::Bytes>> + Unpin, file: &mut File) -> Result<()> {
+        while let Some(chunk) = stream.next().await {
+            file
+                .write_all(&chunk?)
+                .await?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn set_url_seq_query(url: &mut Url, base_query: &str, sq: u64) {
+        url.set_query(Some(&base_query));
+        url
+            .query_pairs_mut()
+            .append_pair("sq", &sq.to_string());
+    }
+
+    #[inline]
+    fn extract_segment_count(res: &Response) -> Result<u64> {
+        Ok(
+            res
+                .headers()
+                .get("Segment-Count")
+                .ok_or_else(|| Error::UnexpectedResponse(
+                    "sequence download request did not contain a Segment-Count".into()
+                ))?
+                .to_str()
+                .map_err(|_| Error::UnexpectedResponse(
+                    "Segment-Count is not valid utf-8".into()
+                ))?
+                .parse::<u64>()
+                .map_err(|_| Error::UnexpectedResponse(
+                    "Segment-Count could not be parsed into an integer".into()
+                ))?
+        )
+    }
+
+    #[inline]
+    pub async fn content_length(&self) -> Result<u64> {
+        if let Some(content_length) = self.content_length {
+            return Ok(content_length);
+        }
+
+        self.client
+            .head(self.signature_cipher.url.as_str())
+            .send()
+            .await?
+            .error_for_status()?
+            .content_length()
+            .ok_or(Error::UnexpectedResponse(
+                "the response did not contain a valid content-length field".into()
+            ))
     }
 
     #[inline]
     fn parse_codecs(MimeType { mime, codecs }: &MimeType) -> Result<(Option<String>, Option<String>)> {
-        if !Self::is_adaptive(codecs) {
+        if !is_adaptive(codecs) {
             let (video, audio) = codecs
                 .iter()
                 .try_collect()
@@ -135,44 +242,45 @@ impl Stream {
                     codecs.len(), codecs
                 ).into()))?;
             Ok((Some(video.to_owned()), Some(audio.to_owned())))
-        } else if Self::includes_video_track(codecs, mime) {
-            Ok((codecs.get(0).cloned(), None))
-        } else if Self::includes_audio_track(codecs, mime) {
-            Ok((None, codecs.get(0).cloned()))
+        } else if includes_video_track(codecs, mime) {
+            Ok((codecs.first().cloned(), None))
+        } else if includes_audio_track(codecs, mime) {
+            Ok((None, codecs.first().cloned()))
         } else {
             Ok((None, None))
         }
     }
 
-    #[inline]
-    fn is_adaptive(codecs: &Vec<String>) -> bool {
-        codecs.len() % 2 != 0
-    }
-
-    #[inline]
-    fn includes_video_track(codecs: &Vec<String>, mime: &Mime) -> bool {
-        Self::is_progressive(codecs) || mime.type_() == "video"
-    }
-
-    #[inline]
-    fn includes_audio_track(codecs: &Vec<String>, mime: &Mime) -> bool {
-        Self::is_progressive(codecs) || mime.type_() == "audio"
-    }
-
-    #[inline]
-    fn is_progressive(codecs: &Vec<String>) -> bool {
-        !Self::is_adaptive(codecs)
-    }
 
     fn file_path(&self) -> PathBuf {
+        // todo
         // let file_name = percent_decode_str(self.try_into() url.as_str())
         //     .decode_utf8_lossy()
         //     .to_string();
-        // todo
         let file_name = format!("video.mp4");
 
         let mut path = PathBuf::from(file_name);
         path.set_extension(self.mime.subtype().as_str());
         path
     }
+}
+
+#[inline]
+fn is_adaptive(codecs: &Vec<String>) -> bool {
+    codecs.len() % 2 != 0
+}
+
+#[inline]
+fn includes_video_track(codecs: &Vec<String>, mime: &Mime) -> bool {
+    is_progressive(codecs) || mime.type_() == "video"
+}
+
+#[inline]
+fn includes_audio_track(codecs: &Vec<String>, mime: &Mime) -> bool {
+    is_progressive(codecs) || mime.type_() == "audio"
+}
+
+#[inline]
+fn is_progressive(codecs: &Vec<String>) -> bool {
+    !is_adaptive(codecs)
 }

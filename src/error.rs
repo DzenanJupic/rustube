@@ -8,8 +8,8 @@ pub enum Error {
     BadIdFormat,
     #[error("the video you requested is unavailable")]
     VideoUnavailable,
-    #[error("could not download the video")]
-    DownloadFailed,
+    #[error("the video contains no streams")]
+    NoStreams,
 
     #[error(transparent)]
     IO(#[from] std::io::Error),
