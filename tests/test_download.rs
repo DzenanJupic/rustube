@@ -2,13 +2,13 @@
 
 use url::Url;
 
-use rustube::{YouTube, YouTubeFetcher};
+use rustube::{Video, VideoFetcher};
 
 #[tokio::test]
 async fn download_fetcher() {
     let url = Url::parse("https://www.youtube.com/watch?v=SmM0653YvXU&ab_channel=PitbullVEVO").unwrap();
 
-    let descrambler = YouTubeFetcher::from_url(&url)
+    let descrambler = VideoFetcher::from_url(&url)
         .unwrap()
         .fetch()
         .await
@@ -37,19 +37,39 @@ async fn download_fetcher() {
 async fn download_best_resolution() {
     let url = Url::parse("https://www.youtube.com/watch?v=5jlI4uzZGjU&ab_channel=PitbullVEVO").unwrap();
 
-    let path = dbg!(YouTube::from_url(&url)
-        .await.unwrap())
-        .download_best_resolution()
-        .await.unwrap();
+    let path = dbg!(Video::from_url(&url)
+        .await
+        .unwrap())
+        .best_resolution()
+        .unwrap()
+        .download()
+        .await
+        .unwrap();
 
     dbg!(path);
 }
 
 #[tokio::test]
-async fn download_youtube_chain() {
+async fn download_to_dir() {
     let url = Url::parse("https://www.youtube.com/watch?v=5jlI4uzZGjU&ab_channel=PitbullVEVO").unwrap();
 
-    let path = dbg!(YouTube::from_url(&url)
+    let path = dbg!(Video::from_url(&url)
+        .await
+        .unwrap())
+        .worst_resolution()
+        .unwrap()
+        .download_to_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/videos"))
+        .await
+        .unwrap();
+
+    dbg!(path);
+}
+
+#[tokio::test]
+async fn download_video_chain() {
+    let url = Url::parse("https://www.youtube.com/watch?v=5jlI4uzZGjU&ab_channel=PitbullVEVO").unwrap();
+
+    let path = dbg!(Video::from_url(&url)
         .await
         .unwrap())
         .streams()

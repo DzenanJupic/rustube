@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use serde::Deserialize;
 
 use playability_status::PlayabilityStatus;
@@ -28,7 +30,7 @@ pub struct PlayerResponse {
     // storyboards: _,
     pub streaming_data: Option<StreamingData>,
     // trackingParams: "CAAQu2kiEwi__L_qyNftAhWWplUKHVxxAhI=",
-    pub video_details: VideoDetails,
+    pub video_details: Arc<VideoDetails>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

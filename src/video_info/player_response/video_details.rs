@@ -26,7 +26,6 @@ pub struct VideoDetails {
     #[serde(deserialize_with = "Thumbnail::deserialize_vec")]
     pub thumbnails: Vec<Thumbnail>,
     pub title: String,
-    #[serde(deserialize_with = "IdBuf::deserialize_owned")]
     pub video_id: IdBuf,
     #[serde_as(as = "JsonString")]
     pub view_count: u64,

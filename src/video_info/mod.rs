@@ -1,7 +1,9 @@
 use serde::Deserialize;
 use serde_with::{json::JsonString, serde_as};
 
-use crate::player_response::PlayerResponse;
+use player_response::PlayerResponse;
+
+pub mod player_response;
 
 #[serde_as]
 #[derive(Clone, Debug, Deserialize)]

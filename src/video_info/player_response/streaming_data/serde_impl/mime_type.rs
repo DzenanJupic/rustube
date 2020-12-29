@@ -6,8 +6,8 @@ use regex::Regex;
 use serde::{Deserialize, Deserializer};
 use serde::de::{Error, Unexpected};
 
-use crate::player_response::streaming_data::MimeType;
 use crate::TryCollect;
+use crate::video_info::player_response::streaming_data::MimeType;
 
 pub fn deserialize<'de, D>(deserializer: D) -> Result<MimeType, <D as Deserializer<'de>>::Error> where
     D: Deserializer<'de> {

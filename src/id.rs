@@ -1,11 +1,13 @@
 use std::borrow::Cow;
+use std::cmp::Ordering;
 use std::lazy::SyncLazy;
-use std::ops::Deref;
 
-use derive_more::Display;
 use regex::Regex;
-use serde::{Deserialize, Deserializer, Serialize};
-use serde::de::{Error as SerdeError, Unexpected};
+#[cfg(feature = "serde")]
+use serde::{
+    de::{Error as SerdeError, Unexpected},
+    Deserialize, Deserializer, Serialize
+};
 use url::Url;
 
 use crate::{Error, Result};
@@ -56,13 +58,17 @@ pub static ID_PATTERN: SyncLazy<Regex> = SyncLazy::new(||
 /// - The id can always be used as a valid url parameter
 /// 
 /// ## Ownership
-/// All available constructors except for [`Id::deserialize_owned`] and [`Id::from_string`] will
+/// All available constructors except for [`Id::deserialize`] and [`Id::from_string`] will
 /// create the borrowed version with the lifetime of the input. Therefore no allocation is required.
+/// 
+/// If you don't need 'static deserialization, you can use [`Id::deserialize_borrowed`], which will
+/// create an `Id<'de>`.
 /// 
 /// If you require [`Id`] to be owned (`Id<'static`>), you can use [`Id::as_owned`] or 
 /// [`Id::into_owned`], which both can easily be chained. You can also use [`IdBuf`], which is
 /// an alias for `Id<'static>`, to make functions and types less verbose. 
-#[derive(Clone, Debug, Display, Serialize, PartialOrd, Ord, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Ord, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 pub struct Id<'a>(Cow<'a, str>);
 
 impl<'a> Id<'a> {
@@ -114,6 +120,30 @@ impl<'a> Id<'a> {
             .into_owned()
     }
 
+    /// Creates an `&IdBuf` from an arbitrary `Id`.
+    /// 
+    /// By just returning a reference, `&IdBuf` cannot outlive `Id`, even if the original 
+    /// string might still live:
+    /// ```compile_fail
+    ///# use rustube::Id;
+    /// let string = String::from("12345678910");
+    /// // create a borrowed Id
+    /// let id: Id = Id::from_raw(&string).unwrap();
+    /// // create a reference to an IdBuf with the lifetime of id
+    /// let id_static: &Id<'static> = id.as_static();
+    /// // give ownership of id away | this invalidates id_static
+    /// let id_buf = id.into_owned();
+    /// // trying to access id_static now, throws a compile error
+    /// let str_static = id_static.as_str();
+    /// ```
+    #[inline]
+    pub fn as_static(&'a self) -> &'a IdBuf {
+        // SAFETY:
+        // This method returns a reference with the lifetime of 'a.
+        // Therefore the returned IdBuf cannot outlive self (have a look at the doc-test). 
+        unsafe { std::mem::transmute::<&'a Id<'a>, &'a Id<'static>>(&self) }
+    }
+
     #[inline]
     pub fn as_borrowed(&'a self) -> Self {
         Self(Cow::Borrowed(&self.0))
@@ -155,7 +185,7 @@ impl<'a> Id<'a> {
     }
 }
 
-impl Id<'static> {
+impl IdBuf {
     #[inline]
     pub fn from_string(id: String) -> Result<Self, String> {
         match ID_PATTERN.is_match(id.as_str()) {
@@ -163,20 +193,12 @@ impl Id<'static> {
             false => Err(id)
         }
     }
-
-    #[inline]
-    pub fn deserialize_owned<'de, D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
-        D: Deserializer<'de> {
-        Ok(
-            Id::deserialize(deserializer)?
-                .into_owned()
-        )
-    }
 }
 
-impl<'de> Deserialize<'de> for Id<'de> {
+#[cfg(feature = "serde")]
+impl<'de> Id<'de> {
     #[inline]
-    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
+    pub fn deserialize_borrowed<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
         D: Deserializer<'de> {
         let raw = <&'de str>::deserialize(deserializer)?;
         Self::from_raw(raw)
@@ -187,18 +209,59 @@ impl<'de> Deserialize<'de> for Id<'de> {
     }
 }
 
-impl<'a> AsRef<str> for Id<'a> {
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for Id<'static> {
+    #[inline]
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
+        D: Deserializer<'de> {
+        let raw = <&'de str>::deserialize(deserializer)?;
+        Id::from_raw(raw)
+            .map(|id: Id<'de>| id.into_owned())
+            .map_err(|_| D::Error::invalid_value(
+                Unexpected::Str(raw),
+                &"expected a valid youtube video identifier",
+            ))
+    }
+}
+
+
+impl core::fmt::Display for Id<'_> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl core::ops::Deref for Id<'_> {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_str()
+    }
+}
+
+impl core::convert::AsRef<str> for Id<'_> {
     #[inline]
     fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
 
-impl<'a> Deref for Id<'a> {
-    type Target = str;
+impl<T> core::cmp::PartialEq<T> for Id<'_>
+    where T: core::convert::AsRef<str> {
+    fn eq(&self, other: &T) -> bool {
+        core::cmp::PartialEq::eq(
+            self.as_str(),
+            other.as_ref(),
+        )
+    }
+}
 
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        self.as_str()
+impl<T> core::cmp::PartialOrd<T> for Id<'_>
+    where T: AsRef<str> {
+    fn partial_cmp(&self, other: &T) -> Option<Ordering> {
+        core::cmp::PartialOrd::partial_cmp(
+            self.as_str(),
+            other.as_ref(),
+        )
     }
 }

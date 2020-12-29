@@ -6,30 +6,39 @@ use thiserror::Error;
 pub enum Error {
     #[error("the provided raw Id does not match any known Id-pattern")]
     BadIdFormat,
+    #[cfg(feature = "fetch")]
     #[error("the video you requested is unavailable")]
     VideoUnavailable,
+    #[cfg(feature = "download")]
     #[error("the video contains no streams")]
     NoStreams,
 
     #[error(transparent)]
+    #[cfg(feature = "fetch")]
     IO(#[from] std::io::Error),
     #[error(transparent)]
+    #[cfg(feature = "fetch")]
     Request(#[from] reqwest::Error),
     #[error("YouTube returned an unexpected response: `{0}`")]
     UnexpectedResponse(Cow<'static, str>),
     #[error(transparent)]
+    #[cfg(feature = "fetch")]
     QueryDeserialization(#[from] serde_qs::Error),
     #[error(transparent)]
+    #[cfg(feature = "fetch")]
     JsonDeserialization(#[from] serde_json::Error),
     #[error(transparent)]
     UrlParseError(#[from] url::ParseError),
     #[error("the itag `{0}` returned by YouTube is not in the known collection of itags")]
     UnknownItag(u64),
 
+    #[cfg(feature = "fetch")]
     #[error("the requested video is for members only")]
     MembersOnly,
+    #[cfg(feature = "fetch")]
     #[error("the requested video is private")]
     RecordingUnavailable,
+    #[cfg(feature = "fetch")]
     #[error("the requested video is private")]
     VideoPrivate,
 

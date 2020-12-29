@@ -1,19 +1,27 @@
 use std::ops::Range;
-use std::path::PathBuf;
+#[cfg(feature = "download")]
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
+#[cfg(feature = "download")]
 use futures::Stream as FuturesStream;
 use mime::Mime;
-use reqwest::{Client, Response};
-use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
-use tokio::stream::StreamExt;
-use url::Url;
+use reqwest::Client;
+#[cfg(feature = "download")]
+use tokio::{
+    fs::File,
+    io::AsyncWriteExt,
+    stream::StreamExt,
+};
 
-use crate::{Result, TryCollect};
+use crate::{Result, TryCollect, VideoDetails};
 use crate::error::Error;
-use crate::itags::ItagProfile;
-use crate::player_response::streaming_data::{AudioQuality, ColorInfo, FormatType, MimeType, ProjectionType, Quality, QualityLabel, RawFormat, SignatureCipher};
+use crate::video_info::player_response::streaming_data::{AudioQuality, ColorInfo, FormatType, MimeType, ProjectionType, Quality, QualityLabel, RawFormat, SignatureCipher};
+
+use self::itags::ItagProfile;
+
+mod itags;
 
 #[derive(Clone, Debug)]
 pub struct Stream {
@@ -53,12 +61,13 @@ pub struct Stream {
     pub quality_label: Option<QualityLabel>,
     pub signature_cipher: SignatureCipher,
     pub width: Option<u64>,
+    pub video_details: Arc<VideoDetails>,
     client: Client,
 }
 
 
 impl Stream {
-    pub fn from_raw_format(raw_format: RawFormat, client: Client) -> Result<Self> {
+    pub fn from_raw_format(raw_format: RawFormat, client: Client, video_details: Arc<VideoDetails>) -> Result<Self> {
         let (video_codec, audio_codec) = Self::parse_codecs(
             &raw_format.mime_type
         )?;
@@ -102,33 +111,70 @@ impl Stream {
             signature_cipher: raw_format.signature_cipher,
             width: raw_format.width,
             client,
+            video_details,
         })
     }
 
     // todo: download in ranges
     // todo: blocking download
 
+    /// Attempts to downloads the `Stream`s resource.
+    /// This will download the video to <video_id>.mp4 in the current working directory.
+    #[inline]
+    #[cfg(feature = "download")]
     pub async fn download(&self) -> Result<PathBuf> {
-        let path = self.file_path();
+        let path = Path::new(self.video_details.video_id.as_str())
+            .with_extension("mp4");
+        self.download_to(&path)
+            .await
+            .map(|_| path)
+    }
+
+    /// Attempts to downloads the `Stream`s resource.
+    /// This will download the video to <video_id>.mp4 in the provided directory. 
+    #[inline]
+    #[cfg(feature = "download")]
+    pub async fn download_to_dir<P: AsRef<Path>>(&self, dir: P) -> Result<PathBuf> {
+        let mut path = dir
+            .as_ref()
+            .join(self.video_details.video_id.as_str());
+        path.set_extension("mp4");
+        self.download_to(&path)
+            .await
+            .map(|_| path)
+    }
+
+    /// Attempts to downloads the `Stream`s resource.
+    /// This will download the video to the provided file path.
+    #[cfg(feature = "download")]
+    pub async fn download_to<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        log::trace!("download_to: {:?}", path.as_ref());
         let mut file = File::create(&path).await?;
 
-
-        match self.download_full(self.signature_cipher.url.as_str(), &mut file).await {
+        match self.download_full(&self.signature_cipher.url, &mut file).await {
+            Ok(_) => {
+                log::info!(
+                    "downloaded {} successfully to {:?}",
+                    self.video_details.video_id, path.as_ref()
+                );
+                Ok(())
+            }
             Err(Error::Request(e)) if e.status().contains(&reqwest::StatusCode::NOT_FOUND) => {
+                log::error!("failed to download {}: {:?}", self.video_details.video_id, e);
                 // Some adaptive streams need to be requested with sequence numbers
                 self.download_full_seq(&mut file)
                     .await
-                    .map(|_| path)
             }
             Err(e) => {
+                log::error!("failed to download {}: {:?}", self.video_details.video_id, e);
                 drop(file);
                 tokio::fs::remove_file(path).await?;
                 Err(e)
             }
-            Ok(_) => Ok(path)
         }
     }
 
+    #[cfg(feature = "download")]
     async fn download_full_seq(&self, file: &mut File) -> Result<()> {
         // fixme: this implementation is **not** tested yet!
         // To test it, I would need an url of a video, which does require sequenced downloading.
@@ -147,29 +193,32 @@ impl Stream {
         // The 0th sequential request provides the file headers, which tell us
         // information about how the file is segmented.
         Self::set_url_seq_query(&mut url, &base_query, 0);
-        let res = self.get(url.as_str()).await?;
+        let res = self.get(&url).await?;
         let segment_count = Stream::extract_segment_count(&res)?;
         Self::write_stream_to_file(res.bytes_stream(), file).await?;
 
         for i in 1..segment_count {
             Self::set_url_seq_query(&mut url, &base_query, i);
-            self.download_full(url.as_str(), file).await?;
+            self.download_full(&url, file).await?;
         }
 
         Ok(())
     }
 
     #[inline]
-    async fn download_full<U: reqwest::IntoUrl>(&self, url: U, file: &mut File) -> Result<()> {
+    #[cfg(feature = "download")]
+    async fn download_full(&self, url: &url::Url, file: &mut File) -> Result<()> {
         let res = self.get(url).await?;
         Self::write_stream_to_file(res.bytes_stream(), file).await
     }
 
     #[inline]
-    async fn get<U: reqwest::IntoUrl>(&self, url: U) -> Result<Response> {
+    #[cfg(feature = "download")]
+    async fn get(&self, url: &url::Url) -> Result<reqwest::Response> {
+        log::trace!("get: {}", url.as_str());
         Ok(
             self.client
-                .get(url)
+                .get(url.as_str())
                 .send()
                 .await?
                 .error_for_status()?
@@ -177,6 +226,7 @@ impl Stream {
     }
 
     #[inline]
+    #[cfg(feature = "download")]
     async fn write_stream_to_file(mut stream: impl FuturesStream<Item=reqwest::Result<bytes::Bytes>> + Unpin, file: &mut File) -> Result<()> {
         while let Some(chunk) = stream.next().await {
             file
@@ -187,7 +237,8 @@ impl Stream {
     }
 
     #[inline]
-    fn set_url_seq_query(url: &mut Url, base_query: &str, sq: u64) {
+    #[cfg(feature = "download")]
+    fn set_url_seq_query(url: &mut url::Url, base_query: &str, sq: u64) {
         url.set_query(Some(&base_query));
         url
             .query_pairs_mut()
@@ -195,7 +246,8 @@ impl Stream {
     }
 
     #[inline]
-    fn extract_segment_count(res: &Response) -> Result<u64> {
+    #[cfg(feature = "download")]
+    fn extract_segment_count(res: &reqwest::Response) -> Result<u64> {
         Ok(
             res
                 .headers()
@@ -215,6 +267,7 @@ impl Stream {
     }
 
     #[inline]
+    #[cfg(feature = "download")]
     pub async fn content_length(&self) -> Result<u64> {
         if let Some(content_length) = self.content_length {
             return Ok(content_length);
@@ -249,19 +302,6 @@ impl Stream {
         } else {
             Ok((None, None))
         }
-    }
-
-
-    fn file_path(&self) -> PathBuf {
-        // todo
-        // let file_name = percent_decode_str(self.try_into() url.as_str())
-        //     .decode_utf8_lossy()
-        //     .to_string();
-        let file_name = format!("video.mp4");
-
-        let mut path = PathBuf::from(file_name);
-        path.set_extension(self.mime.subtype().as_str());
-        path
     }
 }
 

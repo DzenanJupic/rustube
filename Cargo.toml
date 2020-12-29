@@ -8,26 +8,41 @@ edition = "2018"
 
 [dependencies]
 # Currently uses bytes 0.5.0, since reqwest is currently depending on it 😢
-bytes = "0.5.0"
-chrono = "0.4.19"
+bytes = { version = "0.5.0", optional = true }
+chrono = { version = "0.4.19", optional = true }
 derive_more = "0.99.11"
-futures = "0.3.8"
-# Currently uses hyper 0.13.9, since reqwest is currently depending on it 😢
-hyper = "0.13.9"
+futures = { version = "0.3.8", optional = true }
 log = "0.4.11"
-mime = "0.3.16"
-percent-encoding = "2.1.0"
-regex = "1.4.2"
-reqwest = { version = "0.10.10", features = ["cookies", "gzip", "brotli", "json", "stream"] }
-serde = "1.0.118"
-serde_qs = "0.8.2"
-serde_json = "1.0.60"
-serde_with = { version = "1.6.0", features = ["json", "macros"] }
-thiserror = "1.0.22"
+mime = { version = "0.3.16", optional = true }
+regex = { version = "1.4.2" }
+reqwest = { version = "0.10.10", optional = true }
+serde = { version = "1.0.118", default-features = false, optional = true }
+serde_qs = { version = "0.8.2", optional = true }
+serde_json = { version = "1.0.60", optional = true }
+serde_with = { version = "1.6.0", optional = true }
+thiserror = { version = "1.0.22" }
 # Currently uses tokio 2.2.24, since reqwest is currently depending on it 😢
-tokio = { version = "0.2.24", features = ["fs", "io-util", "io-driver", "stream", "rt-core"] }
-url = { version = "2.2.0", features = ["serde"] }
+tokio = { version = "0.2.24", optional = true }
+url = { version = "2.2.0" }
 
 [dev-dependencies]
 tokio = { version = "0.2.24", features = ["full"] }
 tokio-test = "0.2.1"
+
+[features]
+# By default, the minimal features for downloading a video are enabled. If you compile with default-features = false,
+# you get only the Id type as well as the Error type. 
+default = ["download", "serde"]
+
+download = [
+    "fetch", "tokio/fs", "tokio/io-util", "tokio/io-driver", "tokio/stream", "futures", "tokio/rt-core"
+]
+# could be usefull if you don't want to download videos, but just want to get information like title, view-count, ...
+fetch = [
+    "tokio/macros", "reqwest",
+    "serde/default", "serde/rc", "serde_with/json", "serde_json", "serde_qs", "bytes", "chrono", "mime",
+    "descramble", "url/serde", "reqwest/cookies", "reqwest/stream", "reqwest/gzip"
+]
+
+descramble = ["fetch", "stream"]
+stream = ["descramble"]
