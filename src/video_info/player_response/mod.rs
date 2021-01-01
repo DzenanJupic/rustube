@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use playability_status::PlayabilityStatus;
 use streaming_data::StreamingData;
@@ -11,7 +11,7 @@ pub mod streaming_data;
 pub mod playability_status;
 
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerResponse {
     pub assets: Option<Assets>,
@@ -29,11 +29,14 @@ pub struct PlayerResponse {
     // response_context: ResponseContext,
     // storyboards: _,
     pub streaming_data: Option<StreamingData>,
-    // trackingParams: "CAAQu2kiEwi__L_qyNftAhWWplUKHVxxAhI=",
     pub video_details: Arc<VideoDetails>,
+    pub tracking_params: String,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(
+Clone, Default, Debug, derive_more::Display,
+Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash
+)]
 pub struct Assets {
     pub js: String
 }

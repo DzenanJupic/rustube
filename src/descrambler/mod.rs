@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use derive_more::Display;
 use reqwest::Client;
 use url::Url;
 
@@ -31,10 +30,12 @@ mod cipher;
 /// let descrambler: VideoDescrambler = fetcher.fetch().await.unwrap();
 ///# }); 
 /// ``` 
-#[derive(Clone, Debug, Display)]
-#[display(fmt = "YouTubeDescrambler({})", "video_info.player_response.video_details.video_id")]
+#[derive(Clone, derive_more::Display, derivative::Derivative)]
+#[display(fmt = "VideoDescrambler({})", "video_info.player_response.video_details.video_id")]
+#[derivative(Debug, PartialEq, Eq)]
 pub struct VideoDescrambler {
     pub(crate) video_info: VideoInfo,
+    #[derivative(Debug = "ignore", PartialEq = "ignore")]
     pub(crate) client: Client,
     pub(crate) js: String,
 }

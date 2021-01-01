@@ -6,7 +6,7 @@ use regex::Regex;
 #[cfg(feature = "serde")]
 use serde::{
     de::{Error as SerdeError, Unexpected},
-    Deserialize, Deserializer, Serialize
+    Deserialize, Deserializer, Serialize,
 };
 use url::Url;
 
@@ -67,7 +67,7 @@ pub static ID_PATTERN: SyncLazy<Regex> = SyncLazy::new(||
 /// If you require [`Id`] to be owned (`Id<'static`>), you can use [`Id::as_owned`] or 
 /// [`Id::into_owned`], which both can easily be chained. You can also use [`IdBuf`], which is
 /// an alias for `Id<'static>`, to make functions and types less verbose. 
-#[derive(Clone, Debug, Ord, Eq, Hash)]
+#[derive(Clone, Debug, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 pub struct Id<'a>(Cow<'a, str>);
 
@@ -85,6 +85,14 @@ impl<'a> Id<'a> {
                     })
             )
             .ok_or(Error::BadIdFormat)
+    }
+
+    #[inline]
+    pub fn from_str(id: &'a str) -> Result<Self> {
+        match ID_PATTERN.is_match(id) {
+            true => Ok(Self(Cow::Borrowed(id))),
+            false => Err(Error::BadIdFormat)
+        }
     }
 
     #[inline]
@@ -127,20 +135,20 @@ impl<'a> Id<'a> {
     /// ```compile_fail
     ///# use rustube::Id;
     /// let string = String::from("12345678910");
-    /// // create a borrowed Id
+    /// // create a borrowed Id bound to the live time of string 
     /// let id: Id = Id::from_raw(&string).unwrap();
-    /// // create a reference to an IdBuf with the lifetime of id
+    /// // create a reference to an IdBuf bound to the lifetime of id
     /// let id_static: &Id<'static> = id.as_static();
-    /// // give ownership of id away | this invalidates id_static
+    /// // give ownership of id away | this **must** also invalidate id_static
     /// let id_buf = id.into_owned();
-    /// // trying to access id_static now, throws a compile error
+    /// // trying to access id_static now, throws a compile time error
     /// let str_static = id_static.as_str();
     /// ```
     #[inline]
     pub fn as_static(&'a self) -> &'a IdBuf {
         // SAFETY:
         // This method returns a reference with the lifetime of 'a.
-        // Therefore the returned IdBuf cannot outlive self (have a look at the doc-test). 
+        // Therefore the returned IdBuf cannot outlive self (also have a look at the doc-test). 
         unsafe { std::mem::transmute::<&'a Id<'a>, &'a Id<'static>>(&self) }
     }
 
@@ -198,8 +206,9 @@ impl IdBuf {
 #[cfg(feature = "serde")]
 impl<'de> Id<'de> {
     #[inline]
-    pub fn deserialize_borrowed<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
-        D: Deserializer<'de> {
+    pub fn deserialize_borrowed<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
+        where
+            D: Deserializer<'de> {
         let raw = <&'de str>::deserialize(deserializer)?;
         Self::from_raw(raw)
             .map_err(|_| D::Error::invalid_value(
@@ -212,8 +221,9 @@ impl<'de> Id<'de> {
 #[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for Id<'static> {
     #[inline]
-    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
-        D: Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
+        where
+            D: Deserializer<'de> {
         let raw = <&'de str>::deserialize(deserializer)?;
         Id::from_raw(raw)
             .map(|id: Id<'de>| id.into_owned())
@@ -226,6 +236,7 @@ impl<'de> Deserialize<'de> for Id<'static> {
 
 
 impl core::fmt::Display for Id<'_> {
+    #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.write_str(self.as_str())
     }
@@ -234,6 +245,7 @@ impl core::fmt::Display for Id<'_> {
 impl core::ops::Deref for Id<'_> {
     type Target = str;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         self.as_str()
     }
@@ -247,7 +259,9 @@ impl core::convert::AsRef<str> for Id<'_> {
 }
 
 impl<T> core::cmp::PartialEq<T> for Id<'_>
-    where T: core::convert::AsRef<str> {
+    where
+        T: core::convert::AsRef<str> {
+    #[inline]
     fn eq(&self, other: &T) -> bool {
         core::cmp::PartialEq::eq(
             self.as_str(),
@@ -256,8 +270,19 @@ impl<T> core::cmp::PartialEq<T> for Id<'_>
     }
 }
 
+impl core::cmp::Eq for Id<'_> {}
+
+impl core::cmp::Ord for Id<'_> {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.as_str().cmp(other.as_str())
+    }
+}
+
 impl<T> core::cmp::PartialOrd<T> for Id<'_>
-    where T: AsRef<str> {
+    where
+        T: AsRef<str> {
+    #[inline]
     fn partial_cmp(&self, other: &T) -> Option<Ordering> {
         core::cmp::PartialOrd::partial_cmp(
             self.as_str(),

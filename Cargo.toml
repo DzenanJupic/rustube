@@ -1,6 +1,6 @@
 [package]
 name = "rustube"
-version = "0.1.0-beta.0"
+version = "0.1.0-beta.1"
 authors = ["Dzenan Jupic <info@dzenanjupic.de>"]
 edition = "2018"
 
@@ -10,6 +10,7 @@ edition = "2018"
 # Currently uses bytes 0.5.0, since reqwest is currently depending on it 😢
 bytes = { version = "0.5.0", optional = true }
 chrono = { version = "0.4.19", optional = true }
+derivative = "2.1.1"
 derive_more = "0.99.11"
 futures = { version = "0.3.8", optional = true }
 log = "0.4.11"
@@ -26,6 +27,7 @@ tokio = { version = "0.2.24", optional = true }
 url = { version = "2.2.0" }
 
 [dev-dependencies]
+rand = "0.8.0"
 tokio = { version = "0.2.24", features = ["full"] }
 tokio-test = "0.2.1"
 

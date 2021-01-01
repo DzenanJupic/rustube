@@ -15,31 +15,23 @@ use tokio::{
     stream::StreamExt,
 };
 
-use crate::{Result, TryCollect, VideoDetails};
+use crate::{Result, VideoDetails};
 use crate::error::Error;
-use crate::video_info::player_response::streaming_data::{AudioQuality, ColorInfo, FormatType, MimeType, ProjectionType, Quality, QualityLabel, RawFormat, SignatureCipher};
+use crate::video_info::player_response::streaming_data::{AudioQuality, ColorInfo, FormatType, ProjectionType, Quality, QualityLabel, RawFormat, SignatureCipher};
 
-use self::itags::ItagProfile;
+// todo: there are different types of streams: video, audio, and video + audio
+// make Stream and RawFormat an enum, so there are less options in it
 
-mod itags;
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, derivative::Derivative)]
+#[derivative(PartialEq)]
 pub struct Stream {
     pub mime: Mime,
     pub codecs: Vec<String>,
-    pub video_codec: Option<String>,
-    pub audio_codec: Option<String>,
-    pub is_dash: bool,
-    pub abr: Option<u64>,
-    pub resolution: Option<u64>,
     pub is_progressive: bool,
     pub includes_video_track: bool,
     pub includes_audio_track: bool,
-    pub is_3d: bool,
-    pub is_hdr: bool,
-    pub is_live: bool,
     pub format_type: Option<FormatType>,
-    pub approx_duration_ms: u64,
+    pub approx_duration_ms: Option<u64>,
     pub audio_channels: Option<u8>,
     pub audio_quality: Option<AudioQuality>,
     pub audio_sample_rate: Option<u64>,
@@ -62,31 +54,20 @@ pub struct Stream {
     pub signature_cipher: SignatureCipher,
     pub width: Option<u64>,
     pub video_details: Arc<VideoDetails>,
+    #[derivative(PartialEq = "ignore")]
     client: Client,
 }
 
 
 impl Stream {
+    // maybe deserialize RawFormat seeded with client and VideoDetails
     pub fn from_raw_format(raw_format: RawFormat, client: Client, video_details: Arc<VideoDetails>) -> Result<Self> {
-        let (video_codec, audio_codec) = Self::parse_codecs(
-            &raw_format.mime_type
-        )?;
-        let itag_profile = ItagProfile::from_itag(raw_format.itag);
-
         Ok(Self {
             is_progressive: is_progressive(&raw_format.mime_type.codecs),
             includes_video_track: includes_video_track(&raw_format.mime_type.codecs, &raw_format.mime_type.mime),
             includes_audio_track: includes_audio_track(&raw_format.mime_type.codecs, &raw_format.mime_type.mime),
             mime: raw_format.mime_type.mime,
             codecs: raw_format.mime_type.codecs,
-            video_codec,
-            audio_codec,
-            is_dash: itag_profile.is_dash,
-            abr: itag_profile.abr,
-            resolution: itag_profile.resolution,
-            is_3d: itag_profile.is_3d,
-            is_hdr: itag_profile.is_hdr,
-            is_live: itag_profile.is_live,
             format_type: raw_format.format_type,
             approx_duration_ms: raw_format.approx_duration_ms,
             audio_channels: raw_format.audio_channels,
@@ -282,26 +263,6 @@ impl Stream {
             .ok_or(Error::UnexpectedResponse(
                 "the response did not contain a valid content-length field".into()
             ))
-    }
-
-    #[inline]
-    fn parse_codecs(MimeType { mime, codecs }: &MimeType) -> Result<(Option<String>, Option<String>)> {
-        if !is_adaptive(codecs) {
-            let (video, audio) = codecs
-                .iter()
-                .try_collect()
-                .ok_or(Error::UnexpectedResponse(format!(
-                    "expected codecs to contains 2 elements, got {}, `{:?}`",
-                    codecs.len(), codecs
-                ).into()))?;
-            Ok((Some(video.to_owned()), Some(audio.to_owned())))
-        } else if includes_video_track(codecs, mime) {
-            Ok((codecs.first().cloned(), None))
-        } else if includes_audio_track(codecs, mime) {
-            Ok((None, codecs.first().cloned()))
-        } else {
-            Ok((None, None))
-        }
     }
 }
 

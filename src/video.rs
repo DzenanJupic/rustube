@@ -19,7 +19,7 @@ use crate::video_info::player_response::video_details::VideoDetails;
 /// performed.
 /// 
 /// # Examples
-/// - Constructing using [`Video::from_url`] (easiest way)
+/// - Constructing using [`Video::from_url`] (or [`Video::from_id`]) (easiest way)
 /// ```no_run
 ///# use rustube::Video;
 ///# use url::Url;
@@ -27,7 +27,7 @@ use crate::video_info::player_response::video_details::VideoDetails;
 /// let url = Url::parse(URL).unwrap();
 /// 
 ///# tokio_test::block_on(async {
-/// let yt: Video = Video::from_url(&url).await.unwrap();
+/// let video: Video = Video::from_url(&url).await.unwrap();
 ///# });
 /// ``` 
 /// - Constructing using [`VideoDescrambler::descramble`]
@@ -40,7 +40,7 @@ use crate::video_info::player_response::video_details::VideoDetails;
 ///# tokio_test::block_on(async {
 /// let fetcher: VideoFetcher = VideoFetcher::from_url(&url).unwrap();
 /// let descrambler: VideoDescrambler = fetcher.fetch().await.unwrap();  
-/// let yt: Video = descrambler.descramble().unwrap();
+/// let video: Video = descrambler.descramble().unwrap();
 ///# });
 /// ``` 
 /// - Construction using chained calls
@@ -51,7 +51,7 @@ use crate::video_info::player_response::video_details::VideoDetails;
 /// let url = Url::parse(URL).unwrap();
 /// 
 ///# tokio_test::block_on(async {
-/// let yt: Video = VideoFetcher::from_url(&url)
+/// let video: Video = VideoFetcher::from_url(&url)
 ///    .unwrap()
 ///    .fetch()
 ///    .await
@@ -67,10 +67,10 @@ use crate::video_info::player_response::video_details::VideoDetails;
 ///# const URL: &str = "https://youtube.com/watch?iv=5jlI4uzZGjU";
 ///# let url = Url::parse(URL).unwrap();
 ///# tokio_test::block_on(async { 
-///#     let yt: Video = VideoFetcher::from_url(&url).unwrap()
+///#     let video: Video = VideoFetcher::from_url(&url).unwrap()
 ///#        .fetch().await.unwrap()  
 ///#        .descramble().unwrap();
-/// let video_path = yt
+/// let video_path = video
 ///    .streams()
 ///    .iter()
 ///    .filter(|stream| stream.mime.subtype() == "mp4" && stream.width.is_some())
@@ -82,12 +82,12 @@ use crate::video_info::player_response::video_details::VideoDetails;
 /// 
 /// println!(
 ///    "The video with the id `{}` was downloaded to: `{:?}`",
-///    yt.video_info().player_response.video_details.video_id,
+///    video.id(),
 ///    video_path 
 /// );
 ///# });
 /// ``` 
-#[derive(Clone, Debug, Display)]
+#[derive(Clone, Debug, Display, PartialEq)]
 #[display(fmt =
 "Video({}, streams: {})",
 "video_info.player_response.video_details.video_id", "streams.len()"
@@ -148,20 +148,56 @@ impl Video {
     }
 
     #[inline]
-    pub fn best_resolution(&self) -> Option<&Stream> {
+    pub fn best_quality(&self) -> Option<&Stream> {
         self
             .streams
             .iter()
             .filter(|stream| stream.includes_video_track && stream.includes_audio_track)
-            .max_by_key(|stream| stream.resolution)
+            .max_by_key(|stream| stream.quality_label)
     }
 
     #[inline]
-    pub fn worst_resolution(&self) -> Option<&Stream> {
+    pub fn worst_quality(&self) -> Option<&Stream> {
         self
             .streams
             .iter()
             .filter(|stream| stream.includes_video_track && stream.includes_audio_track)
-            .min_by_key(|stream| stream.resolution)
+            .min_by_key(|stream| stream.quality_label)
+    }
+
+    #[inline]
+    pub fn best_video(&self) -> Option<&Stream> {
+        self
+            .streams
+            .iter()
+            .filter(|stream| stream.includes_video_track)
+            .max_by_key(|stream| stream.width)
+    }
+
+    #[inline]
+    pub fn worst_video(&self) -> Option<&Stream> {
+        self
+            .streams
+            .iter()
+            .filter(|stream| stream.includes_video_track)
+            .min_by_key(|stream| stream.width)
+    }
+
+    #[inline]
+    pub fn best_audio(&self) -> Option<&Stream> {
+        self
+            .streams
+            .iter()
+            .filter(|stream| stream.includes_audio_track)
+            .max_by_key(|stream| stream.bitrate)
+    }
+
+    #[inline]
+    pub fn worst_abr(&self) -> Option<&Stream> {
+        self
+            .streams
+            .iter()
+            .filter(|stream| stream.includes_audio_track)
+            .min_by_key(|stream| stream.bitrate)
     }
 }

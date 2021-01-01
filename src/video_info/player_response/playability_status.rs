@@ -1,50 +1,181 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PlayabilityStatus {
-    pub status: Status,
-    pub playable_in_embed: bool,
-    pub miniplayer: MiniPlayer,
-    #[serde(default)]
-    pub messages: Vec<Reason>,
-    pub context_params: String,
+use crate::video_info::player_response::video_details::Thumbnail;
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(tag = "status", rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PlayabilityStatus {
+    #[serde(rename_all = "camelCase")]
+    Ok {
+        playable_in_embed: bool,
+        miniplayer: MiniPlayer,
+        #[serde(default)]
+        messages: Vec<String>,
+        context_params: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    Unplayable {
+        #[serde(default)]
+        messages: Vec<String>,
+        reason: String,
+        error_screen: ErrorScreen,
+        playable_in_embed: bool,
+        miniplayer: MiniPlayer,
+        context_params: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    LoginRequired {
+        #[serde(default)]
+        messages: Vec<String>,
+        error_screen: ErrorScreen,
+        desktop_legacy_age_gate_reason: Option<i64>,
+        context_params: String,
+    },
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct MiniPlayer {
     pub miniplayer_renderer: MiniplayerRenderer
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct MiniplayerRenderer {
     pub playback_mode: PlaybackMode
 }
 
-#[derive(Clone, Copy, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub enum PlaybackMode {
     #[serde(rename = "PLAYBACK_MODE_ALLOW")]
     Allow
 }
 
-#[derive(Clone, Copy, Debug, Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum Status {
-    Ok,
-    Unplayable,
-    LoginRequired,
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct ErrorScreen {
+    pub player_error_message_renderer: PlayerErrorMessageRenderer
 }
 
-#[derive(Clone, Copy, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerErrorMessageRenderer {
+    pub subreason: Option<Reason>,
+    pub reason: Reason,
+    pub proceed_button: Option<ProceedButton>,
+    #[serde(rename = "thumbnail")]
+    #[serde(serialize_with = "Thumbnail::serialize_vec")]
+    #[serde(deserialize_with = "Thumbnail::deserialize_vec")]
+    pub thumbnails: Vec<Thumbnail>,
+    pub icon: Icon,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct Reason {
+    #[serde(alias = "simpleText")]
+    pub text: Option<String>,
+    #[serde(default)]
+    pub runs: Vec<Reason>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct ProceedButton {
+    pub button_renderer: ButtonRenderer,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct ButtonRenderer {
+    pub style: ButtonRendererStyle,
+    pub size: ButtonRendererSize,
+    pub is_disabled: bool,
+    pub text: Reason,
+    pub navigation_endpoint: NavigationEndpoint,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+pub enum ButtonRendererStyle {
+    #[serde(rename = "STYLE_OVERLAY")]
+    Overlay,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+pub enum ButtonRendererSize {
+    #[serde(rename = "SIZE_DEFAULT")]
+    Default
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct NavigationEndpoint {
+    #[serde(flatten)]
+    pub endpoint: Endpoint,
+    pub sign_in_endpoint: SignInEndpoint,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct Endpoint {
+    pub click_tracking_params: String,
+    pub command_metadata: CommandMetadata,
+
+    // todo: there may be an extra field `url_endpoint: Option<UrlEndpoint>`
+    // currently this field is only used in NextEndpoint and therefore not exposed in this struct
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct CommandMetadata {
+    pub web_command_metadata: WebCommandMetadata
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct WebCommandMetadata {
+    /// a relative url
+    pub url: String,
+    pub web_page_type: WebPageType,
+    pub root_ve: i64,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+pub enum WebPageType {
+    #[serde(rename = "WEB_PAGE_TYPE_UNKNOWN")]
+    Unknown
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct SignInEndpoint {
+    pub next_endpoint: NextEndpoint
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct NextEndpoint {
+    #[serde(flatten)]
+    pub endpoint: Endpoint,
+    pub url_endpoint: UrlEndpoint,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct UrlEndpoint {
+    /// a relative url
+    url: String
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct Icon {
+    pub icon_type: IconType
+}
+
+#[derive(Clone, Copy, Debug, derive_more::Display, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum Reason {
-    #[serde(rename = "Join this channel to get access to members-only content like this video, and other exclusive perks.")]
-    MembersOnly,
-    #[serde(rename = "This live stream recording is not available.")]
-    RecordingNotAvailable,
-    #[serde(rename = "This is a private video. Please sign in to verify that you may see it.")]
-    PrivateVideo,
+pub enum IconType {
+    ErrorOutline
 }

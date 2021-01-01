@@ -1,14 +1,12 @@
 use std::lazy::SyncLazy;
 
-use derive_more::Display;
 use regex::Regex;
 use reqwest::Client;
 use serde::Deserialize;
 use url::Url;
 
-use crate::{Id, IdBuf, PlayerResponse, VideoDescrambler, VideoInfo};
-use crate::error::Error;
-use crate::video_info::player_response::playability_status::{PlayabilityStatus, Reason, Status};
+use crate::{Error, Id, IdBuf, PlayerResponse, VideoDescrambler, VideoInfo};
+use crate::video_info::player_response::playability_status::PlayabilityStatus;
 
 /// A YouTubeFetcher, used to download all necessary data from YouTube, which then could be used
 /// to extract video-urls, or other video information.
@@ -24,11 +22,13 @@ use crate::video_info::player_response::playability_status::{PlayabilityStatus, 
 /// 
 /// let fetcher: VideoFetcher =  VideoFetcher::from_url(&url).unwrap();
 /// ```
-#[derive(Clone, Debug, Display)]
-#[display(fmt = "YouTubeFetcher({})", video_id)]
+#[derive(Clone, derive_more::Display, derivative::Derivative)]
+#[display(fmt = "VideoFetcher({})", video_id)]
+#[derivative(Debug, PartialEq, Eq)]
 pub struct VideoFetcher {
     video_id: IdBuf,
     watch_url: Url,
+    #[derivative(Debug = "ignore", PartialEq = "ignore")]
     client: Client,
 }
 
@@ -123,20 +123,37 @@ impl VideoFetcher {
     /// [`YouTubeDescrambler::descramble`].  
     #[cfg(feature = "fetch")]
     pub async fn fetch(self) -> crate::Result<VideoDescrambler> {
+        // fixme: It seems like watch_html also contains a PlayerResponse in all cases. VideoInfo
+        // only contains the  extra field `adaptive_fmts_raw`. It may be possible to just use the 
+        // watch_html PlayerResponse. This would eliminate one request and therefore improve 
+        // performance.
+        //
+        // To do so, two things must happen:
+        //      1. I need a video, which has `adaptive_fmts_raw` set, so I can examine
+        //         both the watch_html as well as the video_info. (adaptive_fmts_raw even may be 
+        //         a legacy thing, which isn't used by YouTube anymore).
+        //      2. I need to have some kind of evidence, that watch_html comes with the 
+        //         PlayerResponse in most cases. (It would also be possible to just check, weather
+        //         or not watch_html contains PlayerResponse, and otherwise request video_info). 
+
         let watch_html = self.get_html(&self.watch_url).await?;
-        self.check_availability(&watch_html)?;
         let is_age_restricted = is_age_restricted(&watch_html);
+        Self::check_availability(&watch_html, is_age_restricted)?;
 
         let (
             (js, player_response),
             mut video_info
         ) = tokio::try_join!(
-            self.get_js_player_response(is_age_restricted, &watch_html),
+            self.get_js(is_age_restricted, &watch_html),
             self.get_video_info(is_age_restricted)
         )?;
 
-        if let None = video_info.player_response.streaming_data {
-            video_info.player_response = player_response;
+        match (&video_info.player_response.streaming_data, player_response) {
+            (None, Some(player_response)) => video_info.player_response = player_response,
+            (None, None) => return Err(Error::UnexpectedResponse(
+                "StreamingData is none and the watch html did not contain a valid PlayerResponse".into()
+            )),
+            _ => {}
         }
 
         Ok(VideoDescrambler {
@@ -156,16 +173,48 @@ impl VideoFetcher {
         &self.watch_url
     }
 
+    fn check_availability(watch_html: &str, is_age_restricted: bool) -> crate::Result<()> {
+        static PLAYABILITY_STATUS: SyncLazy<Regex> = SyncLazy::new(||
+            Regex::new(r#"["']?playabilityStatus["']?\s*[:=]\s*"#).unwrap()
+        );
+
+        let playability_status: PlayabilityStatus = PLAYABILITY_STATUS
+            .find_iter(watch_html)
+            .map(|m| json_object(
+                watch_html
+                    .get(m.end()..)
+                    .ok_or(Error::Internal("The regex does not match meaningful"))?
+            ))
+            .filter_map(Result::ok)
+            .map(serde_json::from_str::<PlayabilityStatus>)
+            .filter_map(Result::ok)
+            .next()
+            .ok_or_else(|| Error::UnexpectedResponse(
+                "watch html did not contain a PlayabilityStatus".into()
+            ))?;
+
+        match playability_status {
+            // maybe we can return the playability status, later skip it when deserializing
+            // the PlayerResponse, and then use this one again?
+            PlayabilityStatus::Ok { .. } => Ok(()),
+            PlayabilityStatus::LoginRequired { .. } if is_age_restricted => Ok(()),
+            ps => Err(Error::VideoUnavailable(ps))
+        }
+    }
+
     #[inline]
     #[cfg(feature = "fetch")]
-    async fn get_js_player_response(&self, is_age_restricted: bool, watch_html: &str) -> crate::Result<(String, PlayerResponse)> {
+    async fn get_js(&self,
+                    is_age_restricted: bool,
+                    watch_html: &str,
+    ) -> crate::Result<(String, Option<PlayerResponse>)> {
         let (js_url, player_response) = match is_age_restricted {
             true => {
                 let embed_url = self.video_id.embed_url();
                 let embed_html = self.get_html(&embed_url).await?;
-                js_url_player_response(&embed_html)?
+                js_url(&embed_html)?
             }
-            false => js_url_player_response(watch_html)?
+            false => js_url(watch_html)?
         };
 
         self
@@ -204,31 +253,6 @@ impl VideoFetcher {
 
     #[inline]
     #[cfg(feature = "fetch")]
-    fn check_availability(&self, watch_html: &str) -> crate::Result<()> {
-        match playability_status(&watch_html)? {
-            Some(PlayabilityStatus { status: Status::Ok, .. }) | None => {}
-            Some(playability_status) => {
-                let reason = match playability_status.messages.first() {
-                    Some(&reason) => reason,
-                    None => return Err(Error::VideoUnavailable)
-                };
-
-                match (playability_status.status, reason) {
-                    // maybe: make Error mimic Status and Reason better
-                    (Status::Unplayable, Reason::MembersOnly) => return Err(Error::MembersOnly),
-                    (Status::Unplayable, Reason::RecordingNotAvailable) => return Err(Error::RecordingUnavailable),
-                    (Status::LoginRequired, Reason::PrivateVideo) => return Err(Error::VideoPrivate),
-                    (Status::Ok, _) => unreachable!(),
-                    _ => return Err(Error::VideoUnavailable)
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    #[inline]
-    #[cfg(feature = "fetch")]
     async fn get_html(&self, url: &Url) -> crate::Result<String> {
         Ok(
             self.client
@@ -246,32 +270,6 @@ impl VideoFetcher {
 fn is_age_restricted(watch_html: &str) -> bool {
     static PATTERN: SyncLazy<Regex> = SyncLazy::new(|| Regex::new("og:restrictions:age").unwrap());
     PATTERN.is_match(watch_html)
-}
-
-#[inline]
-#[cfg(feature = "fetch")]
-fn playability_status(watch_html: &str) -> crate::Result<Option<PlayabilityStatus>> {
-    match initial_player_response(watch_html) {
-        Some(initial_player_response) => {
-            // todo: why do I have to deserialize it again?
-            let player_response = serde_json::from_str::<PlayerResponse>(initial_player_response)?;
-            Ok(Some(player_response.playability_status))
-        }
-        None => Ok(None)
-    }
-}
-
-#[inline]
-#[cfg(feature = "fetch")]
-fn initial_player_response(watch_html: &str) -> Option<&str> {
-    static PATTERN: SyncLazy<Regex> = SyncLazy::new(||
-        Regex::new(r#"window\[['"]ytInitialPlayerResponse['"]]\s*=\s*(\{[^\n]+});"#).unwrap()
-    );
-
-    match PATTERN.captures(watch_html) {
-        Some(c) => Some(c.get(1).unwrap().as_str()),
-        None => None
-    }
 }
 
 #[inline]
@@ -317,41 +315,14 @@ fn _video_info_url(params: &[(&str, &str)]) -> Url {
 
 #[inline]
 #[cfg(feature = "fetch")]
-fn js_url_player_response(html: &str) -> crate::Result<(Url, PlayerResponse)> {
-    let player_response = get_ytplayer_config(html)?;
-    let base_js = match player_response.assets {
-        Some(ref assets) => assets.js.as_str(),
-        None => get_ytplayer_js(html)?
+fn js_url(html: &str) -> crate::Result<(Url, Option<PlayerResponse>)> {
+    let player_response = get_ytplayer_config(html);
+    let base_js = match player_response {
+        Ok(PlayerResponse { assets: Some(ref assets), .. }) => assets.js.as_str(),
+        _ => get_ytplayer_js(html)?
     };
 
-
-    Ok(
-        Url::parse(&format!("https://youtube.com{}", base_js))
-            .map(|url| (url, player_response))?
-    )
-}
-
-/// Get the YouTube player base JavaScript path.
-/// 
-/// :param str html
-///     The html contents of the watch page.
-/// :rtype: str
-/// :returns:
-///     Path to YouTube's base.js file.
-#[inline]
-#[cfg(feature = "fetch")]
-fn get_ytplayer_js(html: &str) -> crate::Result<&str> {
-    static JS_URL_PATTERNS: SyncLazy<Regex> = SyncLazy::new(||
-        Regex::new(r"(/s/player/[\w\d]+/[\w\d_/.]+/base\.js)").unwrap()
-    );
-
-    match JS_URL_PATTERNS.captures(html) {
-        Some(function_match) => Ok(function_match.get(1).unwrap().as_str()),
-        None => Err(Error::UnexpectedResponse(format!(
-            "could not extract the ytplayer-javascript from: {}",
-            html
-        ).into()))
-    }
+    Ok((Url::parse(&format!("https://youtube.com{}", base_js))?, player_response.ok()))
 }
 
 /// Get the YouTube player configuration data from the watch html.
@@ -397,6 +368,21 @@ fn get_ytplayer_config(html: &str) -> crate::Result<PlayerResponse> {
 
 #[inline]
 #[cfg(feature = "fetch")]
+fn parse_for_object<'a>(html: &'a str, regex: &Regex) -> crate::Result<&'a str> {
+    let json_obj_start = regex
+        .find(html)
+        .ok_or(Error::Internal("The regex does not match"))?
+        .end();
+
+    Ok(json_object(
+        html
+            .get(json_obj_start..)
+            .ok_or(Error::Internal("The regex does not match meaningful"))?
+    )?)
+}
+
+#[inline]
+#[cfg(feature = "fetch")]
 fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
     #[derive(Deserialize)]
     struct Args { player_response: PlayerResponse }
@@ -412,19 +398,26 @@ fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
     )
 }
 
+/// Get the YouTube player base JavaScript path.
+/// 
+/// :param str html
+///     The html contents of the watch page.
+/// :rtype: str
+/// :returns:
+///     Path to YouTube's base.js file.
 #[inline]
 #[cfg(feature = "fetch")]
-fn parse_for_object<'a>(html: &'a str, regex: &Regex) -> crate::Result<&'a str> {
-    let json_obj_start = regex
-        .find(html)
-        .ok_or(Error::Internal("The regex does not match"))?
-        .end();
+fn get_ytplayer_js(html: &str) -> crate::Result<&str> {
+    static JS_URL_PATTERNS: SyncLazy<Regex> = SyncLazy::new(||
+        Regex::new(r"(/s/player/[\w\d]+/[\w\d_/.]+/base\.js)").unwrap()
+    );
 
-    Ok(json_object(
-        html
-            .get(json_obj_start..)
-            .ok_or(Error::Internal("The regex does not match meaningful"))?
-    )?)
+    match JS_URL_PATTERNS.captures(html) {
+        Some(function_match) => Ok(function_match.get(1).unwrap().as_str()),
+        None => Err(Error::UnexpectedResponse(format!(
+            "could not extract the ytplayer-javascript url from the watch html",
+        ).into()))
+    }
 }
 
 #[inline]

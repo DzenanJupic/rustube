@@ -140,7 +140,7 @@ fn get_transform_plan(js: &str) -> Result<Vec<String>> {
             .captures(js)
             .ok_or_else(|| Error::UnexpectedResponse(format!(
                 "could not extract the initial JavaScript function: {}",
-                js
+                pattern
             ).into()))?
             .get(1)
             .expect("the pattern must contain at least one capture group")
@@ -178,11 +178,10 @@ fn get_initial_function_name(js: &str) -> Result<&str> {
 }
 
 fn get_transform_map(js: &str, var: &str) -> Result<HashMap<String, TransformerFn>> {
-    // todo: why am I returning a Vec<String>, and not a Vec<&str>?
     let transform_object = get_transform_object(js, var)?;
     let mut mapper = HashMap::new();
 
-    for obj in transform_object {
+    for obj in transform_object.split(", ") {
         // AJ:function(a){a.reverse()} => AJ, function(a){a.reverse()}
         let (name, function) = obj
             .split_once(':')
@@ -254,22 +253,19 @@ fn map_functions(js_func: &str) -> Result<TransformerFn> {
         ).into()))
 }
 
-fn get_transform_object(js: &str, var: &str) -> Result<Vec<String>> {
+fn get_transform_object(js: &str, var: &str) -> Result<String> {
     Ok(
         Regex::new(&format!(r"var {}=\{{((?s).*?)}};", regex::escape(var)))
             .unwrap()
             .captures(js)
             .ok_or_else(|| Error::UnexpectedResponse(format!(
-                "could not extract the transform-object `{}` from: `{}`",
-                var, js
+                "could not extract the transform-object `{}`",
+                var
             ).into()))?
             .get(1)
             .expect("the regex pattern must contain at least one capture group")
             .as_str()
             .replace('\n', " ")
-            .split(", ")
-            .map(str::to_owned)
-            .collect()
     )
 }
 

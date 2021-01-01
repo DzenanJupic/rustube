@@ -1,7 +1,7 @@
 use chrono::{DateTime, TimeZone, Utc};
+use serde::{Deserializer, Serializer};
 use serde::de::{Error, Unexpected};
-use serde::Deserializer;
-use serde_with::DeserializeAs;
+use serde_with::{DeserializeAs, SerializeAs};
 use serde_with::json::JsonString;
 
 pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, <D as Deserializer<'de>>::Error> where
@@ -14,4 +14,11 @@ pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, <D as Deser
             Unexpected::Signed(micro_seconds),
             &"Expected a valid UNIX time stamp in microseconds",
         ))
+}
+
+pub fn serialize<S>(time: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer {
+    let micro_seconds: i64 = time.timestamp_millis() * 1000;
+    JsonString::serialize_as(&micro_seconds, serializer)
 }

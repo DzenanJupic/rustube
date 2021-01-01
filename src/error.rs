@@ -2,13 +2,15 @@ use std::borrow::Cow;
 
 use thiserror::Error;
 
+use crate::video_info::player_response::playability_status::PlayabilityStatus;
+
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("the provided raw Id does not match any known Id-pattern")]
     BadIdFormat,
     #[cfg(feature = "fetch")]
-    #[error("the video you requested is unavailable")]
-    VideoUnavailable,
+    #[error("the video you requested is unavailable:\n{0:?}")]
+    VideoUnavailable(PlayabilityStatus),
     #[cfg(feature = "download")]
     #[error("the video contains no streams")]
     NoStreams,
@@ -31,16 +33,6 @@ pub enum Error {
     UrlParseError(#[from] url::ParseError),
     #[error("the itag `{0}` returned by YouTube is not in the known collection of itags")]
     UnknownItag(u64),
-
-    #[cfg(feature = "fetch")]
-    #[error("the requested video is for members only")]
-    MembersOnly,
-    #[cfg(feature = "fetch")]
-    #[error("the requested video is private")]
-    RecordingUnavailable,
-    #[cfg(feature = "fetch")]
-    #[error("the requested video is private")]
-    VideoPrivate,
 
     #[error("{0}")]
     Custom(Cow<'static, str>),

@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use mime::Mime;
 use regex::Regex;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{Error, Unexpected};
 
 use crate::TryCollect;
@@ -51,4 +51,23 @@ pub fn deserialize<'de, D>(deserializer: D) -> Result<MimeType, <D as Deserializ
         mime,
         codecs,
     })
+}
+
+pub fn serialize<S>(mime_type: &MimeType, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer {
+    let mut s = format!(
+        r#"{}/{}; codecs=""#,
+        mime_type.mime.type_(),
+        mime_type.mime.subtype(),
+    );
+
+    for codec in mime_type.codecs.iter() {
+        s.push_str(codec);
+        s.push(',');
+        s.push(' ');
+    }
+
+    s.push('"');
+    s.serialize(serializer)
 }
