@@ -128,6 +128,11 @@ impl Video {
     }
 
     #[inline]
+    pub fn into_streams(self) -> Vec<Stream> {
+        self.streams
+    }
+
+    #[inline]
     pub fn video_details(&self) -> Arc<VideoDetails> {
         Arc::clone(&self.video_info.player_response.video_details)
     }
@@ -193,7 +198,7 @@ impl Video {
     }
 
     #[inline]
-    pub fn worst_abr(&self) -> Option<&Stream> {
+    pub fn worst_audio(&self) -> Option<&Stream> {
         self
             .streams
             .iter()

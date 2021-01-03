@@ -2,6 +2,7 @@ use std::ops::Range;
 #[cfg(feature = "download")]
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use chrono::{DateTime, Utc};
 #[cfg(feature = "download")]
@@ -22,8 +23,8 @@ use crate::video_info::player_response::streaming_data::{AudioQuality, ColorInfo
 // todo: there are different types of streams: video, audio, and video + audio
 // make Stream and RawFormat an enum, so there are less options in it
 
-#[derive(Clone, Debug, derivative::Derivative)]
-#[derivative(PartialEq)]
+#[derive(Clone, derivative::Derivative)]
+#[derivative(Debug, PartialEq)]
 pub struct Stream {
     pub mime: Mime,
     pub codecs: Vec<String>,
@@ -38,7 +39,8 @@ pub struct Stream {
     pub average_bitrate: Option<u64>,
     pub bitrate: Option<u64>,
     pub color_info: Option<ColorInfo>,
-    pub content_length: Option<u64>,
+    #[derivative(PartialEq(compare_with = "atomic_u64_is_eq"))]
+    content_length: Arc<AtomicU64>,
     pub fps: u8,
     pub height: Option<u64>,
     pub high_replication: Option<bool>,
@@ -54,7 +56,7 @@ pub struct Stream {
     pub signature_cipher: SignatureCipher,
     pub width: Option<u64>,
     pub video_details: Arc<VideoDetails>,
-    #[derivative(PartialEq = "ignore")]
+    #[derivative(Debug = "ignore", PartialEq = "ignore")]
     client: Client,
 }
 
@@ -76,7 +78,7 @@ impl Stream {
             average_bitrate: raw_format.average_bitrate,
             bitrate: raw_format.bitrate,
             color_info: raw_format.color_info,
-            content_length: raw_format.content_length,
+            content_length: Arc::new(AtomicU64::new(raw_format.content_length.unwrap_or(0))),
             fps: raw_format.fps,
             height: raw_format.height,
             high_replication: raw_format.high_replication,
@@ -250,9 +252,8 @@ impl Stream {
     #[inline]
     #[cfg(feature = "download")]
     pub async fn content_length(&self) -> Result<u64> {
-        if let Some(content_length) = self.content_length {
-            return Ok(content_length);
-        }
+        let cl = self.content_length.load(Ordering::SeqCst);
+        if cl != 0 { return Ok(cl); }
 
         self.client
             .head(self.signature_cipher.url.as_str())
@@ -260,6 +261,10 @@ impl Stream {
             .await?
             .error_for_status()?
             .content_length()
+            .map(|cl| {
+                self.content_length.store(cl, Ordering::SeqCst);
+                cl
+            })
             .ok_or(Error::UnexpectedResponse(
                 "the response did not contain a valid content-length field".into()
             ))
@@ -284,4 +289,8 @@ fn includes_audio_track(codecs: &Vec<String>, mime: &Mime) -> bool {
 #[inline]
 fn is_progressive(codecs: &Vec<String>) -> bool {
     !is_adaptive(codecs)
+}
+
+fn atomic_u64_is_eq(lhs: &Arc<AtomicU64>, rhs: &Arc<AtomicU64>) -> bool {
+    lhs.load(Ordering::Acquire) == rhs.load(Ordering::Acquire)
 }
