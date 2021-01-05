@@ -3,6 +3,9 @@ name = "rustube"
 version = "0.1.1-beta.0"
 authors = ["Dzenan Jupic <info@dzenanjupic.de>"]
 edition = "2018"
+description = "A YouTube video downloader, originally inspired by pytube, written in Rust."
+keywords = ["youtube", "download", "downloader", "video", "pytube"]
+license = "MIT OR Apache-2.0"
 
 # todo: add features to opt in/out of deserialization of some data (title, view_count, ...)
 
