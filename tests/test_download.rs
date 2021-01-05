@@ -10,7 +10,9 @@ const SIGNATURE_CIPHER: &[&str] = &[
 ];
 const PRE_SIGNED: &[&str] = &[
     "2lAe1cqCOXo",
-    "QRS8MkLhQmM"
+    "QRS8MkLhQmM",
+    "xQDsI2ptfgg",
+    "MAoOAa_izh0"
 ];
 const AGE_RESTRICTED: &[&str] = &[
     "VXDsM-1McE0",

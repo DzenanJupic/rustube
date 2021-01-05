@@ -134,6 +134,8 @@ pub enum Quality {
     Large,
     Hd720,
     Hd1080,
+    Hd1440,
+    Hd2160,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -148,10 +150,16 @@ pub enum QualityLabel {
     P480,
     #[serde(rename = "720p")]
     P720,
+    #[serde(rename = "720p50")]
+    P720Hz50,
     #[serde(rename = "720p60")]
     P720Hz60,
     #[serde(rename = "1080p")]
     P1080,
     #[serde(rename = "1080p60")]
-    P1080Hz60
+    P1080Hz60,
+    #[serde(rename = "1440p")]
+    P1440,
+    #[serde(rename = "2160p")]
+    P2160,
 }

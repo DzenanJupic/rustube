@@ -9,6 +9,7 @@ use chrono::{DateTime, Utc};
 use futures::Stream as FuturesStream;
 use mime::Mime;
 use reqwest::Client;
+use reqwest::header::CONTENT_LENGTH;
 #[cfg(feature = "download")]
 use tokio::{
     fs::File,
@@ -140,13 +141,22 @@ impl Stream {
                     "downloaded {} successfully to {:?}",
                     self.video_details.video_id, path.as_ref()
                 );
+                log::debug!("downloaded stream {:?}", &self);
                 Ok(())
             }
             Err(Error::Request(e)) if e.status().contains(&reqwest::StatusCode::NOT_FOUND) => {
                 log::error!("failed to download {}: {:?}", self.video_details.video_id, e);
+                log::info!("try to download {} using sequenced download", self.video_details.video_id);
                 // Some adaptive streams need to be requested with sequence numbers
                 self.download_full_seq(&mut file)
                     .await
+                    .map_err(|e| {
+                        log::error!(
+                            "failed to download {} using sequenced download: {:?}",
+                            self.video_details.video_id, e
+                        );
+                        e
+                    })
             }
             Err(e) => {
                 log::error!("failed to download {}: {:?}", self.video_details.video_id, e);
@@ -163,8 +173,11 @@ impl Stream {
         // To test it, I would need an url of a video, which does require sequenced downloading.
         log::warn!(
             "`download_full_seq` is not tested yet and probably broken!\n\
-            Please open a GitHub issue and paste the whole warning message plus the videos Id in:\n\
-            url: {}", self.signature_cipher.url.as_str()
+            Please open a GitHub issue and paste the whole warning message in:\n\
+            id: {}\n\
+            url: {}",
+            self.video_details.video_id,
+            self.signature_cipher.url.as_str()
         );
 
         let mut url = self.signature_cipher.url.clone();
@@ -260,12 +273,16 @@ impl Stream {
             .send()
             .await?
             .error_for_status()?
-            .content_length()
+            .headers()
+            .get(CONTENT_LENGTH)
+            .and_then(|cl| cl.to_str().ok())
+            .and_then(|cl| cl.parse::<u64>().ok())
             .map(|cl| {
+                log::trace!("content length of {:?} is {}", self, cl);
                 self.content_length.store(cl, Ordering::SeqCst);
                 cl
             })
-            .ok_or(Error::UnexpectedResponse(
+            .ok_or_else(|| Error::UnexpectedResponse(
                 "the response did not contain a valid content-length field".into()
             ))
     }

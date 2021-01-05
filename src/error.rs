@@ -2,15 +2,13 @@ use std::borrow::Cow;
 
 use thiserror::Error;
 
-use crate::video_info::player_response::playability_status::PlayabilityStatus;
-
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("the provided raw Id does not match any known Id-pattern")]
     BadIdFormat,
     #[cfg(feature = "fetch")]
     #[error("the video you requested is unavailable:\n{0:?}")]
-    VideoUnavailable(PlayabilityStatus),
+    VideoUnavailable(crate::video_info::player_response::playability_status::PlayabilityStatus),
     #[cfg(feature = "download")]
     #[error("the video contains no streams")]
     NoStreams,
