@@ -89,8 +89,8 @@ impl VideoDescrambler {
             apply_descrambler_adaptive_fmts(streaming_data, adaptive_fmts_raw)?;
         }
 
-        let mut streams = Vec::new();
         apply_signature(streaming_data, &self.js)?;
+        let mut streams = Vec::new();
         Self::initialize_streams(
             streaming_data,
             &mut streams,

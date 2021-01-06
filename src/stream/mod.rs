@@ -5,19 +5,18 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use chrono::{DateTime, Utc};
-#[cfg(feature = "download")]
-use futures::Stream as FuturesStream;
 use mime::Mime;
 use reqwest::Client;
-use reqwest::header::CONTENT_LENGTH;
 #[cfg(feature = "download")]
 use tokio::{
     fs::File,
     io::AsyncWriteExt,
-    stream::StreamExt,
 };
+#[cfg(feature = "download")]
+use tokio_stream::StreamExt;
 
 use crate::{Result, VideoDetails};
+#[cfg(feature = "download")]
 use crate::error::Error;
 use crate::video_info::player_response::streaming_data::{AudioQuality, ColorInfo, FormatType, ProjectionType, Quality, QualityLabel, RawFormat, SignatureCipher};
 
@@ -223,7 +222,7 @@ impl Stream {
 
     #[inline]
     #[cfg(feature = "download")]
-    async fn write_stream_to_file(mut stream: impl FuturesStream<Item=reqwest::Result<bytes::Bytes>> + Unpin, file: &mut File) -> Result<()> {
+    async fn write_stream_to_file(mut stream: impl tokio_stream::Stream<Item=reqwest::Result<bytes::Bytes>> + Unpin, file: &mut File) -> Result<()> {
         while let Some(chunk) = stream.next().await {
             file
                 .write_all(&chunk?)
@@ -274,7 +273,7 @@ impl Stream {
             .await?
             .error_for_status()?
             .headers()
-            .get(CONTENT_LENGTH)
+            .get(reqwest::header::CONTENT_LENGTH)
             .and_then(|cl| cl.to_str().ok())
             .and_then(|cl| cl.parse::<u64>().ok())
             .map(|cl| {

@@ -17,7 +17,7 @@ pub(crate) struct Cipher {
 }
 
 impl Cipher {
-    pub fn from_js(js: &str) -> Result<Self> {
+    pub(crate) fn from_js(js: &str) -> Result<Self> {
         let transform_plan = get_transform_plan(js)?;
 
         let (var, _): (&str, &str) = transform_plan
@@ -39,7 +39,7 @@ impl Cipher {
         })
     }
 
-    pub fn decrypt_signature(&self, signature: &mut String) -> Result<()> {
+    pub(crate) fn decrypt_signature(&self, signature: &mut String) -> Result<()> {
         // SAFETY:
         // At the end of the function, `signature` is checked, and, if it's not valid utf-8,
         // completely cleared. So in case, the transformations mess something up, signature

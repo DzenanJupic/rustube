@@ -19,6 +19,7 @@ rustube is still in development and will definitely see braking changes!
 - [ ] blocking API
 - [ ] full video info deserialization
 - [ ] feature based opt-in deserialization of video info
+- [ ] CLI
 - [x] testing suite
 - [ ] benchmarks
 - [ ] Python bindings

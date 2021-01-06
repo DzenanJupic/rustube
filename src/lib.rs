@@ -2,17 +2,31 @@
 async_closure, bool_to_option, cow_is_borrowed, once_cell, box_syntax,
 str_split_as_str, str_split_once, try_trait, option_result_contains
 )]
+#![warn(
+missing_debug_implementations,
+// missing_docs,
+rust_2018_idioms,
+unreachable_pub
+)]
+#![deny(broken_intra_doc_links)]
 
+#[doc(inline)]
 #[cfg(feature = "descramble")]
 pub use crate::descrambler::VideoDescrambler;
+#[doc(inline)]
 pub use crate::error::Error;
+#[doc(inline)]
 #[cfg(feature = "fetch")]
 pub use crate::fetcher::VideoFetcher;
+#[doc(inline)]
 pub use crate::id::{Id, IdBuf};
+#[doc(inline)]
 #[cfg(feature = "stream")]
 pub use crate::stream::Stream;
+#[doc(inline)]
 #[cfg(feature = "descramble")]
 pub use crate::video::Video;
+#[doc(inline)]
 #[cfg(feature = "fetch")]
 pub use crate::video_info::{
     player_response::{

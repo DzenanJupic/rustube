@@ -9,7 +9,7 @@ use serde::de::{Error, Unexpected};
 use crate::TryCollect;
 use crate::video_info::player_response::streaming_data::MimeType;
 
-pub fn deserialize<'de, D>(deserializer: D) -> Result<MimeType, <D as Deserializer<'de>>::Error> where
+pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<MimeType, <D as Deserializer<'de>>::Error> where
     D: Deserializer<'de> {
     static PATTERN: SyncLazy<Regex> = SyncLazy::new(||
         Regex::new(r#"(\w+/\w+);\scodecs="([a-zA-Z-0-9.,\s]*)""#).unwrap()
@@ -53,7 +53,7 @@ pub fn deserialize<'de, D>(deserializer: D) -> Result<MimeType, <D as Deserializ
     })
 }
 
-pub fn serialize<S>(mime_type: &MimeType, serializer: S) -> Result<S::Ok, S::Error>
+pub(crate) fn serialize<S>(mime_type: &MimeType, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer {
     let mut s = format!(

@@ -11,7 +11,7 @@ use crate::video_info::player_response::playability_status::PlayabilityStatus;
 /// A YouTubeFetcher, used to download all necessary data from YouTube, which then could be used
 /// to extract video-urls, or other video information.
 /// 
-/// You will probably rarely use this type directly, and use [`YouTube`] instead. 
+/// You will probably rarely use this type directly, and use [`Video`] instead. 
 /// 
 /// # Example
 /// ```no_run
@@ -164,7 +164,7 @@ impl VideoFetcher {
     }
 
     #[inline]
-    pub fn video_id(&self) -> Id {
+    pub fn video_id(&self) -> Id<'_> {
         self.video_id.as_borrowed()
     }
 
@@ -274,7 +274,7 @@ fn is_age_restricted(watch_html: &str) -> bool {
 
 #[inline]
 #[cfg(feature = "fetch")]
-fn video_info_url(video_id: Id, watch_url: &Url) -> Url {
+fn video_info_url(video_id: Id<'_>, watch_url: &Url) -> Url {
     let params: &[(&str, &str)] = &[
         ("video_id", video_id.as_str()),
         ("ps", "default"),
@@ -286,7 +286,7 @@ fn video_info_url(video_id: Id, watch_url: &Url) -> Url {
 
 #[inline]
 #[cfg(feature = "fetch")]
-fn video_info_url_age_restricted(video_id: Id, watch_url: &Url) -> Url {
+fn video_info_url_age_restricted(video_id: Id<'_>, watch_url: &Url) -> Url {
     static PATTERN: SyncLazy<Regex> = SyncLazy::new(|| Regex::new(r#""sts"\s*:\s*(\d+)"#).unwrap());
 
     let sts = match PATTERN.captures(watch_url.as_str()) {

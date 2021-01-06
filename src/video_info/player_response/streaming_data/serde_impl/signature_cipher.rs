@@ -4,12 +4,12 @@ use url::Url;
 
 use crate::video_info::player_response::streaming_data::SignatureCipher;
 
-pub fn deserialize<'de, D>(deserializer: D) -> serde::export::Result<SignatureCipher, D::Error>
+pub(crate) fn deserialize<'de, D>(deserializer: D) -> serde::export::Result<SignatureCipher, D::Error>
     where
         D: serde_with::serde::Deserializer<'de> {
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
-    pub struct EitherUrlOrCipher {
+    struct EitherUrlOrCipher {
         url: Option<Url>,
         #[serde(default)]
         #[serde(alias = "Cipher")]

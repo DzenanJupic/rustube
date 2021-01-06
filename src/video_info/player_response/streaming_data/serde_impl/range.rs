@@ -3,7 +3,7 @@ use serde_with::{DeserializeAs, json::JsonString, serde_as, SerializeAs};
 
 #[serde_as]
 #[derive(Deserialize, Serialize)]
-pub struct Range {
+pub(crate) struct Range {
     #[serde_as(as = "JsonString")]
     start: u64,
     #[serde_as(as = "JsonString")]

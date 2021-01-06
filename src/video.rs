@@ -138,7 +138,7 @@ impl Video {
     }
 
     #[inline]
-    pub fn id(&self) -> Id {
+    pub fn id(&self) -> Id<'_> {
         self.video_info.player_response.video_details.video_id.as_borrowed()
     }
 

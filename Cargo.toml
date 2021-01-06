@@ -1,38 +1,42 @@
 [package]
 name = "rustube"
-version = "0.1.1-beta.0"
+version = "0.2.0-beta.0"
 authors = ["Dzenan Jupic <info@dzenanjupic.de>"]
 edition = "2018"
 description = "A YouTube video downloader, originally inspired by pytube, written in Rust."
 keywords = ["youtube", "download", "downloader", "video", "pytube"]
 license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/DzenanJupic/rustube"
+documentation = "https://docs.rs/rustube"
+include = [
+    "src/**/*", "Cargo.toml",
+]
 
 # todo: add features to opt in/out of deserialization of some data (title, view_count, ...)
 
 [dependencies]
-# Currently uses bytes 0.5.0, since reqwest is currently depending on it 😢
-bytes = { version = "0.5.0", optional = true }
+bytes = { version = "1.0.0", optional = true }
 chrono = { version = "0.4.19", optional = true }
-derivative = "2.1.1"
+derivative = "2.1.3"
 derive_more = "0.99.11"
-futures = { version = "0.3.8", optional = true }
 log = "0.4.11"
 mime = { version = "0.3.16", optional = true }
 regex = { version = "1.4.2" }
-reqwest = { version = "0.10.10", optional = true }
+reqwest = { version = "0.11.0", optional = true }
 serde = { version = "1.0.118", default-features = false, optional = true }
 serde_qs = { version = "0.8.2", optional = true }
-serde_json = { version = "1.0.60", optional = true }
+serde_json = { version = "1.0.61", optional = true }
 serde_with = { version = "1.6.0", optional = true }
-thiserror = { version = "1.0.22" }
-# Currently uses tokio 2.2.24, since reqwest is currently depending on it 😢
-tokio = { version = "0.2.24", optional = true }
+thiserror = "1.0.23"
+tokio = { version = "1.0.1", optional = true }
+tokio-stream = { version = "0.1.1", optional = true }
 url = { version = "2.2.0" }
 
 [dev-dependencies]
-rand = "0.8.0"
-tokio = { version = "0.2.24", features = ["full"] }
-tokio-test = "0.2.1"
+rand = "0.8.1"
+tokio = { version = "1.0.1", features = ["full"] }
+tokio-test = "0.4.0"
 
 [features]
 # By default, the minimal features for downloading a video are enabled. If you compile with default-features = false,
@@ -40,7 +44,7 @@ tokio-test = "0.2.1"
 default = ["download", "serde"]
 
 download = [
-    "fetch", "tokio/fs", "tokio/io-util", "tokio/io-driver", "tokio/stream", "futures", "tokio/rt-core"
+    "fetch", "tokio/fs", "tokio/io-util", "tokio/parking_lot", "tokio-stream"
 ]
 # could be usefull if you don't want to download videos, but just want to get information like title, view-count, ...
 fetch = [
