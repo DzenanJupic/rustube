@@ -1,6 +1,6 @@
 [package]
 name = "rustube"
-version = "0.2.0-beta.0"
+version = "0.2.1-beta.0"
 authors = ["Dzenan Jupic <info@dzenanjupic.de>"]
 edition = "2018"
 description = "A YouTube video downloader, originally inspired by pytube, written in Rust."
@@ -22,13 +22,13 @@ derivative = "2.1.3"
 derive_more = "0.99.11"
 log = "0.4.11"
 mime = { version = "0.3.16", optional = true }
-regex = { version = "1.4.2" }
+regex = { version = "1.4.2", optional = true }
 reqwest = { version = "0.11.0", optional = true }
 serde = { version = "1.0.118", default-features = false, optional = true }
 serde_qs = { version = "0.8.2", optional = true }
 serde_json = { version = "1.0.61", optional = true }
 serde_with = { version = "1.6.0", optional = true }
-thiserror = "1.0.23"
+thiserror = { version = "1.0.23", optional = true }
 tokio = { version = "1.0.1", optional = true }
 tokio-stream = { version = "0.1.1", optional = true }
 url = { version = "2.2.0" }
@@ -41,7 +41,9 @@ tokio-test = "0.4.0"
 [features]
 # By default, the minimal features for downloading a video are enabled. If you compile with default-features = false,
 # you get only the Id type as well as the Error type. 
-default = ["download", "serde"]
+default = ["download", "std"]
+
+std = ["regex", "thiserror"]
 
 download = [
     "fetch", "tokio/fs", "tokio/io-util", "tokio/parking_lot", "tokio-stream"
@@ -50,8 +52,10 @@ download = [
 fetch = [
     "tokio/macros", "reqwest",
     "serde/default", "serde/rc", "serde_with/json", "serde_json", "serde_qs", "bytes", "chrono", "mime",
-    "descramble", "url/serde", "reqwest/cookies", "reqwest/stream", "reqwest/gzip"
+    "std", "descramble", "url/serde", "reqwest/cookies", "reqwest/stream", "reqwest/gzip"
 ]
 
 descramble = ["fetch", "stream"]
 stream = ["descramble"]
+
+blocking = ["tokio/rt", "std"]

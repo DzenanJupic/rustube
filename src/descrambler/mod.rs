@@ -5,31 +5,73 @@ use url::Url;
 
 use cipher::Cipher;
 
-use crate::{Stream, Video, VideoDetails, VideoInfo};
+use crate::{IdBuf, Stream, Video, VideoDetails, VideoInfo};
 use crate::error::Error;
 use crate::video_info::player_response::streaming_data::RawFormat;
 use crate::video_info::player_response::streaming_data::StreamingData;
 
 mod cipher;
 
-/// A YouTubeDescrambler, used to decrypt the data fetched by [`YouTubeFetcher`].
+/// A descrambler used to decrypt the data fetched by [`VideoFetcher`].
 ///
-/// You will probably rarely use this type directly, and use [`YouTube`] instead. 
-/// There's no public way of directly constructing a [`YouTubeDescrambler`]. The only way of getting
-/// one is by calling [`YouTubeFetcher::fetch`].
+/// You will probably rarely use this type directly, and use [`Video`] instead. 
+/// There's no public way of directly constructing a [`VideoDescrambler`]. The only way of getting
+/// one is by calling [`VideoFetcher::fetch`].
 ///
 /// # Example
 /// ```no_run
 ///# use rustube::{VideoFetcher, Id, VideoDescrambler};
 ///# use url::Url;
-/// const URL: &str = "https://youtube.com/watch?iv=5jlI4uzZGjU";
-/// let url = Url::parse(URL).unwrap();
+/// let url = Url::parse("https://youtube.com/watch?iv=5jlI4uzZGjU").unwrap();
 /// 
 ///# tokio_test::block_on(async {
 /// let fetcher: VideoFetcher =  VideoFetcher::from_url(&url).unwrap();
 /// let descrambler: VideoDescrambler = fetcher.fetch().await.unwrap();
 ///# }); 
 /// ``` 
+/// 
+/// # How it works
+/// (To fully understand `descramble`, you should first read how [`VideoFetcher::fetch`] works).
+/// 
+/// Descrambling, in this case, mainly refers to descrambling the [`SignatureCipher`]. After we 
+/// requested the [`VideoInfo`] in `fetch`, we are left with many [`RawFormat`]s. Those formats
+/// come in two flavours: pre-signed and encrypted formats. Pre-signed formats are actually a free lunch.
+/// Such formats already contain a valid video URL, which can be used to download the video. The
+/// encrypted once are a little bit more complicated.
+///
+/// These encrypted [`RawFormat`]s contain a [`SignatureCipher`] with a signature ['s`] in them, 
+/// which is basically just a long string. But this signature isn't correct yet! We first need to
+/// decrypt it. And that's where the `transform_plan` and the `transform_map` come into play.   
+/// 
+/// The `transform_plan` is just a list of JavaScript function calls, which take a string (or an 
+/// array) plus sometimes an integer as input. The called JavaScript functions then transform the 
+/// string in a certain way and return a new string. This new string then represents the new 
+/// signature.
+/// 
+/// But wait! How can we run JavaScript in Rust? And doesn't that come with a considerable overhead?
+/// It actually would come with a vast overhead! That's why we need the `transform_map`. The 
+/// `transform_map` is a `HashMap<String, TransformFn>`, which maps JavaScript function names to
+/// Rust functions.
+///
+/// To finally get the videos signature, the raw, initial signature must be transformed once 
+/// by every function in the `transform_plan`. To do so, we just iterate over it, extract the 
+/// function name and the optional integer, look up the corresponding `TransformFn` in
+/// `transform_map`, and pass the signature and the optional integer to it.
+/// 
+/// The last step `descramble` performs, is to take all `RawFormat's, which now contain the 
+/// correct signature, and convert them to `Stream`s. At the end of the day, `Stream's are just
+/// `RawFormat's with some extra information.
+/// 
+/// And that's it! We can now download a YouTube video like we would download any other
+/// video from the internet. The only difference is that the [`Stream`]s [`URL`]
+/// will eventually expire.
+/// 
+/// [`SignatureCipher`]: crate::video_info::player_response::streaming_data::SignatureCipher
+/// [`s`]: crate::video_info::player_response::streaming_data::SignatureCipher::s
+/// [`url`]: crate::video_info::player_response::streaming_data::SignatureCipher::url
+/// [`VideoFetcher::fetch`]: crate::fetcher::VideoFetcher::fetch
+/// [`VideoFetcher`]: crate::fetcher::VideoFetcher
+/// [`VideoFetcher::fetch`]: crate::fetcher::VideoFetcher::fetch
 #[derive(Clone, derive_more::Display, derivative::Derivative)]
 #[display(fmt = "VideoDescrambler({})", "video_info.player_response.video_details.video_id")]
 #[derivative(Debug, PartialEq, Eq)]
@@ -42,42 +84,11 @@ pub struct VideoDescrambler {
 
 impl VideoDescrambler {
     /// Descrambles the data fetched by YouTubeFetcher.
-    /// For more information have a look at the [`YouTube`] documentation.
+    /// For more information have a look at the [`Video`] documentation.
     ///
-    /// # Errors
-    /// This method will fail, when it's not able do extract all necessary information out of the
-    /// 
-    /// # How it works
-    /// Descrambling, in this case, mainly refers to descrambling the 
-    /// [`player_response::streaming_data::SignatureCipher`]. YouTube does, unfortunately, not 
-    /// directly provide any urls for their videos. In fact, as long as nobody requests a video, 
-    /// the video has no url, and therefore cannot be accessed or downloaded via the internet.
-    /// So then, how can we download it?
-    /// 
-    /// The first step, requesting the video, already happened in [`YouTubeFetcher::fetch`] (To fully
-    /// understand `descramble`, you should first read how fetching works).
-    /// The next step is to descramble (or decrypt) the signature, stored in `CipherSignature.s`,
-    /// of each individual `RawFormat`. To to so, there's the so called `transform_plan`, and the 
-    /// so called `transform_map`. 
-    /// 
-    /// The `transform_plan` is just a list of javascript function, which take a string (or an array) 
-    /// plus an optional integer as input, transform the string in a certain way, and return the new
-    /// string. This new string then represents the new signature.
-    /// 
-    /// But wait! How can we run JavaScript in Rust? And doesn't that come with a huge overhead?
-    /// It actually would come with a huge overhead! That's why we need the `transform_map`. The 
-    /// `transform_map` is a `HashMap<String, TransformFn>`, which maps JavaScript function names to
-    /// Rust functions. For now, you can think of `TransformFn` just being a function pointer. 
-    /// There's actually more to it, but that's not important for downloading the video.
-    ///
-    /// To finally get the videos signature, the raw, initial signature has to be transformed once 
-    /// by every function in the `transform_plan`. To do so, we just iterate over it, look up the
-    /// corresponding `TransformFn` in `transform_map`, and pass the signature as well as the 
-    /// optional integer. to it.
-    /// 
-    /// The last step `descramble` performs, is to take all `RawFormat`s, which now contain the 
-    /// correct signature, and convert them to `Stream`s. At the end of the day, `Stream`s are just
-    /// `RawFormat`s with some extra information.
+    /// ### Errors
+    /// - When the streaming data of the video is incomplete.
+    /// - When descrambling the videos signatures fails.
     pub fn descramble(mut self) -> crate::Result<Video> {
         let streaming_data = self.video_info.player_response.streaming_data
             .as_mut()
@@ -86,6 +97,7 @@ impl VideoDescrambler {
             ))?;
 
         if let Some(ref adaptive_fmts_raw) = self.video_info.adaptive_fmts_raw {
+            // fixme: this should probably be part of fetch.
             apply_descrambler_adaptive_fmts(streaming_data, adaptive_fmts_raw)?;
         }
 
@@ -96,7 +108,7 @@ impl VideoDescrambler {
             &mut streams,
             &self.client,
             &self.video_info.player_response.video_details,
-        )?;
+        );
 
         Ok(Video {
             video_info: self.video_info,
@@ -104,31 +116,50 @@ impl VideoDescrambler {
         })
     }
 
+    /// The [`VideoInfo`] of the video.
     #[inline]
     pub fn video_info(&self) -> &VideoInfo {
         &self.video_info
     }
 
+    /// The [`VideoDetails`] of the video.
+    #[inline]
+    pub fn video_details(&self) -> &VideoDetails {
+        &self.video_info.player_response.video_details
+    }
+
+    /// The [`Id`](crate::Id) of the video.
+    #[inline]
+    pub fn video_id(&self) -> &IdBuf {
+        &self.video_details().video_id
+    }
+
+    /// The title of the video.
+    #[inline]
+    pub fn video_title(&self) -> &String {
+        &self.video_details().title
+    }
+
+    /// Consumes all [`RawFormat`]s and constructs [`Stream`]s from them. 
     #[inline]
     fn initialize_streams(
         streaming_data: &mut StreamingData,
         streams: &mut Vec<Stream>,
         client: &Client,
         video_details: &Arc<VideoDetails>,
-    ) -> crate::Result<()> {
+    ) {
         for raw_format in streaming_data.formats.drain(..).chain(streaming_data.adaptive_formats.drain(..)) {
             let stream = Stream::from_raw_format(
                 raw_format,
                 client.clone(),
                 Arc::clone(video_details),
-            )?;
+            );
             streams.push(stream);
         }
-
-        Ok(())
     }
 }
 
+/// Extracts the [`RawFormat`]s from `adaptive_fmts_raw`. (This may be a legacy thing) 
 #[inline]
 fn apply_descrambler_adaptive_fmts(streaming_data: &mut StreamingData, adaptive_fmts_raw: &str) -> crate::Result<()> {
     for raw_fmt in adaptive_fmts_raw.split(',') {
@@ -147,6 +178,7 @@ fn apply_descrambler_adaptive_fmts(streaming_data: &mut StreamingData, adaptive_
     Ok(())
 }
 
+/// Descrambles the signature of a video.
 #[inline]
 fn apply_signature(streaming_data: &mut StreamingData, js: &str) -> crate::Result<()> {
     let cipher = Cipher::from_js(js)?;
@@ -170,6 +202,7 @@ fn apply_signature(streaming_data: &mut StreamingData, js: &str) -> crate::Resul
     Ok(())
 }
 
+/// Checks weather or not the video url is already signed.
 #[inline]
 fn url_already_contains_signature(url: &Url) -> bool {
     let url = url.as_str();

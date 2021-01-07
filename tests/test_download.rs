@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use rand::Rng;
 
-use rustube::{Error, Id, IdBuf, Video, VideoFetcher};
+use rustube::{Error, Id, IdBuf, Video, VideoFetcher, block};
 use rustube::video_info::player_response::playability_status::PlayabilityStatus;
 
 const SIGNATURE_CIPHER: &[&str] = &[
@@ -160,6 +160,24 @@ async fn download_age_restricted_to_dir() {
         .unwrap()
         .download_to_dir(DOWNLOAD_DIR)
         .await
+        .unwrap();
+
+    correct_path!(path, expected_path);
+}
+
+#[test]
+#[ignore]
+fn blocking_download_to_dir() {
+    use rustube::blocking::Video;
+
+    let id = random_id(AGE_RESTRICTED);
+    let expected_path = block!(download_path_from_id(id.as_borrowed()));
+
+    let path = dbg!(Video::from_id(id)
+        .unwrap())
+        .worst_quality()
+        .unwrap()
+        .blocking_download_to_dir(DOWNLOAD_DIR)
         .unwrap();
 
     correct_path!(path, expected_path);

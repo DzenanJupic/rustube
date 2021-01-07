@@ -1,3 +1,5 @@
+//! All the types, that hold video information.
+
 use serde::{Deserialize, Serialize};
 use serde_with::{json::JsonString, serde_as};
 

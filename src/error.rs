@@ -1,8 +1,7 @@
-use std::borrow::Cow;
+use alloc::borrow::Cow;
 
-use thiserror::Error;
-
-#[derive(Error, Debug)]
+/// Errors that can occur during the id extraction or the video download process.   
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("the provided raw Id does not match any known Id-pattern")]
     BadIdFormat,

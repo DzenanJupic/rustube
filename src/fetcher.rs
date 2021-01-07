@@ -8,20 +8,60 @@ use url::Url;
 use crate::{Error, Id, IdBuf, PlayerResponse, VideoDescrambler, VideoInfo};
 use crate::video_info::player_response::playability_status::PlayabilityStatus;
 
-/// A YouTubeFetcher, used to download all necessary data from YouTube, which then could be used
-/// to extract video-urls, or other video information.
-/// 
-/// You will probably rarely use this type directly, and use [`Video`] instead. 
-/// 
+/// A fetcher used to download all necessary data from YouTube, which then could be used
+/// to extract video-URLs.
+///   
+/// You will probably rarely use this type directly, and use [`Video`] instead.
+///  
 /// # Example
-/// ```no_run
+///```no_run
 ///# use rustube::{Id, VideoFetcher};
 ///# use url::Url;
 /// const URL: &str = "https://youtube.com/watch?iv=5jlI4uzZGjU";
 /// let url = Url::parse(URL).unwrap();
-/// 
+///  
 /// let fetcher: VideoFetcher =  VideoFetcher::from_url(&url).unwrap();
 /// ```
+/// # How it works 
+/// So you want to download a YouTube video? You probably already noticed, that YouTube makes
+/// this quite hard, and does not just provide static URLs for their videos. In fact, there's
+/// not the one URL for each video. When currently nobody is watching a video, there's actually
+/// no URL for this video at all!
+/// 
+/// So we need to somehow show YouTube that we want to watch the video, so the YouTube server
+/// generates a URL for us. To do this, we do what every 'normal' human being would do: we
+/// request the webpage of the video. To do so, we need nothing more, then the video's id (If you 
+/// want to learn more about the id, you can have a look at[`Id`]. But you don't need to know 
+/// anything about it for now.). Let's say, for example, take the id '5jlI4uzZGjU'. With this id, we
+/// can then visit <https://youtube.com/watch?v=5jlI4uzZGjU>, the site, you as a human would visit
+/// when just watching the video.
+/// 
+/// The next step is to extract as much information from <https://youtube.com/watch?v=5jlI4uzZGjU>
+/// as possible. This is, i.e., information like "is the video age-restricted?", or "can we watch
+/// the video without being a member of that channel?".
+/// 
+/// But there's information, which is a lot more important then knowing if we are old enough to watch the video: The [`VideoInfo`], the [`PlayerResponse`] and the JavaScript of the 
+/// page. [`VideoInfo`] and [`PlayerResponse`] are JSON objects, which contain the most 
+/// important information about the video. If you are feeling brave, feel free to have a look
+/// at the definitions of those two types, their subtypes, and all the information they contain
+/// (It's huge!). The JavaScript is not processed by `fetch`, but is used later by 
+/// [`VideoDescrambler::descramble`] to generate the `transform_plan` and the `transform_map` 
+/// (you will learn about both when it comes to descrambling).
+/// 
+/// To get the videos [`VideoInfo`], we actually need to request one more page. One you probably 
+/// don't frequently visit as a 'normal' human being. Because we, programmers, are really
+/// creative when it comes to naming stuff, a video's [`VideoInfo`] can be requested at 
+/// <https://youtube.com/get_video_info>. Btw.: If you want to see how the computer feels, when 
+/// we ask him to deserialize the response into the [`VideoInfo`] struct, you can have a look
+/// at <https://www.youtube.com/get_video_info?video_id=5jlI4uzZGjU&eurl=https%3A%2F%2Fyoutube.com%2Fwatch%3Fiv%3D5jlI4uzZGjU&sts=>
+/// (most browsers, will download a text file!). This is the actual [`VideoInfo`] for the
+/// video with the id '5jlI4uzZGjU'. 
+/// 
+/// That's it! Of course, we cannot download the video yet. But that's not the task of `fetch`. 
+/// `fetch` is just responsible for requesting all the essential information. To learn how the 
+/// journey continues, have a look at [`VideoDescrambler::descramble`].  
+/// 
+/// [`Video`]: crate::video::Video
 #[derive(Clone, derive_more::Display, derivative::Derivative)]
 #[display(fmt = "VideoFetcher({})", video_id)]
 #[derivative(Debug, PartialEq, Eq)]
@@ -33,22 +73,21 @@ pub struct VideoFetcher {
 }
 
 impl VideoFetcher {
-    /// Creates a YouTubeFetcher from an `Url`.
-    /// For more information have a look at the `YouTube` documentation.
-    /// # Errors
-    /// This method fails if no valid video id can be extracted from the url or when `reqwest` fails
-    /// to initialize an new `Client`.
+    /// Constructs a [`VideoFetcher`] from an `Url`.
+    /// ### Errors
+    /// - When [`Id::from_raw`] fails to extracted the videos id from the url.
+    /// - When [`reqwest`] fails to initialize an new [`Client`].
     #[inline]
+    #[cfg(feature = "regex")]
     pub fn from_url(url: &Url) -> crate::Result<Self> {
         let id = Id::from_raw(url.as_str())?
             .into_owned();
         Self::from_id(id)
     }
 
-    /// Creates a YouTubeFetcher from an `Id`.
-    /// For more information have a look at the `YouTube` documentation. 
-    /// # Errors
-    /// This method fails if `reqwest` fails to initialize an new `Client`.
+    /// Constructs a [`VideoFetcher`] from an `Id`.
+    /// ### Errors
+    /// When [`reqwest`] fails to initialize an new [`Client`].
     #[inline]
     pub fn from_id(video_id: IdBuf) -> crate::Result<Self> {
         let client = Client::builder()
@@ -57,9 +96,8 @@ impl VideoFetcher {
         Ok(Self::from_id_with_client(video_id, client))
     }
 
-    /// Creates a YouTubeFetcher from an `Id` and an existing `Client`.
-    /// There are no special constrains, what the `Client` has to look like.
-    /// For more information have a look at the `YouTube` documentation.
+    /// Constructs a [`VideoFetcher`] from an [`Id`] and an existing [`Client`].
+    /// There are no special constrains, what the [`Client`] has to look like.
     #[inline]
     pub fn from_id_with_client(video_id: IdBuf, client: Client) -> Self {
         Self {
@@ -69,72 +107,30 @@ impl VideoFetcher {
         }
     }
 
-    /// Fetches all data necessary to extract important video information.
-    /// For more information have a look at the `YouTube` documentation. 
+    /// Fetches all available video data and deserializes it into [`VideoInfo`].
     /// 
-    /// # Errors
-    /// This method fails, when the video is private, only for members, or otherwise not accessible,
-    /// when it cannot request all necessary video resources, or when deserializing the raw response
-    /// string into the corresponding Rust types fails.
+    /// ### Errors
+    /// - When the video is private, only for members, or otherwise not accessible.
+    /// - When requests to some video resources fail.
+    /// - When deserializing the raw response fails.
     /// 
     /// When having a good internet connection, only errors due to inaccessible videos should occur.
     /// Other errors usually mean, that YouTube changed their API, and `rustube` did not adapt to 
     /// this change yet. Please feel free to open a GitHub issue if this is the case.
-    /// 
-    /// # How it works
-    /// So you want to download a YouTube video? You probably already noticed, that YouTube makes 
-    /// this quite hard, and does not just provide static urls for their videos. In fact, there's
-    /// not the one url for each video. When currently nobody is watching a video, there's actually
-    /// no url for this video at all!
-    ///
-    /// So we need to somehow show YouTube that we want to watch the video, so the YouTube server
-    /// generates a url for us. To do this, we do what every 'normal' human being would do: we
-    /// request the webpage of the video. To do so, we need nothing more, then the videos id (If you
-    /// want to learn more about the id, you can have a look at the [`id`] module. But you don't
-    /// need to know anything about it for now.). Let's say for example '5jlI4uzZGjU'. With this id,
-    /// we can then visit <https://youtube.com/watch?v=5jlI4uzZGjU>, the site, you as a human, would
-    /// go to when just watching the video.
-    ///
-    /// The next step is to extract as much information from <https://youtube.com/watch?v=5jlI4uzZGjU>
-    /// as possible. This is, i.e., information like "is the video age restricted?", or "can we watch
-    /// the video without being a member of that channel?".
-    ///
-    /// But there's information, which is a lot more important then knowing if we are old enough to
-    /// to watch the video: The [`VideoInfo`], the [`PlayerResponse`], and the JavaScript of the 
-    /// page. [`VideoInfo`] and [`PlayerResponse`] are JSON objects, which contain the most 
-    /// important Information about the video. If you are feeling brave, feel free to have a look
-    /// at the definitions of those two types, their subtypes, and all the information they contain
-    /// (It's huge!). The JavaScript is not processed by fetch, but is used later by `descramble` to
-    /// generate the `transform_plan` and the `transform_map` (you will learn about  both when it
-    /// comes to descrambling).
-    /// 
-    /// To get the videos [`VideoInfo`], we actually need to request one more page, which you 
-    /// usually probably don't visit as a 'normal' human being. Because we, programmers, are really
-    /// creative when it comes to naming stuff, a videos [`VideoInfo`] can be requested at 
-    /// <https://youtube.com/get_video_info>. Btw.: If you want to see how the computer feels, when 
-    /// we ask him to deserialize the response into the [`VideoInfo`] struct, you can have a look
-    /// at <https://www.youtube.com/get_video_info?video_id=5jlI4uzZGjU&eurl=https%3A%2F%2Fyoutube.com%2Fwatch%3Fiv%3D5jlI4uzZGjU&sts=>
-    /// (most browsers, will download a text file!). This is the actual [`VideoInfo`] for the
-    /// video with the id '5jlI4uzZGjU'. 
-    /// 
-    /// That's it! Of curse we are not even close to be able to download the video, yet. But that's
-    /// not the task of `fetch`. `fetch` is just responsible for requesting all the important 
-    /// information. To learn, how the journey continues, have a look at 
-    /// [`YouTubeDescrambler::descramble`].  
     #[cfg(feature = "fetch")]
     pub async fn fetch(self) -> crate::Result<VideoDescrambler> {
-        // fixme: It seems like watch_html also contains a PlayerResponse in all cases. VideoInfo
-        // only contains the  extra field `adaptive_fmts_raw`. It may be possible to just use the 
-        // watch_html PlayerResponse. This would eliminate one request and therefore improve 
-        // performance.
-        //
-        // To do so, two things must happen:
-        //      1. I need a video, which has `adaptive_fmts_raw` set, so I can examine
-        //         both the watch_html as well as the video_info. (adaptive_fmts_raw even may be 
-        //         a legacy thing, which isn't used by YouTube anymore).
-        //      2. I need to have some kind of evidence, that watch_html comes with the 
-        //         PlayerResponse in most cases. (It would also be possible to just check, weather
-        //         or not watch_html contains PlayerResponse, and otherwise request video_info). 
+        // fixme: 
+        //  It seems like watch_html also contains a PlayerResponse in all cases. VideoInfo
+        //  only contains the  extra field `adaptive_fmts_raw`. It may be possible to just use the 
+        //  watch_html PlayerResponse. This would eliminate one request and therefore improve 
+        //  performance.
+        //  To do so, two things must happen:
+        //       1. I need a video, which has `adaptive_fmts_raw` set, so I can examine
+        //          both the watch_html as well as the video_info. (adaptive_fmts_raw even may be 
+        //          a legacy thing, which isn't used by YouTube anymore).
+        //       2. I need to have some kind of evidence, that watch_html comes with the 
+        //          PlayerResponse in most cases. (It would also be possible to just check, weather
+        //          or not watch_html contains PlayerResponse, and otherwise request video_info). 
 
         let watch_html = self.get_html(&self.watch_url).await?;
         let is_age_restricted = is_age_restricted(&watch_html);
@@ -163,16 +159,19 @@ impl VideoFetcher {
         })
     }
 
+    /// The id of the video.
     #[inline]
     pub fn video_id(&self) -> Id<'_> {
         self.video_id.as_borrowed()
     }
 
+    /// The url, under witch the video can be watched.
     #[inline]
     pub fn watch_url(&self) -> &Url {
         &self.watch_url
     }
 
+    /// Checks, weather or not the video is accessible for normal users. 
     fn check_availability(watch_html: &str, is_age_restricted: bool) -> crate::Result<()> {
         static PLAYABILITY_STATUS: SyncLazy<Regex> = SyncLazy::new(||
             Regex::new(r#"["']?playabilityStatus["']?\s*[:=]\s*"#).unwrap()
@@ -202,11 +201,13 @@ impl VideoFetcher {
         }
     }
 
+    /// Extracts or requests the JavaScript used to descramble the video signature.
     #[inline]
     #[cfg(feature = "fetch")]
-    async fn get_js(&self,
-                    is_age_restricted: bool,
-                    watch_html: &str,
+    async fn get_js(
+        &self,
+        is_age_restricted: bool,
+        watch_html: &str,
     ) -> crate::Result<(String, Option<PlayerResponse>)> {
         let (js_url, player_response) = match is_age_restricted {
             true => {
@@ -223,6 +224,7 @@ impl VideoFetcher {
             .map(|html| (html, player_response))
     }
 
+    /// Requests the [`VideoInfo`] of a video 
     #[inline]
     #[cfg(feature = "fetch")]
     async fn get_video_info(&self, is_age_restricted: bool) -> crate::Result<VideoInfo> {
@@ -235,6 +237,7 @@ impl VideoFetcher {
         Ok(video_info)
     }
 
+    /// Generates the url under which the [`VideoInfo`] can be requested.
     #[inline]
     #[cfg(feature = "fetch")]
     fn get_video_info_url(&self, is_age_restricted: bool) -> Url {
@@ -251,6 +254,7 @@ impl VideoFetcher {
         }
     }
 
+    /// Requests a website.
     #[inline]
     #[cfg(feature = "fetch")]
     async fn get_html(&self, url: &Url) -> crate::Result<String> {
@@ -265,6 +269,7 @@ impl VideoFetcher {
     }
 }
 
+/// Extracts weather or not a particular video is age restricted. 
 #[inline]
 #[cfg(feature = "fetch")]
 fn is_age_restricted(watch_html: &str) -> bool {
@@ -272,6 +277,7 @@ fn is_age_restricted(watch_html: &str) -> bool {
     PATTERN.is_match(watch_html)
 }
 
+/// Generates the url under which the [`VideoInfo`] of a video can be requested. 
 #[inline]
 #[cfg(feature = "fetch")]
 fn video_info_url(video_id: Id<'_>, watch_url: &Url) -> Url {
@@ -284,6 +290,7 @@ fn video_info_url(video_id: Id<'_>, watch_url: &Url) -> Url {
     _video_info_url(params)
 }
 
+/// Generates the url under which the [`VideoInfo`] of an age restricted video can be requested.
 #[inline]
 #[cfg(feature = "fetch")]
 fn video_info_url_age_restricted(video_id: Id<'_>, watch_url: &Url) -> Url {
@@ -303,7 +310,7 @@ fn video_info_url_age_restricted(video_id: Id<'_>, watch_url: &Url) -> Url {
     _video_info_url(params)
 }
 
-
+/// Helper for assembling th video info url.
 #[inline]
 #[cfg(feature = "fetch")]
 fn _video_info_url(params: &[(&str, &str)]) -> Url {
@@ -313,6 +320,7 @@ fn _video_info_url(params: &[(&str, &str)]) -> Url {
     ).unwrap()
 }
 
+/// Generates the url under which the JavaScript used for descrambling can be requested.
 #[inline]
 #[cfg(feature = "fetch")]
 fn js_url(html: &str) -> crate::Result<(Url, Option<PlayerResponse>)> {
@@ -325,17 +333,7 @@ fn js_url(html: &str) -> crate::Result<(Url, Option<PlayerResponse>)> {
     Ok((Url::parse(&format!("https://youtube.com{}", base_js))?, player_response.ok()))
 }
 
-/// Get the YouTube player configuration data from the watch html.
-/// 
-/// Extract the ``ytplayer_config``, which is json data embedded within the
-/// watch html and serves as the primary source of obtaining the stream
-/// manifest data.
-/// 
-/// :param str html:
-///     The html contents of the watch page.
-/// :rtype: str
-/// :returns:
-///     Substring of the html containing the encoded manifest data.
+/// Extracts the [`PlayerResponse`] from the watch html.
 #[inline]
 #[cfg(feature = "fetch")]
 fn get_ytplayer_config(html: &str) -> crate::Result<PlayerResponse> {
@@ -366,6 +364,7 @@ fn get_ytplayer_config(html: &str) -> crate::Result<PlayerResponse> {
         ))
 }
 
+/// Extracts a json object from a string starting after a pattern.
 #[inline]
 #[cfg(feature = "fetch")]
 fn parse_for_object<'a>(html: &'a str, regex: &Regex) -> crate::Result<&'a str> {
@@ -381,6 +380,7 @@ fn parse_for_object<'a>(html: &'a str, regex: &Regex) -> crate::Result<&'a str> 
     )?)
 }
 
+/// Deserializes the [`PalyerResponse`] which can be found in the watch html.
 #[inline]
 #[cfg(feature = "fetch")]
 fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
@@ -398,13 +398,7 @@ fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
     )
 }
 
-/// Get the YouTube player base JavaScript path.
-/// 
-/// :param str html
-///     The html contents of the watch page.
-/// :rtype: str
-/// :returns:
-///     Path to YouTube's base.js file.
+/// Extracts the JavaScript used for descrambling from the watch html.
 #[inline]
 #[cfg(feature = "fetch")]
 fn get_ytplayer_js(html: &str) -> crate::Result<&str> {
@@ -420,6 +414,7 @@ fn get_ytplayer_js(html: &str) -> crate::Result<&str> {
     }
 }
 
+/// Extracts a complete json object from a string. 
 #[inline]
 #[cfg(feature = "fetch")]
 fn json_object(mut html: &str) -> crate::Result<&str> {
@@ -437,7 +432,7 @@ fn json_object(mut html: &str) -> crate::Result<&str> {
         .enumerate()
         .skip(1)
         .find(
-            |(_i, &curr_char)| find_json_object(curr_char, &mut skip, &mut stack)
+            |(_i, &curr_char)| is_json_object_end(curr_char, &mut skip, &mut stack)
         )
         .ok_or(Error::Internal("could not find a closing delimiter"))?;
 
@@ -448,9 +443,10 @@ fn json_object(mut html: &str) -> crate::Result<&str> {
     Ok(full_obj)
 }
 
+/// Checks if a char represents the end of a json object.
 #[inline]
 #[cfg(feature = "fetch")]
-fn find_json_object(curr_char: u8, skip: &mut bool, stack: &mut Vec<u8>) -> bool {
+fn is_json_object_end(curr_char: u8, skip: &mut bool, stack: &mut Vec<u8>) -> bool {
     if *skip {
         *skip = false;
         return false;
@@ -458,7 +454,7 @@ fn find_json_object(curr_char: u8, skip: &mut bool, stack: &mut Vec<u8>) -> bool
 
     let context = *stack
         .last()
-        .expect("stack must start with len == 1, and find mut end, when len == 0");
+        .expect("stack must start with len == 1, and search must end, when len == 0");
 
     match curr_char {
         b'}' if context == b'{' => { stack.pop(); }

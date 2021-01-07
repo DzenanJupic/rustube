@@ -1,7 +1,8 @@
-use std::borrow::Cow;
-use std::cmp::Ordering;
-use std::lazy::SyncLazy;
+use alloc::borrow::{Cow, ToOwned};
+use alloc::string::String;
+use core::cmp::Ordering;
 
+#[cfg(feature = "regex")]
 use regex::Regex;
 #[cfg(feature = "serde")]
 use serde::{
@@ -10,36 +11,46 @@ use serde::{
 };
 use url::Url;
 
+#[cfg(feature = "std")]
 use crate::{Error, Result};
 
+/// Alias for an owned [`Id`].
 pub type IdBuf = Id<'static>;
 
 // todo: check patterns with regex debugger
-/// A list of possible YouTube video identifiers.
+/// A list of possible YouTube video identifier patterns.
 /// 
 /// ## Guarantees:
 /// - each pattern contains an `id` group that will always capture when the pattern matches
 /// - The captured id will always match following regex (defined in [ID_PATTERN]): `^[a-zA-Z0-9_-]{11}$`
-pub static ID_PATTERNS: [&SyncLazy<Regex>; 4] = [
+#[cfg(feature = "regex")]
+pub static ID_PATTERNS: [&std::lazy::SyncLazy<Regex>; 4] = [
     &WATCH_URL_PATTERN,
     &EMBED_URL_PATTERN,
     &SHARE_URL_PATTERN,
     &ID_PATTERN
 ];
-
-pub static WATCH_URL_PATTERN: SyncLazy<Regex> = SyncLazy::new(||
+/// A pattern matching the watch url of a video (i.e. `youtube.com/watch?v=<ID>`).
+#[cfg(feature = "regex")]
+pub static WATCH_URL_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
     // watch url    (i.e. https://youtube.com/watch?v=video_id)
     Regex::new(r"^(https?://)?(www\.)?youtube.\w\w\w?/watch\?v=(?P<id>[a-zA-Z0-9_-]{11})(&.*)?$").unwrap()
 );
-pub static EMBED_URL_PATTERN: SyncLazy<Regex> = SyncLazy::new(||
+/// A pattern matching the embedded url of a video (i.e. `youtube.com/embed/<ID>`).
+#[cfg(feature = "regex")]
+pub static EMBED_URL_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
     // embed url    (i.e. https://youtube.com/embed/video_id)
     Regex::new(r"^(https?://)?(www\.)?youtube.\w\w\w?/embed/(?P<id>[a-zA-Z0-9_-]{11})\\?(\?.*)?$").unwrap()
 );
-pub static SHARE_URL_PATTERN: SyncLazy<Regex> = SyncLazy::new(||
+/// A pattern matching the embedded url of a video (i.e. `youtu.be/<ID>`).
+#[cfg(feature = "regex")]
+pub static SHARE_URL_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
     // share url    (i.e. https://youtu.be/video_id)
     Regex::new(r"^(https?://)?youtu\.be/(?P<id>[a-zA-Z0-9_-]{11})$").unwrap()
 );
-pub static ID_PATTERN: SyncLazy<Regex> = SyncLazy::new(||
+/// A pattern matching the id of a video (`^[a-zA-Z0-9_-]{11}$`).
+#[cfg(feature = "regex")]
+pub static ID_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
     // id          (i.e. video_id)
     Regex::new("^(?P<id>[a-zA-Z0-9_-]{11})$").unwrap()
 );
@@ -72,6 +83,7 @@ pub static ID_PATTERN: SyncLazy<Regex> = SyncLazy::new(||
 pub struct Id<'a>(Cow<'a, str>);
 
 impl<'a> Id<'a> {
+    #[cfg(all(feature = "regex", feature = "std"))]
     pub fn from_raw(raw: &'a str) -> Result<Self> {
         ID_PATTERNS
             .iter()
@@ -88,10 +100,38 @@ impl<'a> Id<'a> {
     }
 
     #[inline]
+    #[cfg(all(feature = "regex", feature = "std"))]
     pub fn from_str(id: &'a str) -> Result<Self> {
         match ID_PATTERN.is_match(id) {
             true => Ok(Self(Cow::Borrowed(id))),
             false => Err(Error::BadIdFormat)
+        }
+    }
+
+    #[inline]
+    #[cfg(any(not(feature = "regex"), not(feature = "std")))]
+    pub fn from_str(id: &'a str) -> Option<Self> {
+        match Self::check_str(id) {
+            Ok(_) => Some(Self(Cow::Borrowed(id))),
+            Err(_) => None
+        }
+    }
+
+    #[inline]
+    #[cfg(any(not(feature = "regex"), not(feature = "std")))]
+    fn check_str(id: &'_ str) -> Result<(), ()> {
+        if id.len() != 11 {
+            return Err(());
+        }
+
+        let only_allowed_chars = id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+
+        if only_allowed_chars {
+            Ok(())
+        } else {
+            Err(())
         }
     }
 
@@ -149,7 +189,7 @@ impl<'a> Id<'a> {
         // SAFETY:
         // This method returns a reference with the lifetime of 'a.
         // Therefore the returned IdBuf cannot outlive self (also have a look at the doc-test). 
-        unsafe { std::mem::transmute::<&'a Id<'a>, &'a Id<'static>>(&self) }
+        unsafe { core::mem::transmute::<&'a Id<'a>, &'a Id<'static>>(&self) }
     }
 
     #[inline]
@@ -195,10 +235,20 @@ impl<'a> Id<'a> {
 
 impl IdBuf {
     #[inline]
+    #[cfg(all(feature = "regex", feature = "std"))]
     pub fn from_string(id: String) -> Result<Self, String> {
         match ID_PATTERN.is_match(id.as_str()) {
             true => Ok(Self(Cow::Owned(id))),
             false => Err(id)
+        }
+    }
+
+    #[inline]
+    #[cfg(any(not(feature = "regex"), not(feature = "std")))]
+    pub fn from_string(id: String) -> Result<Self, String> {
+        match Self::check_str(&id) {
+            Ok(_) => Ok(Self(Cow::Owned(id))),
+            Err(_) => Err(id)
         }
     }
 }
@@ -210,7 +260,12 @@ impl<'de> Id<'de> {
         where
             D: Deserializer<'de> {
         let raw = <&'de str>::deserialize(deserializer)?;
-        Self::from_raw(raw)
+        #[cfg(not(feature = "regex"))]
+            let res = Self::from_str(raw);
+        #[cfg(feature = "regex")]
+            let res = Self::from_raw(raw);
+
+        res
             .map_err(|_| D::Error::invalid_value(
                 Unexpected::Str(raw),
                 &"expected a valid youtube video identifier",
@@ -224,11 +279,15 @@ impl<'de> Deserialize<'de> for Id<'static> {
     fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
         where
             D: Deserializer<'de> {
-        let raw = <&'de str>::deserialize(deserializer)?;
-        Id::from_raw(raw)
-            .map(|id: Id<'de>| id.into_owned())
-            .map_err(|_| D::Error::invalid_value(
-                Unexpected::Str(raw),
+        let raw = String::deserialize(deserializer)?;
+        #[cfg(not(feature = "regex"))]
+            let res = Self::from_string(raw);
+        #[cfg(feature = "regex")]
+            let res = Self::from_string(raw);
+
+        res
+            .map_err(|s| D::Error::invalid_value(
+                Unexpected::Str(&s),
                 &"expected a valid youtube video identifier",
             ))
     }
