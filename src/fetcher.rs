@@ -78,7 +78,8 @@ impl VideoFetcher {
     /// - When [`Id::from_raw`] fails to extracted the videos id from the url.
     /// - When [`reqwest`] fails to initialize an new [`Client`].
     #[inline]
-    #[cfg(feature = "regex")]
+    #[cfg(any(feature = "regex", doc))]
+    #[doc(cfg(feature = "regex"))]
     pub fn from_url(url: &Url) -> crate::Result<Self> {
         let id = Id::from_raw(url.as_str())?
             .into_owned();
@@ -117,7 +118,8 @@ impl VideoFetcher {
     /// When having a good internet connection, only errors due to inaccessible videos should occur.
     /// Other errors usually mean, that YouTube changed their API, and `rustube` did not adapt to 
     /// this change yet. Please feel free to open a GitHub issue if this is the case.
-    #[cfg(feature = "fetch")]
+    #[cfg(any(feature = "fetch", doc))]
+    #[doc(cfg(feature = "fetch"))]
     pub async fn fetch(self) -> crate::Result<VideoDescrambler> {
         // fixme: 
         //  It seems like watch_html also contains a PlayerResponse in all cases. VideoInfo
@@ -203,7 +205,8 @@ impl VideoFetcher {
 
     /// Extracts or requests the JavaScript used to descramble the video signature.
     #[inline]
-    #[cfg(feature = "fetch")]
+    #[cfg(any(feature = "fetch", doc))]
+    #[doc(cfg(feature = "fetch"))]
     async fn get_js(
         &self,
         is_age_restricted: bool,
@@ -226,7 +229,8 @@ impl VideoFetcher {
 
     /// Requests the [`VideoInfo`] of a video 
     #[inline]
-    #[cfg(feature = "fetch")]
+    #[cfg(any(feature = "fetch", doc))]
+    #[doc(cfg(feature = "fetch"))]
     async fn get_video_info(&self, is_age_restricted: bool) -> crate::Result<VideoInfo> {
         let video_info_url = self.get_video_info_url(is_age_restricted);
         let video_info_raw = self.get_html(&video_info_url).await?;
@@ -239,7 +243,8 @@ impl VideoFetcher {
 
     /// Generates the url under which the [`VideoInfo`] can be requested.
     #[inline]
-    #[cfg(feature = "fetch")]
+    #[cfg(any(feature = "fetch", doc))]
+    #[doc(cfg(feature = "fetch"))]
     fn get_video_info_url(&self, is_age_restricted: bool) -> Url {
         if is_age_restricted {
             video_info_url_age_restricted(
@@ -256,7 +261,8 @@ impl VideoFetcher {
 
     /// Requests a website.
     #[inline]
-    #[cfg(feature = "fetch")]
+    #[cfg(any(feature = "fetch", doc))]
+    #[doc(cfg(feature = "fetch"))]
     async fn get_html(&self, url: &Url) -> crate::Result<String> {
         Ok(
             self.client
@@ -271,7 +277,8 @@ impl VideoFetcher {
 
 /// Extracts weather or not a particular video is age restricted. 
 #[inline]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 fn is_age_restricted(watch_html: &str) -> bool {
     static PATTERN: SyncLazy<Regex> = SyncLazy::new(|| Regex::new("og:restrictions:age").unwrap());
     PATTERN.is_match(watch_html)
@@ -279,7 +286,8 @@ fn is_age_restricted(watch_html: &str) -> bool {
 
 /// Generates the url under which the [`VideoInfo`] of a video can be requested. 
 #[inline]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 fn video_info_url(video_id: Id<'_>, watch_url: &Url) -> Url {
     let params: &[(&str, &str)] = &[
         ("video_id", video_id.as_str()),
@@ -292,7 +300,8 @@ fn video_info_url(video_id: Id<'_>, watch_url: &Url) -> Url {
 
 /// Generates the url under which the [`VideoInfo`] of an age restricted video can be requested.
 #[inline]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 fn video_info_url_age_restricted(video_id: Id<'_>, watch_url: &Url) -> Url {
     static PATTERN: SyncLazy<Regex> = SyncLazy::new(|| Regex::new(r#""sts"\s*:\s*(\d+)"#).unwrap());
 
@@ -312,7 +321,8 @@ fn video_info_url_age_restricted(video_id: Id<'_>, watch_url: &Url) -> Url {
 
 /// Helper for assembling th video info url.
 #[inline]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 fn _video_info_url(params: &[(&str, &str)]) -> Url {
     Url::parse_with_params(
         "https://youtube.com/get_video_info?",
@@ -322,7 +332,8 @@ fn _video_info_url(params: &[(&str, &str)]) -> Url {
 
 /// Generates the url under which the JavaScript used for descrambling can be requested.
 #[inline]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 fn js_url(html: &str) -> crate::Result<(Url, Option<PlayerResponse>)> {
     let player_response = get_ytplayer_config(html);
     let base_js = match player_response {
@@ -335,7 +346,8 @@ fn js_url(html: &str) -> crate::Result<(Url, Option<PlayerResponse>)> {
 
 /// Extracts the [`PlayerResponse`] from the watch html.
 #[inline]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 fn get_ytplayer_config(html: &str) -> crate::Result<PlayerResponse> {
     static CONFIG_PATTERNS: SyncLazy<[Regex; 3]> = SyncLazy::new(|| [
         Regex::new(r"ytplayer\.config\s*=\s*").unwrap(),
@@ -366,7 +378,8 @@ fn get_ytplayer_config(html: &str) -> crate::Result<PlayerResponse> {
 
 /// Extracts a json object from a string starting after a pattern.
 #[inline]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 fn parse_for_object<'a>(html: &'a str, regex: &Regex) -> crate::Result<&'a str> {
     let json_obj_start = regex
         .find(html)
@@ -382,7 +395,8 @@ fn parse_for_object<'a>(html: &'a str, regex: &Regex) -> crate::Result<&'a str> 
 
 /// Deserializes the [`PalyerResponse`] which can be found in the watch html.
 #[inline]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
     #[derive(Deserialize)]
     struct Args { player_response: PlayerResponse }
@@ -400,7 +414,8 @@ fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
 
 /// Extracts the JavaScript used for descrambling from the watch html.
 #[inline]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 fn get_ytplayer_js(html: &str) -> crate::Result<&str> {
     static JS_URL_PATTERNS: SyncLazy<Regex> = SyncLazy::new(||
         Regex::new(r"(/s/player/[\w\d]+/[\w\d_/.]+/base\.js)").unwrap()
@@ -416,7 +431,8 @@ fn get_ytplayer_js(html: &str) -> crate::Result<&str> {
 
 /// Extracts a complete json object from a string. 
 #[inline]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 fn json_object(mut html: &str) -> crate::Result<&str> {
     html = html.trim_start_matches(|c| c != '{');
     if html.is_empty() {
@@ -445,7 +461,8 @@ fn json_object(mut html: &str) -> crate::Result<&str> {
 
 /// Checks if a char represents the end of a json object.
 #[inline]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 fn is_json_object_end(curr_char: u8, skip: &mut bool, stack: &mut Vec<u8>) -> bool {
     if *skip {
         *skip = false;

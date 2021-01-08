@@ -2,16 +2,17 @@ use alloc::borrow::{Cow, ToOwned};
 use alloc::string::String;
 use core::cmp::Ordering;
 
-#[cfg(feature = "regex")]
+#[cfg(any(feature = "regex", doc))]
+#[doc(cfg(feature = "regex"))]
 use regex::Regex;
-#[cfg(feature = "serde")]
 use serde::{
     de::{Error as SerdeError, Unexpected},
     Deserialize, Deserializer, Serialize,
 };
 use url::Url;
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", doc))]
+#[doc(cfg(feature = "std"))]
 use crate::{Error, Result};
 
 /// Alias for an owned [`Id`].
@@ -23,7 +24,8 @@ pub type IdBuf = Id<'static>;
 /// ## Guarantees:
 /// - each pattern contains an `id` group that will always capture when the pattern matches
 /// - The captured id will always match following regex (defined in [ID_PATTERN]): `^[a-zA-Z0-9_-]{11}$`
-#[cfg(feature = "regex")]
+#[cfg(any(feature = "regex", doc))]
+#[doc(cfg(feature = "regex"))]
 pub static ID_PATTERNS: [&std::lazy::SyncLazy<Regex>; 4] = [
     &WATCH_URL_PATTERN,
     &EMBED_URL_PATTERN,
@@ -31,25 +33,29 @@ pub static ID_PATTERNS: [&std::lazy::SyncLazy<Regex>; 4] = [
     &ID_PATTERN
 ];
 /// A pattern matching the watch url of a video (i.e. `youtube.com/watch?v=<ID>`).
-#[cfg(feature = "regex")]
+#[cfg(any(feature = "regex", doc))]
+#[doc(cfg(feature = "regex"))]
 pub static WATCH_URL_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
     // watch url    (i.e. https://youtube.com/watch?v=video_id)
     Regex::new(r"^(https?://)?(www\.)?youtube.\w\w\w?/watch\?v=(?P<id>[a-zA-Z0-9_-]{11})(&.*)?$").unwrap()
 );
 /// A pattern matching the embedded url of a video (i.e. `youtube.com/embed/<ID>`).
-#[cfg(feature = "regex")]
+#[cfg(any(feature = "regex", doc))]
+#[doc(cfg(feature = "regex"))]
 pub static EMBED_URL_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
     // embed url    (i.e. https://youtube.com/embed/video_id)
     Regex::new(r"^(https?://)?(www\.)?youtube.\w\w\w?/embed/(?P<id>[a-zA-Z0-9_-]{11})\\?(\?.*)?$").unwrap()
 );
 /// A pattern matching the embedded url of a video (i.e. `youtu.be/<ID>`).
-#[cfg(feature = "regex")]
+#[cfg(any(feature = "regex", doc))]
+#[doc(cfg(feature = "regex"))]
 pub static SHARE_URL_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
     // share url    (i.e. https://youtu.be/video_id)
     Regex::new(r"^(https?://)?youtu\.be/(?P<id>[a-zA-Z0-9_-]{11})$").unwrap()
 );
 /// A pattern matching the id of a video (`^[a-zA-Z0-9_-]{11}$`).
-#[cfg(feature = "regex")]
+#[cfg(any(feature = "regex", doc))]
+#[doc(cfg(feature = "regex"))]
 pub static ID_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
     // id          (i.e. video_id)
     Regex::new("^(?P<id>[a-zA-Z0-9_-]{11})$").unwrap()
@@ -78,12 +84,12 @@ pub static ID_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
 /// If you require [`Id`] to be owned (`Id<'static`>), you can use [`Id::as_owned`] or 
 /// [`Id::into_owned`], which both can easily be chained. You can also use [`IdBuf`], which is
 /// an alias for `Id<'static>`, to make functions and types less verbose. 
-#[derive(Clone, Debug, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize))]
+#[derive(Clone, Debug, Serialize, Hash)]
 pub struct Id<'a>(Cow<'a, str>);
 
 impl<'a> Id<'a> {
-    #[cfg(all(feature = "regex", feature = "std"))]
+    #[cfg(any(all(feature = "regex", feature = "std"), doc))]
+    #[doc(cfg(all(feature = "regex", feature = "std")))]
     pub fn from_raw(raw: &'a str) -> Result<Self> {
         ID_PATTERNS
             .iter()
@@ -100,7 +106,8 @@ impl<'a> Id<'a> {
     }
 
     #[inline]
-    #[cfg(all(feature = "regex", feature = "std"))]
+    #[cfg(any(all(feature = "regex", feature = "std"), doc))]
+    #[doc(cfg(all(feature = "regex", feature = "std")))]
     pub fn from_str(id: &'a str) -> Result<Self> {
         match ID_PATTERN.is_match(id) {
             true => Ok(Self(Cow::Borrowed(id))),
@@ -109,7 +116,8 @@ impl<'a> Id<'a> {
     }
 
     #[inline]
-    #[cfg(any(not(feature = "regex"), not(feature = "std")))]
+    #[cfg(any(any(not(feature = "regex"), not(feature = "std")), doc))]
+    #[doc(cfg(any(not(feature = "regex"), not(feature = "std"))))]
     pub fn from_str(id: &'a str) -> Option<Self> {
         match Self::check_str(id) {
             Ok(_) => Some(Self(Cow::Borrowed(id))),
@@ -118,7 +126,8 @@ impl<'a> Id<'a> {
     }
 
     #[inline]
-    #[cfg(any(not(feature = "regex"), not(feature = "std")))]
+    #[cfg(any(any(not(feature = "regex"), not(feature = "std")), doc))]
+    #[doc(cfg(any(not(feature = "regex"), not(feature = "std"))))]
     fn check_str(id: &'_ str) -> Result<(), ()> {
         if id.len() != 11 {
             return Err(());
@@ -235,7 +244,8 @@ impl<'a> Id<'a> {
 
 impl IdBuf {
     #[inline]
-    #[cfg(all(feature = "regex", feature = "std"))]
+    #[cfg(any(all(feature = "regex", feature = "std"), doc))]
+    #[doc(cfg(all(feature = "regex", feature = "std")))]
     pub fn from_string(id: String) -> Result<Self, String> {
         match ID_PATTERN.is_match(id.as_str()) {
             true => Ok(Self(Cow::Owned(id))),
@@ -244,7 +254,8 @@ impl IdBuf {
     }
 
     #[inline]
-    #[cfg(any(not(feature = "regex"), not(feature = "std")))]
+    #[cfg(any(any(not(feature = "regex"), not(feature = "std")), doc))]
+    #[doc(cfg(any(not(feature = "regex"), not(feature = "std"))))]
     pub fn from_string(id: String) -> Result<Self, String> {
         match Self::check_str(&id) {
             Ok(_) => Ok(Self(Cow::Owned(id))),
@@ -253,16 +264,15 @@ impl IdBuf {
     }
 }
 
-#[cfg(feature = "serde")]
 impl<'de> Id<'de> {
     #[inline]
     pub fn deserialize_borrowed<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
         where
             D: Deserializer<'de> {
         let raw = <&'de str>::deserialize(deserializer)?;
-        #[cfg(not(feature = "regex"))]
-            let res = Self::from_str(raw);
-        #[cfg(feature = "regex")]
+        #[cfg(any(not(all(feature = "regex", feature = "std")), doc))]
+            let res = Self::from_str(raw).ok_or(());
+        #[cfg(any(all(feature = "regex", feature = "std"), doc))]
             let res = Self::from_raw(raw);
 
         res
@@ -273,19 +283,13 @@ impl<'de> Id<'de> {
     }
 }
 
-#[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for Id<'static> {
     #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
         where
             D: Deserializer<'de> {
         let raw = String::deserialize(deserializer)?;
-        #[cfg(not(feature = "regex"))]
-            let res = Self::from_string(raw);
-        #[cfg(feature = "regex")]
-            let res = Self::from_string(raw);
-
-        res
+        Self::from_string(raw)
             .map_err(|s| D::Error::invalid_value(
                 Unexpected::Str(&s),
                 &"expected a valid youtube video identifier",

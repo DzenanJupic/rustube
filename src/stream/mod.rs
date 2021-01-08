@@ -1,21 +1,24 @@
-use std::ops::Range;
-#[cfg(feature = "download")]
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
-
 use chrono::{DateTime, Utc};
 use mime::Mime;
 use reqwest::Client;
-#[cfg(feature = "download")]
+use std::ops::Range;
+#[cfg(any(feature = "download", doc))]
+#[doc(cfg(feature = "download"))]
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+#[cfg(any(feature = "download", doc))]
+#[doc(cfg(feature = "download"))]
 use tokio::{
     fs::File,
     io::AsyncWriteExt,
 };
-#[cfg(feature = "download")]
+#[cfg(any(feature = "download", doc))]
+#[doc(cfg(feature = "download"))]
 use tokio_stream::StreamExt;
 
-#[cfg(feature = "download")]
+#[cfg(any(feature = "download", doc))]
+#[doc(cfg(feature = "download"))]
 use crate::{Error, Result};
 use crate::video_info::player_response::streaming_data::{AudioQuality, ColorInfo, FormatType, ProjectionType, Quality, QualityLabel, RawFormat, SignatureCipher};
 use crate::VideoDetails;
@@ -108,7 +111,8 @@ impl Stream {
 // todo: download in ranges
 // todo: blocking download
 
-#[cfg(feature = "download")]
+#[cfg(any(feature = "download", doc))]
+#[doc(cfg(feature = "download"))]
 impl Stream {
     /// The content length of the video.
     /// If the content length was not included in the [`RawFormat`], this method will make a `HEAD`
@@ -292,7 +296,8 @@ impl Stream {
     }
 }
 
-#[cfg(all(feature = "stream", feature = "blocking"))]
+#[cfg(any(all(feature = "stream", feature = "blocking"), doc))]
+#[doc(cfg(all(feature = "stream", feature = "blocking")))]
 impl Stream {
     /// A synchronous wrapper around [`Stream::download`](crate::Stream::download).
     #[inline]

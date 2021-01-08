@@ -1,4 +1,5 @@
 #![feature(
+doc_cfg,
 async_closure, bool_to_option, cow_is_borrowed, once_cell, box_syntax,
 str_split_as_str, str_split_once, try_trait, option_result_contains
 )]
@@ -9,8 +10,9 @@ rust_2018_idioms,
 unreachable_pub
 )]
 #![deny(broken_intra_doc_links)]
+#![doc(test(no_crate_inject))]
 
-#![cfg_attr(not(feature = "regex"), no_std)]
+#![cfg_attr(not(any(feature = "std", feature = "regex")), no_std)]
 
 //! A complete (WIP), and easy to use YouTube downloader.
 //! 
@@ -101,7 +103,7 @@ unreachable_pub
 //! magically tell you which video stream you truly desire. But what's a [`Stream`]? If you ever 
 //! watched a video on YouTube, you probably know that most videos come in different resolutions. 
 //! So when your internet connection sucks, you may watch the 240p version, instead of the full 
-//! fletched 4k variant. Each of those resolutions is a [`Stream`]. Besides those video [`Stream`]s, 
+//! fleged 4k variant. Each of those resolutions is a [`Stream`]. Besides those video [`Stream`]s, 
 //! there are often also video or audio-only [`Stream`]. The methods we used so far are actually
 //! just a nice shortcut for making your life easier. But since all these success gurus tell us,
 //! we should take the hard road, we will!
@@ -125,7 +127,7 @@ unreachable_pub
 //! 
 //! ## Different ways of downloading
 //! As you may already have noticed, all the above examples just call [`Stream::download`], and then
-//! gets a path to a video back. This path will always point to `<VIDEO_ID>.mp4` in the current 
+//! get a path to a video back. This path will always point to `<VIDEO_ID>.mp4` in the current 
 //! working directory. But what if you want to have a little more control over where
 //! to download the video to?
 //! 
@@ -152,6 +154,8 @@ unreachable_pub
 //! - `download`: \[default\] Enables all utilities required for downloading videos.
 //! - `regex`: \[default\] Enables [`Id::from_raw`], which extracts valid `Id`s from arbitrary video
 //!   identifiers like URLs.
+//! - `serde`: \[default\] Enables [`serde`] support for [`Id`] (Keep in mind, that this feature
+//!   does not enable the `regex` automatically).
 //! - `std`: \[default\] Enables `std` usage, which a lot of things depend on.
 //! - `fetch`: \[default\] Enables [`VideoFetcher`], which can be used to fetch video information.
 //! - `descramble`: \[default\] Enables [`VideoDescrambler`], which can decrypt video signatures and is
@@ -159,7 +163,7 @@ unreachable_pub
 //! - `stream`: \[default\] Enables [`Stream`], a representation of a video stream that can be used to download this particular stream.
 //! - `blocking`: Enables the [`blocking`] API, which internally creates a [`tokio`] runtime for you
 //!   , so you don't have to care about it yourself. (Keep in mind, that this feature does not enable
-//!   any of the other features above)
+//!   any of the other features above automatically)
 //! 
 //!
 //! [view count]: crate::video_info::player_response::video_details::VideoDetails::view_count 
@@ -169,32 +173,40 @@ unreachable_pub
 
 extern crate alloc;
 
-#[cfg(feature = "tokio")]
+#[cfg(any(feature = "tokio", doc))]
+#[doc(cfg(feature = "tokio"))]
 pub use tokio;
 pub use url;
 
 #[doc(inline)]
-#[cfg(feature = "descramble")]
+#[cfg(any(feature = "descramble", doc))]
+#[doc(cfg(feature = "descramble"))]
 pub use crate::descrambler::VideoDescrambler;
 #[doc(inline)]
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", doc))]
+#[doc(cfg(feature = "std"))]
 pub use crate::error::Error;
 #[doc(inline)]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 pub use crate::fetcher::VideoFetcher;
 #[doc(inline)]
 pub use crate::id::{Id, IdBuf};
 #[doc(inline)]
-#[cfg(feature = "regex")]
+#[cfg(any(feature = "regex", doc))]
+#[doc(cfg(feature = "regex"))]
 pub use crate::id::{EMBED_URL_PATTERN, ID_PATTERN, ID_PATTERNS, SHARE_URL_PATTERN, WATCH_URL_PATTERN};
 #[doc(inline)]
-#[cfg(feature = "stream")]
+#[cfg(any(feature = "stream", doc))]
+#[doc(cfg(feature = "stream"))]
 pub use crate::stream::Stream;
 #[doc(inline)]
-#[cfg(feature = "descramble")]
+#[cfg(any(feature = "descramble", doc))]
+#[doc(cfg(feature = "descramble"))]
 pub use crate::video::Video;
 #[doc(inline)]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 pub use crate::video_info::{
     player_response::{
         PlayerResponse,
@@ -204,29 +216,37 @@ pub use crate::video_info::{
 };
 
 /// Alias for `Result`, with the default error type [`Error`].
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", doc))]
+#[doc(cfg(feature = "std"))]
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
-#[cfg(feature = "blocking")]
+#[cfg(any(feature = "blocking", doc))]
+#[doc(cfg(feature = "blocking"))]
 pub mod blocking;
 #[doc(hidden)]
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", doc))]
+#[doc(cfg(feature = "std"))]
 pub mod error;
 #[doc(hidden)]
 pub mod id;
 #[doc(hidden)]
-#[cfg(feature = "stream")]
+#[cfg(any(feature = "stream", doc))]
+#[doc(cfg(feature = "stream"))]
 pub mod stream;
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 pub mod video_info;
 #[doc(hidden)]
-#[cfg(feature = "fetch")]
+#[cfg(any(feature = "fetch", doc))]
+#[doc(cfg(feature = "fetch"))]
 pub mod fetcher;
 #[doc(hidden)]
-#[cfg(feature = "descramble")]
+#[cfg(any(feature = "descramble", doc))]
+#[doc(cfg(feature = "descramble"))]
 pub mod descrambler;
 #[doc(hidden)]
-#[cfg(feature = "descramble")]
+#[cfg(any(feature = "descramble", doc))]
+#[doc(cfg(feature = "descramble"))]
 pub mod video;
 
 /// The absolute most straightforward way of downloading a YouTube video in high quality!
@@ -236,7 +256,8 @@ pub mod video;
 /// 
 /// For more control over the download process have a look at the [`crate`] level documentation,
 /// or at the [`Video`] struct. 
-#[cfg(all(feature = "download", feature = "regex"))]
+#[cfg(any(all(feature = "download", feature = "regex"), doc))]
+#[doc(cfg(all(feature = "download", feature = "regex")))]
 pub async fn download_best_quality(video_identifier: &str) -> Result<std::path::PathBuf> {
     let id = Id::from_raw(video_identifier)?;
     Video::from_id(id.into_owned())
@@ -254,7 +275,8 @@ pub async fn download_best_quality(video_identifier: &str) -> Result<std::path::
 ///
 /// For more control over the download process have a look at the [`crate`] level documentation,
 /// or at the [`Video`] struct. 
-#[cfg(all(feature = "download", feature = "regex"))]
+#[cfg(any(all(feature = "download", feature = "regex"), doc))]
+#[doc(cfg(all(feature = "download", feature = "regex")))]
 pub async fn download_worst_quality(video_identifier: &str) -> Result<std::path::PathBuf> {
     let id = Id::from_raw(video_identifier)?;
     Video::from_id(id.into_owned())

@@ -1,5 +1,5 @@
 # rustube
-
+A complete (WIP), and easy to use YouTube downloader.
 `rustube` is still in development and may see breaking changes!
 
 - [API documentation]
@@ -55,7 +55,7 @@ let title = descrambler.video_title();
 println!("The video `{}` was viewed {} times.", title, view_count);
 ```
 
-For more examples, an overview of the blocking API looks at the [API documentation].
+For more examples, an overview of the blocking API have a look at the [API documentation].
 
 
 [API documentation]: https://docs.rs/rustube/

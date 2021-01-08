@@ -1,6 +1,6 @@
 [package]
 name = "rustube"
-version = "0.2.1-beta.0"
+version = "0.2.2"
 authors = ["Dzenan Jupic <info@dzenanjupic.de>"]
 edition = "2018"
 description = "A YouTube video downloader, originally inspired by pytube, written in Rust."
@@ -24,7 +24,7 @@ log = "0.4.11"
 mime = { version = "0.3.16", optional = true }
 regex = { version = "1.4.2", optional = true }
 reqwest = { version = "0.11.0", optional = true }
-serde = { version = "1.0.118", default-features = false, optional = true }
+serde = { version = "1.0.118", default-features = false, features = ["alloc", "derive"] }
 serde_qs = { version = "0.8.2", optional = true }
 serde_json = { version = "1.0.61", optional = true }
 serde_with = { version = "1.6.0", optional = true }
