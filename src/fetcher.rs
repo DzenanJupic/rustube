@@ -31,8 +31,8 @@ use crate::video_info::player_response::playability_status::PlayabilityStatus;
 /// So we need to somehow show YouTube that we want to watch the video, so the YouTube server
 /// generates a URL for us. To do this, we do what every 'normal' human being would do: we
 /// request the webpage of the video. To do so, we need nothing more, then the video's id (If you 
-/// want to learn more about the id, you can have a look at[`Id`]. But you don't need to know 
-/// anything about it for now.). Let's say, for example, take the id '5jlI4uzZGjU'. With this id, we
+/// want to learn more about the id, you can have a look at [`Id`]. But you don't need to know 
+/// anything about it for now). Let's, for example, take the id '5jlI4uzZGjU'. With this id, we
 /// can then visit <https://youtube.com/watch?v=5jlI4uzZGjU>, the site, you as a human would visit
 /// when just watching the video.
 /// 
@@ -59,7 +59,7 @@ use crate::video_info::player_response::playability_status::PlayabilityStatus;
 /// 
 /// That's it! Of course, we cannot download the video yet. But that's not the task of `fetch`. 
 /// `fetch` is just responsible for requesting all the essential information. To learn how the 
-/// journey continues, have a look at [`VideoDescrambler::descramble`].  
+/// journey continues, have a look at [`VideoDescrambler`].  
 /// 
 /// [`Video`]: crate::video::Video
 #[derive(Clone, derive_more::Display, derivative::Derivative)]

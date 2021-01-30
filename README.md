@@ -1,4 +1,9 @@
 # rustube
+
+![crates.io](https://img.shields.io/crates/v/rustube)
+![docs.rs](https://docs.rs/rustube/badge.svg)
+![licence](https://img.shields.io/crates/l/rustube)
+
 A complete (WIP), and easy to use YouTube downloader.
 `rustube` is still in development and may see breaking changes!
 

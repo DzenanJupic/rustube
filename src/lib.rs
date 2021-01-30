@@ -40,7 +40,7 @@ unreachable_pub
 //! 
 //! ## Getting video information
 //! Of course, there's also the use case, where you want to find out information about a video, 
-//! like it's [view count], it's [title], or if it [is_unplugged_corpus] (I mean how of us doesn't 
+//! like it's [view count], it's [title], or if it [is_unplugged_corpus] (I mean who of us doesn't 
 //! have the desire to find that out).
 //! 
 //! In these cases, straigt out using [`download_best_quality`] won't serve you well. 
@@ -100,16 +100,16 @@ unreachable_pub
 //! 
 //! ## Choosing something exotic
 //! Till now, you only saw the methods [`Video::best_quality`] and [`Video::worst_audio`] that
-//! magically tell you which video stream you truly desire. But what's a [`Stream`]? If you ever 
-//! watched a video on YouTube, you probably know that most videos come in different resolutions. 
-//! So when your internet connection sucks, you may watch the 240p version, instead of the full 
-//! fleged 4k variant. Each of those resolutions is a [`Stream`]. Besides those video [`Stream`]s, 
-//! there are often also video or audio-only [`Stream`]. The methods we used so far are actually
-//! just a nice shortcut for making your life easier. But since all these success gurus tell us,
-//! we should take the hard road, we will!
+//! magically tell you which video stream you truly desire. But wait, what's a [`Stream`]? If you 
+//! ever watched a video on YouTube, you probably know that most videos come in different 
+//! resolutions. So when your internet connection sucks, you may watch the 240p version, instead of 
+//! the full fleged 4k variant. Each of those resolutions is a [`Stream`]. Besides those video 
+//! [`Stream`]s, there are often also video-only or audio-only [`Stream`]s. The methods we used so 
+//! far are actually just a nice shortcut for making your life easier. But since all these success
+//! gurus tell us, we should take the hard road, we will!
 //! 
 //! For doing so, and to get a little more control over which [`Stream`] of a [`Video`] to download,
-//! we can use [`Video::streams`], the [`Stream`] attributes, and Rusts amazing [`Iterator`] functions:
+//! we can use [`Video::streams`], the [`Stream`] attributes, and Rusts amazing [`Iterator`] methods:
 //! ```no_run
 //!# #[tokio::main]
 //!# async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -127,7 +127,7 @@ unreachable_pub
 //! 
 //! ## Different ways of downloading
 //! As you may already have noticed, all the above examples just call [`Stream::download`], and then
-//! get a path to a video back. This path will always point to `<VIDEO_ID>.mp4` in the current 
+//! get back a path to a video. This path will always point to `<VIDEO_ID>.mp4` in the current 
 //! working directory. But what if you want to have a little more control over where
 //! to download the video to?
 //! 

@@ -31,39 +31,42 @@ mod cipher;
 /// ``` 
 /// 
 /// # How it works
-/// (To fully understand `descramble`, you should first read how [`VideoFetcher::fetch`] works).
+/// (To fully understand `descramble`, you should first read how [`VideoFetcher`] works).
 /// 
 /// Descrambling, in this case, mainly refers to descrambling the [`SignatureCipher`]. After we 
-/// requested the [`VideoInfo`] in `fetch`, we are left with many [`RawFormat`]s. Those formats
-/// come in two flavours: pre-signed and encrypted formats. Pre-signed formats are actually a free lunch.
-/// Such formats already contain a valid video URL, which can be used to download the video. The
-/// encrypted once are a little bit more complicated.
+/// requested the [`VideoInfo`] in `fetch`, we are left with many [`RawFormat`]s. A [`RawFormat`] is 
+/// just a bucket full of information about a video. Those formats come in two flavours: pre-signed 
+/// and encrypted formats. Pre-signed formats are actually a free lunch. Such formats already 
+/// contain a valid video URL, which can be used to download the video. The encrypted once are a 
+/// little bit more complicated.
 ///
-/// These encrypted [`RawFormat`]s contain a [`SignatureCipher`] with a signature ['s`] in them, 
-/// which is basically just a long string. But this signature isn't correct yet! We first need to
-/// decrypt it. And that's where the `transform_plan` and the `transform_map` come into play.   
+/// These encrypted [`RawFormat`]s contain a so called [`SignatureCipher`] with a the signature 
+/// field [`s`] in it. This signature is a long string and the YouTube server requires us to 
+/// include in the URL query or we get a `403` back. Unfortunalty this signature isn't correct yet!
+/// We first need to decrypt it. And that's where the `transform_plan` and the `transform_map` come
+/// into play.   
 /// 
 /// The `transform_plan` is just a list of JavaScript function calls, which take a string (or an 
-/// array) plus sometimes an integer as input. The called JavaScript functions then transform the 
-/// string in a certain way and return a new string. This new string then represents the new 
-/// signature.
+/// array) plus sometimes an integer as input. The called JavaScript functions then transforms the 
+/// string in a certain way and returns a new string. This new string then represents the new 
+/// signature. To decrypt the signature we just need to pass it through all of these functions in a
+/// row.
 /// 
 /// But wait! How can we run JavaScript in Rust? And doesn't that come with a considerable overhead?
 /// It actually would come with a vast overhead! That's why we need the `transform_map`. The 
 /// `transform_map` is a `HashMap<String, TransformFn>`, which maps JavaScript function names to
 /// Rust functions.
 ///
-/// To finally get the videos signature, the raw, initial signature must be transformed once 
-/// by every function in the `transform_plan`. To do so, we just iterate over it, extract the 
-/// function name and the optional integer, look up the corresponding `TransformFn` in
-/// `transform_map`, and pass the signature and the optional integer to it.
+/// To finally decrypt the signature, we just iterate over each function call in the the
+/// `transform_plan`, extract both the function name and the optinal integer argument, and call the 
+/// corresponding Rust function in `transform_map`.
 /// 
-/// The last step `descramble` performs, is to take all `RawFormat's, which now contain the 
-/// correct signature, and convert them to `Stream`s. At the end of the day, `Stream's are just
-/// `RawFormat's with some extra information.
+/// The last step `descramble` performs, is to take all [`RawFormat`]s, which now contain the 
+/// correct signature, and convert them to [`Stream`]s. At the end of the day, `Stream`s are just
+/// `RawFormat`s with some extra information.
 /// 
 /// And that's it! We can now download a YouTube video like we would download any other
-/// video from the internet. The only difference is that the [`Stream`]s [`URL`]
+/// video from the internet. The only difference is that the [`Stream`]s [`url`]
 /// will eventually expire.
 /// 
 /// [`SignatureCipher`]: crate::video_info::player_response::streaming_data::SignatureCipher
