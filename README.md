@@ -22,7 +22,7 @@ A complete (WIP), and easy to use YouTube downloader.
 - [x] blocking API
 - [ ] full video info deserialization
 - [ ] feature based opt-in deserialization of video info
-- [ ] CLI
+- [x] CLI
 - [x] testing suite
 - [ ] benchmarks
 - [ ] Python bindings

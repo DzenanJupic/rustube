@@ -1,0 +1,22 @@
+[package]
+name = "rustube-cli"
+version = "0.2.3"
+authors = ["Dzenan Jupic <56133904+DzenanJupic@users.noreply.github.com>"]
+edition = "2018"
+description = "A CLI for rustube"
+keywords = ["youtube", "download", "downloader", "video", "pytube"]
+license = "MIT OR Apache-2.0"
+readme = "../README.md"
+repository = "https://github.com/DzenanJupic/rustube"
+documentation = "https://docs.rs/rustube"
+include = [
+    "src/**/*", "Cargo.toml",
+]
+
+[dependencies]
+anyhow = "1.0.38"
+clap = "3.0.0-beta.2"
+rustube = { path = "..", version = "0.2.3", features = ["download", "std"] }
+tokio = { version = "1.1.1", features = ["rt-multi-thread"] }
+serde = "1.0.123"
+serde_json = "1.0.61"

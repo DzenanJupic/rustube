@@ -13,6 +13,9 @@ include = [
     "src/**/*", "Cargo.toml",
 ]
 
+[workspace]
+members = [".", "cli"]
+
 # todo: add features to opt in/out of deserialization of some data (title, view_count, ...)
 
 [dependencies]
@@ -42,9 +45,7 @@ tokio-test = "0.4.0"
 # By default, the minimal features for downloading a video are enabled. If you compile with default-features = false,
 # you get only the Id type as well as the Error type. 
 default = ["download", "std"]
-
 std = ["regex", "thiserror"]
-
 download = [
     "fetch", "tokio/fs", "tokio/io-util", "tokio/parking_lot", "tokio-stream"
 ]
@@ -54,8 +55,6 @@ fetch = [
     "serde/default", "serde/rc", "serde_with/json", "serde_json", "serde_qs", "bytes", "chrono", "mime",
     "std", "descramble", "url/serde", "reqwest/cookies", "reqwest/stream", "reqwest/gzip"
 ]
-
 descramble = ["fetch", "stream"]
 stream = ["descramble"]
-
 blocking = ["tokio/rt", "std"]
