@@ -1,18 +1,25 @@
-# rustube
+# <div style="text-align: center;"> rustube </div>
 
-![crates.io](https://img.shields.io/crates/v/rustube)
-![docs.rs](https://docs.rs/rustube/badge.svg)
-![licence](https://img.shields.io/crates/l/rustube)
+<div style="text-align: center;">
+
+[![crates.io](https://img.shields.io/crates/v/rustube)](https://crates.io/crates/rustube)
+[![docs.rs](https://docs.rs/rustube/badge.svg)](https://docs.rs/rustube)
+[![licence](https://img.shields.io/crates/l/rustube)](https://github.com/DzenanJupic/rustube)
+
+</div>
+
+---
 
 A complete (WIP), and easy to use YouTube downloader.
-`rustube` is still in development and may see breaking changes!
+> **Note**: `rustube` is still in development and may see breaking changes! It currently still requires a nightly
+> compiler. This will change over time.
 
-- [API documentation]
-
-### Table of content
+## Overview
 
 - [Roadmap](#roadmap)
 - [Usage](#usage)
+- [CLI](#cli)
+- [Contributing](#contributing)
 
 ## Roadmap
 
@@ -61,6 +68,63 @@ println!("The video `{}` was viewed {} times.", title, view_count);
 ```
 
 For more examples, an overview of the blocking API have a look at the [API documentation].
+
+## CLI
+
+> **Note**: Currently, `rustube-cli` still requires a nightly compiler. This, as well as the commands, the flags, and
+> the output, will likely change over time.
+
+`rustube` comes with a CLI, `rustube-cli`, so you can download your favorite YouTube videos without having to write a
+single line of code.
+
+To install it, simply run run
+
+```
+cargo +nightly install rustube-cli
+```
+
+After you successfully installed `rustube-cli`, you have access to the command `rustube`
+
+```
+> rustube
+rustube-cli
+
+USAGE:
+    rustube.exe <SUBCOMMAND>
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+SUBCOMMANDS:
+    check       Checks weather or not a video can be downloaded and if so, prints all available
+                streams
+                The check includes fetching, parsing, and descrambling the video data, and also
+                ensuring there is at least one Stream
+                Since the video information gets descrambled, you can use all Stream URLs to
+                access the video online
+    download    Downloads a YouTube video
+                By default, the Stream with the best quality and both a video, and an audio
+                track will be downloaded
+    fetch       Fetches information about a video, and prints it
+                Contrary to the name, this will actually fetch and descramble the video
+                information, so you can directly use all Stream URLs to access the video online
+    help        Prints this message or the help of the given subcommand(s)
+```
+
+## Contributing
+
+`rustube` is still in a pretty early stage, and you are welcome to contribute to it! The goal is to utilize the speed,
+the type system, and the safety of Rust to make the fastest, most reliable, and most complete YouTube downloader out
+there.
+
+This project is 100% open source. Any contribution submitted for inclusion in `rustube` by you, shall have both the MIT
+licence and the Apache-2.0 licence, and shall be licensed as MIT OR Apache-2.0, without any additional terms or
+conditions.
+
+### Licence
+
+This project is licensed under the terms of the MIT licence or the Apache-2.0 licence, at your own choice.
 
 
 [API documentation]: https://docs.rs/rustube/
