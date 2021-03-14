@@ -1,0 +1,53 @@
+name: Build and Test on all major operating systems
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '**.rs'
+      - '**/Cargo.toml'
+      - 'Cargo.lock'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '**.rs'
+      - '**/Cargo.toml'
+      - 'Cargo.lock'
+  schedule:
+    - cron: "0 2 * * 0-6"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_test:
+    name: Build and Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        toolchain:
+          - nightly
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install minimal ${{ matrix.toolchain }} toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            profile: minimal
+            toolchain: ${{ matrix.toolchain }}
+            default: true
+      - name: Build
+        run: cargo build
+      - name: Build all features
+        run: cargo build --all-features
+      - name: Build CLI
+        run: cargo build -p rustube-cli
+      - name: Run tests
+        run: cargo test --all-features
