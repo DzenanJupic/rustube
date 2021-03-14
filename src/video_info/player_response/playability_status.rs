@@ -36,7 +36,7 @@ pub enum PlayabilityStatus {
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct MiniPlayer {
-    pub miniplayer_renderer: MiniplayerRenderer
+    pub miniplayer_renderer: Option<MiniplayerRenderer>
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
