@@ -1,6 +1,6 @@
 [package]
 name = "rustube-cli"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["Dzenan Jupic <56133904+DzenanJupic@users.noreply.github.com>"]
 edition = "2018"
 description = "A CLI for rustube"
@@ -16,7 +16,7 @@ include = [
 [dependencies]
 anyhow = "1.0.38"
 clap = "3.0.0-beta.2"
-rustube = { path = "..", version = "0.2.3", features = ["download", "std"] }
+rustube = { path = "..", version = "0.2.4", features = ["download", "std"] }
 tokio = { version = "1.1.1", features = ["rt-multi-thread"] }
 serde = "1.0.123"
 serde_json = "1.0.61"
