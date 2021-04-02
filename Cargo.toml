@@ -19,22 +19,22 @@ members = [".", "cli"]
 # todo: add features to opt in/out of deserialization of some data (title, view_count, ...)
 
 [dependencies]
-bytes = { version = "1.0.0", optional = true }
+bytes = { version = "1.0.1", optional = true }
 chrono = { version = "0.4.19", optional = true }
-derivative = "2.1.3"
-derive_more = "0.99.11"
-log = "0.4.11"
+derivative = "2.2.0"
+derive_more = "0.99.13"
+log = "0.4.14"
 mime = { version = "0.3.16", optional = true }
-regex = { version = "1.4.2", optional = true }
-reqwest = { version = "0.11.0", optional = true }
-serde = { version = "1.0.118", default-features = false, features = ["alloc", "derive"] }
-serde_qs = { version = "0.8.2", optional = true }
-serde_json = { version = "1.0.61", optional = true }
-serde_with = { version = "1.6.0", optional = true }
-thiserror = { version = "1.0.23", optional = true }
-tokio = { version = "1.0.1", optional = true }
-tokio-stream = { version = "0.1.1", optional = true }
-url = { version = "2.2.0" }
+regex = { version = "1.4.5", optional = true }
+reqwest = { version = "0.11.2", optional = true }
+serde = { version = "1.0.125", default-features = false, features = ["alloc", "derive"] }
+serde_qs = { version = "0.8.3", optional = true }
+serde_json = { version = "1.0.64", optional = true }
+serde_with = { version = "1.8.0", optional = true }
+thiserror = { version = "1.0.24", optional = true }
+tokio = { version = "1.4.0", optional = true }
+tokio-stream = { version = "0.1.5", optional = true }
+url = { version = "2.2.1" }
 
 [dev-dependencies]
 rand = "0.8.1"
@@ -57,4 +57,4 @@ fetch = [
 ]
 descramble = ["fetch", "stream"]
 stream = ["descramble"]
-blocking = ["tokio/rt", "std"]
+blocking = ["tokio/rt", "tokio/rt-multi-thread", "std"]
