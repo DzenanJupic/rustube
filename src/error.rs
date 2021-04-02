@@ -44,4 +44,8 @@ pub enum Error {
             This error should never be propagated to the public API."
     )]
     Internal(&'static str),
+    #[error("The internal channel has been closed")]
+    #[cfg(any(feature = "callback", doc))]
+    #[doc(cfg(feature = "callback"))]
+    ChannelClosed,
 }
