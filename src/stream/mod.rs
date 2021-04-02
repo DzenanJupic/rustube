@@ -15,7 +15,7 @@ use tokio::{
 };
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
-use tokio::sync::mpsc::{self, Sender, Receiver, error::TrySendError};
+use tokio::{sync::mpsc::{self, Sender, Receiver, error::TrySendError}, task};
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
 use std::cell::Cell;
@@ -283,13 +283,45 @@ impl Stream {
             .map(|_| path)
     }
 
+    #[cfg(any(feature = "callback"))]
+    #[inline]
+    async fn on_progress(&self) {
+        if let Some(callback) = self.callback.clone() {
+            let mut receiver = callback.internal_receiver.take().expect("Download called twice on same stream");
+            match &callback.on_progress {
+                OnProgressType::None => {},
+                OnProgressType::Closure(closure) => {
+                    while let Some(data) = receiver.recv().await {
+                        let arguments = CallbackArguments { current_chunk: data };
+                        closure(arguments);
+                    }
+                }
+                OnProgressType::Channel(sender, cancel_on_close) => {
+                    while let Some(data) = receiver.recv().await {
+                        let arguments = CallbackArguments { current_chunk: data };
+                        // await if channel is full
+                        match sender.send(arguments).await {
+                            // close channel to internal loop on closed outer channel
+                            Err(_) => if *cancel_on_close {receiver.close()}
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /// Attempts to downloads the [`Stream`]s resource.
     /// This will download the video to the provided file path.
     pub async fn download_to<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         log::trace!("download_to: {:?}", path.as_ref());
         let mut file = File::create(&path).await?;
 
-        match self.download_full(&self.signature_cipher.url, &mut file).await {
+        // fixme: Requires 'static
+        #[cfg(feature = "callback")]
+        let handle = task::spawn_local(self.on_progress());
+
+        let result = match self.download_full(&self.signature_cipher.url, &mut file).await {
             Ok(_) => {
                 log::info!(
                     "downloaded {} successfully to {:?}",
@@ -318,7 +350,12 @@ impl Stream {
                 tokio::fs::remove_file(path).await?;
                 Err(e)
             }
-        }
+        };
+
+        #[cfg(feature = "callback")]
+        handle.abort();
+
+        result
     }
 
     async fn download_full_seq(&self, file: &mut File) -> Result<()> {
