@@ -205,7 +205,7 @@ fn apply_signature(streaming_data: &mut StreamingData, js: &str) -> crate::Resul
     Ok(())
 }
 
-/// Checks weather or not the video url is already signed.
+/// Checks whether or not the video url is already signed.
 #[inline]
 fn url_already_contains_signature(url: &Url) -> bool {
     let url = url.as_str();

@@ -131,7 +131,7 @@ impl VideoFetcher {
         //          both the watch_html as well as the video_info. (adaptive_fmts_raw even may be 
         //          a legacy thing, which isn't used by YouTube anymore).
         //       2. I need to have some kind of evidence, that watch_html comes with the 
-        //          PlayerResponse in most cases. (It would also be possible to just check, weather
+        //          PlayerResponse in most cases. (It would also be possible to just check, whether
         //          or not watch_html contains PlayerResponse, and otherwise request video_info). 
 
         let watch_html = self.get_html(&self.watch_url).await?;
@@ -173,7 +173,7 @@ impl VideoFetcher {
         &self.watch_url
     }
 
-    /// Checks, weather or not the video is accessible for normal users. 
+    /// Checks, whether or not the video is accessible for normal users. 
     fn check_availability(watch_html: &str, is_age_restricted: bool) -> crate::Result<()> {
         static PLAYABILITY_STATUS: SyncLazy<Regex> = SyncLazy::new(||
             Regex::new(r#"["']?playabilityStatus["']?\s*[:=]\s*"#).unwrap()
@@ -275,7 +275,7 @@ impl VideoFetcher {
     }
 }
 
-/// Extracts weather or not a particular video is age restricted. 
+/// Extracts whether or not a particular video is age restricted. 
 #[inline]
 #[cfg(any(feature = "fetch", doc))]
 #[doc(cfg(feature = "fetch"))]

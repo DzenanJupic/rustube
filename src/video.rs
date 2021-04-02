@@ -156,7 +156,7 @@ impl Video {
         self.video_info.player_response.video_details.title.as_str()
     }
 
-    /// Weather or not the video is age restricted.
+    /// Whether or not the video is age restricted.
     #[inline]
     pub fn is_age_restricted(&self) -> bool {
         self.video_info.is_age_restricted

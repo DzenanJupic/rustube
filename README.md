@@ -90,14 +90,14 @@ After you successfully installed `rustube-cli`, you have access to the command `
 rustube-cli
 
 USAGE:
-    rustube.exe <SUBCOMMAND>
+    rustube <SUBCOMMAND>
 
 FLAGS:
     -h, --help       Prints help information
     -V, --version    Prints version information
 
 SUBCOMMANDS:
-    check       Checks weather or not a video can be downloaded and if so, prints all available
+    check       Checks whether or not a video can be downloaded and if so, prints all available
                 streams
                 The check includes fetching, parsing, and descrambling the video data, and also
                 ensuring there is at least one Stream

@@ -6,4 +6,4 @@ A CLI. This CLI provides a small but useful subset of `rustube`. Currently avail
 
 - `download`: downloads a video from YouTube
 - `fetch`: fetches information about a video
-- `check`: checks weather or not the video can be downloaded
+- `check`: checks whether or not the video can be downloaded

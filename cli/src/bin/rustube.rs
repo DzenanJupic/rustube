@@ -23,7 +23,7 @@ enum Command {
     ")]
     Fetch(FetchArgs),
     #[clap(about = "\
-    Checks weather or not a video can be downloaded and if so, prints all available streams\n\
+    Checks whether or not a video can be downloaded and if so, prints all available streams\n\
     The check includes fetching, parsing, and descrambling the video data, and also ensuring there \
     is at least one Stream\n\
     Since the video information gets descrambled, you can use all Stream URLs to access the video \
