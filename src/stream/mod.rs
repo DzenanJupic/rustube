@@ -299,17 +299,24 @@ impl Stream {
     /// This will download the video to <video_id>.mp4 in the current working directory.
     #[inline]
     pub async fn download(&self) -> Result<PathBuf> {
-        self.download_callback(None).await
+        self.internal_download(None).await
     }
 
     /// Attempts to downloads the [`Stream`]s resource.
     /// This will download the video to <video_id>.mp4 in the current working directory.
-    /// Takes an Callback
+    /// Takes an [`Callback`](crate::stream::Callback)
+    #[cfg(any(feature = "callback", doc))]
+    #[doc(cfg(feature = "callback"))]
     #[inline]
-    pub async fn download_callback(&self, callback: Option<Callback>) -> Result<PathBuf> {
+    pub async fn download_callback(&self, callback: Callback) -> Result<PathBuf> {
+        self.internal_download(Some(callback)).await
+    }
+
+    #[inline]
+    async fn internal_download(&self, callback: Option<Callback>) -> Result<PathBuf> {
         let path = Path::new(self.video_details.video_id.as_str())
             .with_extension("mp4");
-        self.download_to_callback(&path, callback)
+        self.internal_download_to(&path, callback)
             .await
             .map(|_| path)
     }
@@ -318,14 +325,25 @@ impl Stream {
     /// This will download the video to <video_id>.mp4 in the provided directory.
     #[inline]
     pub async fn download_to_dir<P: AsRef<Path>>(&self, dir: P) -> Result<PathBuf> {
-        self.download_to_dir_callback(dir, None).await
+        self.internal_download_to_dir(dir, None).await
     }
 
     /// Attempts to downloads the [`Stream`]s resource.
     /// This will download the video to <video_id>.mp4 in the provided directory. 
-    /// Takes an Callback
+    /// Takes an [`Callback`](crate::stream::Callback)
+    #[cfg(any(feature = "callback", doc))]
+    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub async fn download_to_dir_callback<P: AsRef<Path>>(
+        &self,
+        dir: P,
+        callback: Callback
+    ) -> Result<PathBuf> {
+        self.internal_download_to_dir(dir, Some(callback)).await
+    }
+
+    #[inline]
+    async fn internal_download_to_dir<P: AsRef<Path>>(
         &self,
         dir: P,
         callback: Option<Callback>
@@ -334,7 +352,7 @@ impl Stream {
             .as_ref()
             .join(self.video_details.video_id.as_str());
         path.set_extension("mp4");
-        self.download_to_callback(&path, callback)
+        self.internal_download_to(&path, callback)
             .await
             .map(|_| path)
     }
@@ -388,14 +406,21 @@ impl Stream {
     /// This will download the video to the provided file path.
     #[inline]
     pub async fn download_to<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        self.download_to_callback(path, None).await
+        self.internal_download_to(path, None).await
     }
 
     /// Attempts to downloads the [`Stream`]s resource.
     /// This will download the video to the provided file path.
-    /// Takes an Callback
+    /// Takes an [`Callback`](crate::stream::Callback)
+    #[cfg(any(feature = "callback", doc))]
+    #[doc(cfg(feature = "callback"))]
+    #[inline]
+    pub async fn download_to_callback<P: AsRef<Path>>(&self, path: P, callback: Callback) -> Result<()> {
+        self.internal_download_to(path, Some(callback)).await
+    }
+
     #[allow(unused_mut)]
-    pub async fn download_to_callback<P: AsRef<Path>>(&self, path: P, mut callback: Option<Callback>) -> Result<()> {
+    async fn internal_download_to<P: AsRef<Path>>(&self, path: P, mut callback: Option<Callback>) -> Result<()> {
         log::trace!("download_to: {:?}", path.as_ref());
         let mut file = File::create(&path).await?;
 
@@ -592,7 +617,7 @@ impl Stream {
     }
 
     /// A synchronous wrapper around [`Stream::download_callback`](crate::Stream::download_callback).
-    #[cfg(any(feature = "callback"), doc)]
+    #[cfg(any(feature = "callback", doc))]
     #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn blocking_download_callback(&self, callback: Option<Callback>) -> Result<PathBuf> {
@@ -606,7 +631,7 @@ impl Stream {
     }
 
     /// A synchronous wrapper around [`Stream::download_to_dir_callback`](crate::Stream::download_to_dir_callback).
-    #[cfg(any(feature = "callback"), doc)]
+    #[cfg(any(feature = "callback", doc))]
     #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn blocking_download_to_dir_callback<P: AsRef<Path>>(
@@ -623,7 +648,7 @@ impl Stream {
     }
 
     /// A synchronous wrapper around [`Stream::download_to_callback`](crate::Stream::download_to_callback).
-    #[cfg(any(feature = "callback"), doc)]
+    #[cfg(any(feature = "callback", doc))]
     #[doc(cfg(feature = "callback"))]
     pub fn blocking_download_to_callback<P: AsRef<Path>>(&self, path: P, callback: Option<Callback>) -> Result<()> {
         Ok(crate::block!(self.download_to_callback(path, callback))?)
