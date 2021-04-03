@@ -18,9 +18,6 @@ use tokio::{
 use tokio::{sync::mpsc::{self, Sender, Receiver, error::TrySendError}, task};
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
-use std::cell::Cell;
-#[cfg(any(feature = "callback", doc))]
-#[doc(cfg(feature = "callback"))]
 use std::future::Future;
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
@@ -62,7 +59,6 @@ pub struct CallbackArguments {
 /// Type to process on_progress
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
-#[derive(Clone)]
 pub enum OnProgressType {
     /// Arc containing a closure to execute on progress
     Closure(Arc<OnProgressClosure>),
@@ -75,11 +71,18 @@ pub enum OnProgressType {
     None,
 }
 
+#[cfg(any(feature = "callback", doc))]
+#[doc(cfg(feature = "callback"))]
+impl Default for OnProgressType {
+    fn default() -> Self {
+        OnProgressType::None
+    }
+}
+
 // TODO: Add Debug
 /// Type to process on_progress
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
-#[derive(Clone)]
 pub enum OnCompleteType {
     /// Arc containing a closure to execute on complete
     Closure(Arc<OnCompleteClosure>),
@@ -89,17 +92,95 @@ pub enum OnCompleteType {
     None,
 }
 
+#[cfg(any(feature = "callback", doc))]
+#[doc(cfg(feature = "callback"))]
+impl Default for OnCompleteType {
+    fn default() -> Self {
+        OnCompleteType::None
+    }
+}
+
 // TODO: Add Debug
 /// Methods and streams to process either on_progress or on_complete
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
-#[derive(Clone)]
 pub struct Callback {
     pub on_progress: OnProgressType,
     pub on_complete: OnCompleteType,
     internal_sender: Sender<usize>,
-    internal_receiver: Arc<Cell<Option<Receiver<usize>>>>,
+    internal_receiver: Option<Receiver<usize>>,
 }
+
+#[cfg(any(feature = "callback", doc))]
+#[doc(cfg(feature = "callback"))]
+impl Callback {
+    /// Create a new callback struct without actual callbacks
+    pub fn new() -> Self {
+        let (tx, rx) = mpsc::channel(100);
+        Callback {
+            on_progress: OnProgressType::None,
+            on_complete: OnCompleteType::None,
+            internal_sender: tx,
+            internal_receiver: Some(rx)
+        }
+    }
+
+    /// Attach a closure to be executed on progress
+    ///
+    /// ### Warning:
+    /// This closure gets executed quite often, once every ~2kB progress.
+    /// If it's too slow, some on_progress events will be dropped.
+    #[inline]
+    pub fn connect_on_progress_closure(mut self, closure: Arc<OnProgressClosure>) -> Self {
+        self.on_progress = OnProgressType::Closure(closure);
+        self
+    }
+
+    /// Attach a closure to be executed on progress
+    ///
+    /// ### Warning:
+    /// This closure gets executed quite often, once every ~2kB progress.
+    /// If it's too slow, some on_progress events will be dropped.
+    #[inline]
+    pub fn connect_on_progress_closure_async(mut self, closure: impl Fn(CallbackArguments) -> dyn Future<Output = ()>) -> Self {
+        self.on_progress = OnProgressType::AsyncClosure(Arc::new(|arg| Box::pin(closure(arg))));
+        self
+    }
+
+    /// Attach a bounded sender that receives messages on progress
+    /// cancel_or_close indicates whether or not to cancel the download, if the receiver is closed
+    ///
+    /// ### Warning:
+    /// This sender gets messages quite often, once every ~2kB progress.
+    /// If it's too slow, some on_progress events will be dropped.
+    #[inline]
+    pub fn connect_on_progress_sender(
+        mut self,
+        sender: Sender<CallbackArguments>,
+        cancel_on_close: bool
+    ) -> Self {
+        self.on_progress = OnProgressType::Channel(sender, cancel_on_close);
+        self
+    }
+
+    /// Attach a closure to be executed on complete
+    #[inline]
+    pub fn connect_on_complete_closure(mut self, closure: Arc<OnCompleteClosure>) -> Self {
+        self.on_complete = OnCompleteType::Closure(closure);
+        self
+    }
+
+    /// Attach a closure to be executed on complete
+    #[inline]
+    pub fn connect_on_complete_closure_async(mut self, closure: impl Fn(Option<PathBuf>) -> dyn Future<Output = ()>) -> Self {
+        self.on_complete = OnCompleteType::AsyncClosure(Arc::new(|arg| Box::pin(closure(arg))));
+        self
+    }
+}
+
+#[cfg(not(any(feature = "callback", doc)))]
+#[derive(Debug)]
+pub struct Callback {}
 
 /// A downloadable video Stream, that contains all the important information. 
 #[derive(Clone, derivative::Derivative)]
@@ -137,10 +218,6 @@ pub struct Stream {
     pub video_details: Arc<VideoDetails>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
     client: Client,
-    #[cfg(any(feature = "callback", doc))]
-    #[doc(cfg(feature = "callback"))]
-    #[derivative(Debug = "ignore", PartialEq = "ignore")]
-    pub callback: Option<Callback>,
 }
 
 
@@ -178,8 +255,6 @@ impl Stream {
             width: raw_format.width,
             client,
             video_details,
-            #[cfg(feature = "callback")]
-            callback: None,
         }
     }
 }
@@ -220,148 +295,75 @@ impl Stream {
             ))
     }
 
-    /// Attach a closure to be executed on progress
-    ///
-    /// ### Warning:
-    /// This closure gets executed quite often, once every ~2kB progress.
-    /// If it's too slow, some on_progress events will be dropped.
-    #[cfg(any(feature = "callback", doc))]
-    #[doc(cfg(feature = "callback"))]
-    #[inline]
-    pub fn connect_on_progress_closure(mut self, closure: Arc<OnProgressClosure>) -> Self {
-        self.attach_callback_if_not_exists();
-        if let Some(ref mut callback) = self.callback {
-            callback.on_progress = OnProgressType::Closure(closure);
-        }
-        self
-    }
-
-    /// Attach a closure to be executed on progress
-    ///
-    /// ### Warning:
-    /// This closure gets executed quite often, once every ~2kB progress.
-    /// If it's too slow, some on_progress events will be dropped.
-    #[cfg(any(feature = "callback", doc))]
-    #[doc(cfg(feature = "callback"))]
-    #[inline]
-    pub fn connect_on_progress_closure_async(mut self, closure: impl Fn(CallbackArguments) -> dyn Future<Output = ()>) -> Self {
-        self.attach_callback_if_not_exists();
-        if let Some(ref mut callback) = self.callback {
-            callback.on_progress = OnProgressType::AsyncClosure(Arc::new(|arg| Box::pin(closure(arg))));
-        }
-        self
-    }
-
-    /// Attach a bounded sender that receives messages on progress
-    /// cancel_or_close indicates whether or not to cancel the download, if the receiver is closed
-    ///
-    /// ### Warning:
-    /// This sender gets messages quite often, once every ~2kB progress.
-    /// If it's too slow, some on_progress events will be dropped.
-    #[cfg(any(feature = "callback", doc))]
-    #[doc(cfg(feature = "callback"))]
-    #[inline]
-    pub fn connect_on_progress_sender(
-        mut self,
-        sender: Sender<CallbackArguments>,
-        cancel_on_close: bool
-    ) -> Self {
-        self.attach_callback_if_not_exists();
-        if let Some(ref mut callback) = self.callback {
-            callback.on_progress = OnProgressType::Channel(sender, cancel_on_close);
-        }
-        self
-    }
-
-    /// Attach a closure to be executed on complete
-    #[cfg(any(feature = "callback", doc))]
-    #[doc(cfg(feature = "callback"))]
-    #[inline]
-    pub fn connect_on_complete_closure(mut self, closure: Arc<OnCompleteClosure>) -> Self {
-        self.attach_callback_if_not_exists();
-        if let Some(ref mut callback) = self.callback {
-            callback.on_complete = OnCompleteType::Closure(closure);
-        }
-        self
-    }
-
-    /// Attach a closure to be executed on complete
-    #[cfg(any(feature = "callback", doc))]
-    #[doc(cfg(feature = "callback"))]
-    #[inline]
-    pub fn connect_on_complete_closure_async(mut self, closure: impl Fn(Option<PathBuf>) -> dyn Future<Output = ()>) -> Self {
-        self.attach_callback_if_not_exists();
-        if let Some(ref mut callback) = self.callback {
-            callback.on_complete = OnCompleteType::AsyncClosure(Arc::new(|arg| Box::pin(closure(arg))));
-        }
-        self
-    }
-
-    #[cfg(feature = "callback")]
-    fn attach_callback_if_not_exists(&mut self) {
-        if let None = self.callback {
-            let (tx, rx) = mpsc::channel(100);
-            self.callback = Some(Callback {
-                on_progress: OnProgressType::None,
-                on_complete: OnCompleteType::None,
-                internal_sender: tx,
-                internal_receiver: Arc::new(Cell::new(Some(rx)))
-            })
-        }
-    }
-
     /// Attempts to downloads the [`Stream`]s resource.
     /// This will download the video to <video_id>.mp4 in the current working directory.
     #[inline]
     pub async fn download(&self) -> Result<PathBuf> {
+        self.download_callback(None).await
+    }
+
+    /// Attempts to downloads the [`Stream`]s resource.
+    /// This will download the video to <video_id>.mp4 in the current working directory.
+    /// Takes an Callback
+    #[inline]
+    pub async fn download_callback(&self, callback: Option<Callback>) -> Result<PathBuf> {
         let path = Path::new(self.video_details.video_id.as_str())
             .with_extension("mp4");
-        self.download_to(&path)
+        self.download_to_callback(&path, callback)
             .await
             .map(|_| path)
     }
 
     /// Attempts to downloads the [`Stream`]s resource.
-    /// This will download the video to <video_id>.mp4 in the provided directory. 
+    /// This will download the video to <video_id>.mp4 in the provided directory.
     #[inline]
     pub async fn download_to_dir<P: AsRef<Path>>(&self, dir: P) -> Result<PathBuf> {
+        self.download_to_dir_callback(dir, None).await
+    }
+
+    /// Attempts to downloads the [`Stream`]s resource.
+    /// This will download the video to <video_id>.mp4 in the provided directory. 
+    /// Takes an Callback
+    #[inline]
+    pub async fn download_to_dir_callback<P: AsRef<Path>>(
+        &self,
+        dir: P,
+        callback: Option<Callback>
+    ) -> Result<PathBuf> {
         let mut path = dir
             .as_ref()
             .join(self.video_details.video_id.as_str());
         path.set_extension("mp4");
-        self.download_to(&path)
+        self.download_to_callback(&path, callback)
             .await
             .map(|_| path)
     }
 
     #[cfg(feature = "callback")]
     #[inline]
-    async fn on_progress(&self) {
-        if let Some(callback) = self.callback.clone() {
-            let mut receiver = callback.internal_receiver.take().expect("Download called twice on same stream");
-            match &callback.on_progress {
-                OnProgressType::None => {},
-                OnProgressType::Closure(closure) => {
-                    while let Some(data) = receiver.recv().await {
-                        let arguments = CallbackArguments { current_chunk: data };
-                        closure(arguments);
-                    }
+    async fn on_progress(mut receiver: Receiver<usize>, on_progress: OnProgressType) {
+        match on_progress {
+            OnProgressType::None => {},
+            OnProgressType::Closure(closure) => {
+                while let Some(data) = receiver.recv().await {
+                    let arguments = CallbackArguments { current_chunk: data };
+                    closure(arguments);
                 }
-                OnProgressType::AsyncClosure(closure) => {
-                    while let Some(data) = receiver.recv().await {
-                        let arguments = CallbackArguments { current_chunk: data };
-                        closure(arguments).await;
-                    }
+            }
+            OnProgressType::AsyncClosure(closure) => {
+                while let Some(data) = receiver.recv().await {
+                    let arguments = CallbackArguments { current_chunk: data };
+                    closure(arguments).await;
                 }
-                OnProgressType::Channel(sender, cancel_on_close) => {
-                    while let Some(data) = receiver.recv().await {
-                        let arguments = CallbackArguments { current_chunk: data };
-                        // await if channel is full
-                        match sender.send(arguments).await {
-                            // close channel to internal loop on closed outer channel
-                            Err(_) => if *cancel_on_close {receiver.close()}
-                            _ => {}
-                        }
+            }
+            OnProgressType::Channel(sender, cancel_on_close) => {
+                while let Some(data) = receiver.recv().await {
+                    let arguments = CallbackArguments { current_chunk: data };
+                    // await if channel is full
+                    match sender.send(arguments).await {
+                        // close channel to internal loop on closed outer channel
+                        Err(_) => if cancel_on_close {receiver.close()}
+                        _ => {}
                     }
                 }
             }
@@ -370,31 +372,45 @@ impl Stream {
 
     #[cfg(feature = "callback")]
     #[inline]
-    async fn on_complete(&self, path: Option<PathBuf>) {
-        if let Some(ref callback) = self.callback {
-            match &callback.on_complete {
-                OnCompleteType::None => {},
-                OnCompleteType::Closure(closure) => {
-                    closure(path)
-                }
-                OnCompleteType::AsyncClosure(closure) => {
-                    closure(path).await
-                }
+    async fn on_complete(on_complete: OnCompleteType, path: Option<PathBuf>) {
+        match on_complete {
+            OnCompleteType::None => {},
+            OnCompleteType::Closure(closure) => {
+                closure(path)
+            }
+            OnCompleteType::AsyncClosure(closure) => {
+                closure(path).await
             }
         }
     }
 
     /// Attempts to downloads the [`Stream`]s resource.
     /// This will download the video to the provided file path.
+    #[inline]
     pub async fn download_to<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        self.download_to_callback(path, None).await
+    }
+
+    /// Attempts to downloads the [`Stream`]s resource.
+    /// This will download the video to the provided file path.
+    /// Takes an Callback
+    #[allow(unused_mut)]
+    pub async fn download_to_callback<P: AsRef<Path>>(&self, path: P, mut callback: Option<Callback>) -> Result<()> {
         log::trace!("download_to: {:?}", path.as_ref());
         let mut file = File::create(&path).await?;
 
         // fixme: Requires 'static
         #[cfg(feature = "callback")]
-        let handle = task::spawn_local(self.on_progress());
+        let handle = if let Some(ref mut callback) = callback {
+            Some(task::spawn(Self::on_progress(
+                callback.internal_receiver.take().expect("Callback cannot be used twice"),
+                std::mem::take(&mut callback.on_progress)
+            )))
+        } else {
+            None
+        };
 
-        let result = match self.download_full(&self.signature_cipher.url, &mut file).await {
+        let result = match self.download_full(&self.signature_cipher.url, &mut file, &callback).await {
             Ok(_) => {
                 log::info!(
                     "downloaded {} successfully to {:?}",
@@ -407,7 +423,7 @@ impl Stream {
                 log::error!("failed to download {}: {:?}", self.video_details.video_id, e);
                 log::info!("try to download {} using sequenced download", self.video_details.video_id);
                 // Some adaptive streams need to be requested with sequence numbers
-                self.download_full_seq(&mut file)
+                self.download_full_seq(&mut file, &callback)
                     .await
                     .map_err(|e| {
                         log::error!(
@@ -427,7 +443,9 @@ impl Stream {
 
         #[cfg(feature = "callback")]
         {
-            handle.abort();
+            if let Some(handle) = handle {
+                handle.abort();
+            }
             let path = if let Ok(_) = &result {
                 let mut pathbuf = PathBuf::new();
                 pathbuf.push(path);
@@ -435,14 +453,16 @@ impl Stream {
             } else {
                 None
             };
-            self.on_complete(path).await
+            if let Some(ref mut callback) = callback {
+                Self::on_complete(std::mem::take(&mut callback.on_complete), path);
+            }
         }
 
 
         result
     }
 
-    async fn download_full_seq(&self, file: &mut File) -> Result<()> {
+    async fn download_full_seq(&self, file: &mut File, callback: &Option<Callback>) -> Result<()> {
         // fixme: this implementation is **not** tested yet!
         // To test it, I would need an url of a video, which does require sequenced downloading.
         log::warn!(
@@ -465,20 +485,26 @@ impl Stream {
         Self::set_url_seq_query(&mut url, &base_query, 0);
         let res = self.get(&url).await?;
         let segment_count = Stream::extract_segment_count(&res)?;
-        self.write_stream_to_file(res.bytes_stream(), file).await?;
+        // No callback action since this is not really part of the progress
+        self.write_stream_to_file(res.bytes_stream(), file, &None).await?;
 
         for i in 1..segment_count {
             Self::set_url_seq_query(&mut url, &base_query, i);
-            self.download_full(&url, file).await?;
+            self.download_full(&url, file, &callback).await?;
         }
 
         Ok(())
     }
 
     #[inline]
-    async fn download_full(&self, url: &url::Url, file: &mut File) -> Result<usize> {
+    async fn download_full(
+        &self,
+        url: &url::Url,
+        file: &mut File,
+        callback: &Option<Callback>
+    ) -> Result<usize> {
         let res = self.get(url).await?;
-        self.write_stream_to_file(res.bytes_stream(), file).await
+        self.write_stream_to_file(res.bytes_stream(), file, &callback).await
     }
 
     #[inline]
@@ -494,17 +520,18 @@ impl Stream {
     }
 
     #[inline]
+    #[allow(unused_variables)]
     async fn write_stream_to_file(
         &self,
         mut stream: impl tokio_stream::Stream<Item=reqwest::Result<bytes::Bytes>> + Unpin,
         file: &mut File,
+        callback: &Option<Callback>,
     ) -> Result<usize> {
         // Counter will be 0 if callback is not enabled
         #[allow(unused_mut)]
         let mut counter = 0;
         #[cfg(feature = "callback")]
-        let channel = self
-            .callback
+        let channel = callback
             .as_ref()
             .map(|c| c.internal_sender.clone());
         while let Some(chunk) = stream.next().await {
