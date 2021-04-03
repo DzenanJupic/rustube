@@ -19,6 +19,12 @@ use tokio::{sync::mpsc::{self, Sender, Receiver, error::TrySendError}, task};
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
 use std::cell::Cell;
+#[cfg(any(feature = "callback", doc))]
+#[doc(cfg(feature = "callback"))]
+use std::future::Future;
+#[cfg(any(feature = "callback", doc))]
+#[doc(cfg(feature = "callback"))]
+use std::pin::Pin;
 #[cfg(any(feature = "download", doc))]
 #[doc(cfg(feature = "download"))]
 use tokio_stream::StreamExt;
@@ -60,9 +66,26 @@ pub struct CallbackArguments {
 pub enum OnProgressType {
     /// Arc containing a closure to execute on progress
     Closure(Arc<OnProgressClosure>),
+    // fixme: Find a way to store async closures
+    /// Arc containing a async closure to execute on progress
+    AsyncClosure(Arc<dyn Fn(CallbackArguments) -> Pin<Box<dyn Future<Output = ()>>>>),
     /// Channel to send a message to on progress,
     /// bool indicates whether or not to cancel on a closed channel
     Channel(Sender<CallbackArguments>, bool),
+    None,
+}
+
+// TODO: Add Debug
+/// Type to process on_progress
+#[cfg(any(feature = "callback", doc))]
+#[doc(cfg(feature = "callback"))]
+#[derive(Clone)]
+pub enum OnCompleteType {
+    /// Arc containing a closure to execute on complete
+    Closure(Arc<OnCompleteClosure>),
+    // fixme: Find a way to store async closures
+    /// Arc containing a async closure to execute on complete
+    AsyncClosure(Arc<dyn Fn(Option<PathBuf>) -> Pin<Box<dyn Future<Output = ()>>>>),
     None,
 }
 
@@ -73,7 +96,7 @@ pub enum OnProgressType {
 #[derive(Clone)]
 pub struct Callback {
     pub on_progress: OnProgressType,
-    pub on_complete: Option<Arc<OnCompleteClosure>>,
+    pub on_complete: OnCompleteType,
     internal_sender: Sender<usize>,
     internal_receiver: Arc<Cell<Option<Receiver<usize>>>>,
 }
@@ -213,6 +236,22 @@ impl Stream {
         self
     }
 
+    /// Attach a closure to be executed on progress
+    ///
+    /// ### Warning:
+    /// This closure gets executed quite often, once every ~2kB progress.
+    /// If it's too slow, some on_progress events will be dropped.
+    #[cfg(any(feature = "callback", doc))]
+    #[doc(cfg(feature = "callback"))]
+    #[inline]
+    pub fn connect_on_progress_closure_async(mut self, closure: impl Fn(CallbackArguments) -> dyn Future<Output = ()>) -> Self {
+        self.attach_callback_if_not_exists();
+        if let Some(ref mut callback) = self.callback {
+            callback.on_progress = OnProgressType::AsyncClosure(Arc::new(|arg| Box::pin(closure(arg))));
+        }
+        self
+    }
+
     /// Attach a bounded sender that receives messages on progress
     /// cancel_or_close indicates whether or not to cancel the download, if the receiver is closed
     ///
@@ -241,7 +280,19 @@ impl Stream {
     pub fn connect_on_complete_closure(mut self, closure: Arc<OnCompleteClosure>) -> Self {
         self.attach_callback_if_not_exists();
         if let Some(ref mut callback) = self.callback {
-            callback.on_complete = Some(closure);
+            callback.on_complete = OnCompleteType::Closure(closure);
+        }
+        self
+    }
+
+    /// Attach a closure to be executed on complete
+    #[cfg(any(feature = "callback", doc))]
+    #[doc(cfg(feature = "callback"))]
+    #[inline]
+    pub fn connect_on_complete_closure_async(mut self, closure: impl Fn(Option<PathBuf>) -> dyn Future<Output = ()>) -> Self {
+        self.attach_callback_if_not_exists();
+        if let Some(ref mut callback) = self.callback {
+            callback.on_complete = OnCompleteType::AsyncClosure(Arc::new(|arg| Box::pin(closure(arg))));
         }
         self
     }
@@ -252,7 +303,7 @@ impl Stream {
             let (tx, rx) = mpsc::channel(100);
             self.callback = Some(Callback {
                 on_progress: OnProgressType::None,
-                on_complete: None,
+                on_complete: OnCompleteType::None,
                 internal_sender: tx,
                 internal_receiver: Arc::new(Cell::new(Some(rx)))
             })
@@ -283,7 +334,7 @@ impl Stream {
             .map(|_| path)
     }
 
-    #[cfg(any(feature = "callback"))]
+    #[cfg(feature = "callback")]
     #[inline]
     async fn on_progress(&self) {
         if let Some(callback) = self.callback.clone() {
@@ -296,6 +347,12 @@ impl Stream {
                         closure(arguments);
                     }
                 }
+                OnProgressType::AsyncClosure(closure) => {
+                    while let Some(data) = receiver.recv().await {
+                        let arguments = CallbackArguments { current_chunk: data };
+                        closure(arguments).await;
+                    }
+                }
                 OnProgressType::Channel(sender, cancel_on_close) => {
                     while let Some(data) = receiver.recv().await {
                         let arguments = CallbackArguments { current_chunk: data };
@@ -306,6 +363,22 @@ impl Stream {
                             _ => {}
                         }
                     }
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "callback")]
+    #[inline]
+    async fn on_complete(&self, path: Option<PathBuf>) {
+        if let Some(ref callback) = self.callback {
+            match &callback.on_complete {
+                OnCompleteType::None => {},
+                OnCompleteType::Closure(closure) => {
+                    closure(path)
+                }
+                OnCompleteType::AsyncClosure(closure) => {
+                    closure(path).await
                 }
             }
         }
@@ -347,13 +420,24 @@ impl Stream {
             Err(e) => {
                 log::error!("failed to download {}: {:?}", self.video_details.video_id, e);
                 drop(file);
-                tokio::fs::remove_file(path).await?;
+                tokio::fs::remove_file(path.as_ref()).await?;
                 Err(e)
             }
         };
 
         #[cfg(feature = "callback")]
-        handle.abort();
+        {
+            handle.abort();
+            let path = if let Ok(_) = &result {
+                let mut pathbuf = PathBuf::new();
+                pathbuf.push(path);
+                Some(pathbuf)
+            } else {
+                None
+            };
+            self.on_complete(path).await
+        }
+
 
         result
     }
