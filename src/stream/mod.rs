@@ -591,15 +591,42 @@ impl Stream {
         Ok(crate::block!(self.download())?)
     }
 
+    /// A synchronous wrapper around [`Stream::download_callback`](crate::Stream::download_callback).
+    #[cfg(any(feature = "callback"), doc)]
+    #[doc(cfg(feature = "callback"))]
+    #[inline]
+    pub fn blocking_download_callback(&self, callback: Option<Callback>) -> Result<PathBuf> {
+        Ok(crate::block!(self.download_callback(callback))?)
+    }
+
     /// A synchronous wrapper around [`Stream::download_to_dir`](crate::Stream::download_to_dir). 
     #[inline]
     pub fn blocking_download_to_dir<P: AsRef<Path>>(&self, dir: P) -> Result<PathBuf> {
         Ok(crate::block!(self.download_to_dir(dir))?)
     }
 
+    /// A synchronous wrapper around [`Stream::download_to_dir_callback`](crate::Stream::download_to_dir_callback).
+    #[cfg(any(feature = "callback"), doc)]
+    #[doc(cfg(feature = "callback"))]
+    #[inline]
+    pub fn blocking_download_to_dir_callback<P: AsRef<Path>>(
+        &self,
+        dir: P,
+        callback: Option<Callback>
+    ) -> Result<PathBuf> {
+        Ok(crate::block!(self.download_to_dir_callback(dir, callback))?)
+    }
+
     /// A synchronous wrapper around [`Stream::download_to`](crate::Stream::download_to).
     pub fn blocking_download_to<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         Ok(crate::block!(self.download_to(path))?)
+    }
+
+    /// A synchronous wrapper around [`Stream::download_to_callback`](crate::Stream::download_to_callback).
+    #[cfg(any(feature = "callback"), doc)]
+    #[doc(cfg(feature = "callback"))]
+    pub fn blocking_download_to_callback<P: AsRef<Path>>(&self, path: P, callback: Option<Callback>) -> Result<()> {
+        Ok(crate::block!(self.download_to_callback(path, callback))?)
     }
 
     /// A synchronous wrapper around [`Stream::content_length`](crate::Stream::content_length).
