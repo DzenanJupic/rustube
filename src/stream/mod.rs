@@ -1,3 +1,4 @@
+#![cfg_attr(feature = "callback", feature(async_closure, box_syntax))]
 use chrono::{DateTime, Utc};
 use mime::Mime;
 use reqwest::Client;
@@ -15,10 +16,13 @@ use tokio::{
 };
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
-use tokio::{sync::mpsc::{self, Sender, Receiver, error::TrySendError}, task};
+use tokio::{sync::{mpsc::{self, Sender, Receiver, error::TrySendError}, Mutex}, task};
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
 use std::future::Future;
+#[cfg(any(feature = "callback", doc))]
+#[doc(cfg(feature = "callback"))]
+use futures::{future::BoxFuture, FutureExt};
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
 use std::pin::Pin;
@@ -60,11 +64,11 @@ pub struct CallbackArguments {
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
 pub enum OnProgressType {
-    /// Arc containing a closure to execute on progress
-    Closure(Arc<OnProgressClosure>),
+    /// Box containing a closure to execute on progress
+    Closure(Box<OnProgressClosure>),
     // fixme: Find a way to store async closures
-    /// Arc containing a async closure to execute on progress
-    AsyncClosure(Arc<dyn Fn(CallbackArguments) -> Pin<Box<dyn Future<Output = ()>>>>),
+    /// Box containing a async closure to execute on progress
+    AsyncClosure(Box<dyn Fn(CallbackArguments) -> Pin<Box<dyn Future<Output = ()>>>>),
     /// Channel to send a message to on progress,
     /// bool indicates whether or not to cancel on a closed channel
     Channel(Sender<CallbackArguments>, bool),
@@ -84,11 +88,11 @@ impl Default for OnProgressType {
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
 pub enum OnCompleteType {
-    /// Arc containing a closure to execute on complete
-    Closure(Arc<OnCompleteClosure>),
+    /// Box containing a closure to execute on complete
+    Closure(Box<OnCompleteClosure>),
     // fixme: Find a way to store async closures
-    /// Arc containing a async closure to execute on complete
-    AsyncClosure(Arc<dyn Fn(Option<PathBuf>) -> Pin<Box<dyn Future<Output = ()>>>>),
+    /// Box containing a async closure to execute on complete
+    AsyncClosure(Box<dyn Fn(Option<PathBuf>) -> Pin<Box<dyn Future<Output = ()>>>>),
     None,
 }
 
@@ -128,22 +132,66 @@ impl Callback {
     /// Attach a closure to be executed on progress
     ///
     /// ### Warning:
-    /// This closure gets executed quite often, once every ~2kB progress.
+    /// This closure gets executed quite often, once every ~10kB progress.
     /// If it's too slow, some on_progress events will be dropped.
+    /// If you are looking fore something that will be executed more seldom, look for
+    /// [Callback::connect_on_progress_closure_slow](crate::stream::Callback::connect_on_progress_closure_slow)
     #[inline]
-    pub fn connect_on_progress_closure(mut self, closure: Arc<OnProgressClosure>) -> Self {
-        self.on_progress = OnProgressType::Closure(closure);
+    pub fn connect_on_progress_closure(mut self, closure: impl Fn(CallbackArguments) + 'static) -> Self {
+        self.on_progress = OnProgressType::Closure(Box::new(closure));
         self
     }
 
-    /// Attach a closure to be executed on progress
+    /// Attach a closure to be executed on progress. This closure will be executed
+    /// more seldom, around once for every MB downloaded.
+    #[inline]
+    pub fn connect_on_progress_closure_slow(mut self, closure: impl Fn(CallbackArguments) + 'static) -> Self {
+        let counter = Mutex::new(0);
+        self.on_progress = OnProgressType::Closure(Box::new(move |event| {
+            if let Ok(mut counter) = counter.try_lock() {
+                if *counter == 0 {
+                    closure(event.clone());
+                }
+                *counter += event.current_chunk;
+                if *counter > 1000000 {
+                    *counter = 0;
+                }
+            }
+        }));
+        self
+    }
+
+    /// Attach a async closure to be executed on progress
     ///
     /// ### Warning:
-    /// This closure gets executed quite often, once every ~2kB progress.
+    /// This closure gets executed quite often, once every ~10kB progress.
     /// If it's too slow, some on_progress events will be dropped.
+    /// If you are looking fore something that will be executed more seldom, look for
+    /// [Callback::connect_on_progress_closure_async_slow](crate::stream::Callback::connect_on_progress_closure_async_slow)
     #[inline]
-    pub fn connect_on_progress_closure_async(mut self, closure: impl Fn(CallbackArguments) -> dyn Future<Output = ()>) -> Self {
-        self.on_progress = OnProgressType::AsyncClosure(Arc::new(|arg| Box::pin(closure(arg))));
+    pub fn connect_on_progress_closure_async<Fut: Future<Output = ()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static>(mut self, closure: F) -> Self {
+        self.on_progress = OnProgressType::AsyncClosure(box move |arg| closure(arg).boxed());
+        self
+    }
+
+    /// Attach a async closure to be executed on progress. This closure will be executed
+    /// more seldom, around once for every MB downloaded.
+    #[inline]
+    pub fn connect_on_progress_closure_async_slow<Fut: Future<Output = ()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static + Sync + Send>(mut self, closure: F) -> Self {
+        let counter = Arc::new(Mutex::new(0));
+        self.on_progress = OnProgressType::AsyncClosure(box move |arg| {
+            let counter_clone = counter.clone();
+            async move {
+                let mut counter_ref = counter_clone.lock().await;
+                if *counter_ref == 0 {
+                    closure(arg.clone()).await;
+                }
+                *counter_ref += arg.current_chunk;
+                if *counter_ref > 1000000 {
+                    *counter_ref = 0;
+                }
+            }.boxed()
+        });
         self
     }
 
@@ -151,7 +199,7 @@ impl Callback {
     /// cancel_or_close indicates whether or not to cancel the download, if the receiver is closed
     ///
     /// ### Warning:
-    /// This sender gets messages quite often, once every ~2kB progress.
+    /// This sender gets messages quite often, once every ~10kB progress.
     /// If it's too slow, some on_progress events will be dropped.
     #[inline]
     pub fn connect_on_progress_sender(
@@ -165,15 +213,15 @@ impl Callback {
 
     /// Attach a closure to be executed on complete
     #[inline]
-    pub fn connect_on_complete_closure(mut self, closure: Arc<OnCompleteClosure>) -> Self {
+    pub fn connect_on_complete_closure(mut self, closure: Box<OnCompleteClosure>) -> Self {
         self.on_complete = OnCompleteType::Closure(closure);
         self
     }
 
-    /// Attach a closure to be executed on complete
+    /// Attach a async closure to be executed on complete
     #[inline]
-    pub fn connect_on_complete_closure_async(mut self, closure: impl Fn(Option<PathBuf>) -> dyn Future<Output = ()>) -> Self {
-        self.on_complete = OnCompleteType::AsyncClosure(Arc::new(|arg| Box::pin(closure(arg))));
+    pub fn connect_on_complete_closure_async<Fut: Future<Output = ()> + Send + 'static, F: Fn(Option<PathBuf>) -> Fut + 'static>(mut self, closure: F) -> Self {
+        self.on_complete = OnCompleteType::AsyncClosure(box move |arg| closure(arg).boxed());
         self
     }
 }
@@ -427,7 +475,7 @@ impl Stream {
         // fixme: Requires 'static
         #[cfg(feature = "callback")]
         let handle = if let Some(ref mut callback) = callback {
-            Some(task::spawn(Self::on_progress(
+            Some(task::spawn_local(Self::on_progress(
                 callback.internal_receiver.take().expect("Callback cannot be used twice"),
                 std::mem::take(&mut callback.on_progress)
             )))
