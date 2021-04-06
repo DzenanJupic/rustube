@@ -4,13 +4,12 @@ use std::pin::Pin;
 
 use futures::FutureExt;
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::{mpsc::{Receiver, Sender}, Mutex};
 
 // maybe:
 //  pub type OnProgress = Box<dyn Fn(&dyn Any, &[u8], u32)>;
 //  pub type OnComplete = Box<dyn Fn(&dyn Any, Option<PathBuf>)>;
 /// Arguments given either to a on_progress callback or on_progress receiver
-#[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
 #[derive(Clone, derivative::Derivative)]
 #[derivative(Debug)]
@@ -20,7 +19,6 @@ pub struct CallbackArguments {
 
 // TODO: Add Debug
 /// Type to process on_progress
-#[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
 pub enum OnProgressType {
     /// Box containing a closure to execute on progress
@@ -43,7 +41,6 @@ pub enum OnProgressType {
     None,
 }
 
-#[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
 impl Default for OnProgressType {
     fn default() -> Self {
@@ -53,7 +50,6 @@ impl Default for OnProgressType {
 
 // TODO: Add Debug
 /// Type to process on_progress
-#[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
 pub enum OnCompleteType {
     /// Box containing a closure to execute on complete
@@ -64,7 +60,6 @@ pub enum OnCompleteType {
     None,
 }
 
-#[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
 impl Default for OnCompleteType {
     fn default() -> Self {
@@ -74,7 +69,6 @@ impl Default for OnCompleteType {
 
 // TODO: Add Debug
 /// Methods and streams to process either on_progress or on_complete
-#[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
 pub struct Callback {
     pub on_progress: OnProgressType,
@@ -83,7 +77,6 @@ pub struct Callback {
     pub(crate) internal_receiver: Option<Receiver<usize>>,
 }
 
-#[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
 impl Callback {
     /// Create a new callback struct without actual callbacks
@@ -181,5 +174,91 @@ impl Callback {
     pub fn connect_on_complete_closure_async<Fut: Future<Output = ()> + Send + 'static, F: Fn(Option<PathBuf>) -> Fut + 'static>(mut self, closure: F) -> Self {
         self.on_complete = OnCompleteType::AsyncClosure(box move |arg| closure(arg).boxed());
         self
+    }
+}
+
+impl super::Stream {
+    #[inline]
+    pub(crate) async fn on_progress(mut receiver: Receiver<usize>, on_progress: OnProgressType) {
+        let counter = Mutex::new(1000001);
+        match on_progress {
+            OnProgressType::None => {},
+            OnProgressType::Closure(closure) => {
+                while let Some(data) = receiver.recv().await {
+                    let arguments = CallbackArguments { current_chunk: data };
+                    closure(arguments);
+                }
+            }
+            OnProgressType::AsyncClosure(closure) => {
+                while let Some(data) = receiver.recv().await {
+                    let arguments = CallbackArguments { current_chunk: data };
+                    closure(arguments).await;
+                }
+            }
+            OnProgressType::Channel(sender, cancel_on_close) => {
+                while let Some(data) = receiver.recv().await {
+                    let arguments = CallbackArguments { current_chunk: data };
+                    // await if channel is full
+                    match sender.send(arguments).await {
+                        // close channel to internal loop on closed outer channel
+                        Err(_) => if cancel_on_close {receiver.close()}
+                        _ => {}
+                    }
+                }
+            }
+            OnProgressType::SlowClosure(closure) => {
+                while let Some(data) = receiver.recv().await {
+                    if let Ok(mut counter) = counter.try_lock() {
+                        *counter += data;
+                        if *counter > 1000000 {
+                            *counter = 0;
+                            let arguments = CallbackArguments { current_chunk: data };
+                            closure(arguments)
+                        }
+                    }
+                }
+            }
+            OnProgressType::SlowAsyncClosure(closure) => {
+                while let Some(data) = receiver.recv().await {
+                    if let Ok(mut counter) = counter.try_lock() {
+                        *counter += data;
+                        if *counter > 1000000 {
+                            *counter = 0;
+                            let arguments = CallbackArguments { current_chunk: data };
+                            closure(arguments).await
+                        }
+                    }
+                }
+            }
+            OnProgressType::SlowChannel(sender, cancel_on_close) => {
+                while let Some(data) = receiver.recv().await {
+                    if let Ok(mut counter) = counter.try_lock() {
+                        *counter += data;
+                        if *counter > 1000000 {
+                            *counter = 0;
+                            let arguments = CallbackArguments { current_chunk: data };
+                            match sender.send(arguments).await {
+                                // close channel to internal loop on closed outer channel
+                                Err(_) => if cancel_on_close {receiver.close()}
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[inline]
+    pub(crate) async fn on_complete(on_complete: OnCompleteType, path: Option<PathBuf>) {
+        match on_complete {
+            OnCompleteType::None => {},
+            OnCompleteType::Closure(closure) => {
+                closure(path)
+            }
+            OnCompleteType::AsyncClosure(closure) => {
+                closure(path).await
+            }
+        }
     }
 }

@@ -15,14 +15,14 @@ use tokio::{
 };
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
-use tokio::{sync::{mpsc::{error::TrySendError, Receiver}, Mutex}, task};
+use tokio::{sync::mpsc::error::TrySendError, task};
 #[cfg(any(feature = "download", doc))]
 #[doc(cfg(feature = "download"))]
 use tokio_stream::StreamExt;
 
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
-use callback::{CallbackArguments, OnCompleteType, OnProgressType, Callback};
+use callback::Callback;
 
 #[cfg(any(feature = "download", doc))]
 #[doc(cfg(feature = "download"))]
@@ -218,91 +218,6 @@ impl Stream {
     }
 
     #[cfg(feature = "callback")]
-    #[inline]
-    async fn on_progress(mut receiver: Receiver<usize>, on_progress: OnProgressType) {
-        let counter = Mutex::new(1000001);
-        match on_progress {
-            OnProgressType::None => {},
-            OnProgressType::Closure(closure) => {
-                while let Some(data) = receiver.recv().await {
-                    let arguments = CallbackArguments { current_chunk: data };
-                    closure(arguments);
-                }
-            }
-            OnProgressType::AsyncClosure(closure) => {
-                while let Some(data) = receiver.recv().await {
-                    let arguments = CallbackArguments { current_chunk: data };
-                    closure(arguments).await;
-                }
-            }
-            OnProgressType::Channel(sender, cancel_on_close) => {
-                while let Some(data) = receiver.recv().await {
-                    let arguments = CallbackArguments { current_chunk: data };
-                    // await if channel is full
-                    match sender.send(arguments).await {
-                        // close channel to internal loop on closed outer channel
-                        Err(_) => if cancel_on_close {receiver.close()}
-                        _ => {}
-                    }
-                }
-            }
-            OnProgressType::SlowClosure(closure) => {
-                while let Some(data) = receiver.recv().await {
-                    if let Ok(mut counter) = counter.try_lock() {
-                        *counter += data;
-                        if *counter > 1000000 {
-                            *counter = 0;
-                            let arguments = CallbackArguments { current_chunk: data };
-                            closure(arguments)
-                        }
-                    }
-                }
-            }
-            OnProgressType::SlowAsyncClosure(closure) => {
-                while let Some(data) = receiver.recv().await {
-                    if let Ok(mut counter) = counter.try_lock() {
-                        *counter += data;
-                        if *counter > 1000000 {
-                            *counter = 0;
-                            let arguments = CallbackArguments { current_chunk: data };
-                            closure(arguments).await
-                        }
-                    }
-                }
-            }
-            OnProgressType::SlowChannel(sender, cancel_on_close) => {
-                while let Some(data) = receiver.recv().await {
-                    if let Ok(mut counter) = counter.try_lock() {
-                        *counter += data;
-                        if *counter > 1000000 {
-                            *counter = 0;
-                            let arguments = CallbackArguments { current_chunk: data };
-                            match sender.send(arguments).await {
-                                // close channel to internal loop on closed outer channel
-                                Err(_) => if cancel_on_close {receiver.close()}
-                                _ => {}
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    #[cfg(feature = "callback")]
-    #[inline]
-    async fn on_complete(on_complete: OnCompleteType, path: Option<PathBuf>) {
-        match on_complete {
-            OnCompleteType::None => {},
-            OnCompleteType::Closure(closure) => {
-                closure(path)
-            }
-            OnCompleteType::AsyncClosure(closure) => {
-                closure(path).await
-            }
-        }
-    }
-
     /// Attempts to downloads the [`Stream`]s resource.
     /// This will download the video to the provided file path.
     #[inline]
