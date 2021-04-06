@@ -96,7 +96,8 @@ impl Callback {
     /// This closure gets executed quite often, once every ~10kB progress.
     /// If it's too slow, some on_progress events will be dropped.
     /// If you are looking fore something that will be executed more seldom, look for
-    /// [Callback::connect_on_progress_closure_slow](crate::stream::Callback::connect_on_progress_closure_slow)
+    /// [Callback::connect_on_progress_closure_slow](crate::stream::callback::Callback::connect_on_progress_closure_slow)
+    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn connect_on_progress_closure(mut self, closure: impl Fn(CallbackArguments) + 'static) -> Self {
         self.on_progress = OnProgressType::Closure(Box::new(closure));
@@ -105,6 +106,7 @@ impl Callback {
 
     /// Attach a closure to be executed on progress. This closure will be executed
     /// more seldom, around once for every MB downloaded.
+    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn connect_on_progress_closure_slow(mut self, closure: impl Fn(CallbackArguments) + 'static) -> Self {
         self.on_progress = OnProgressType::SlowClosure(Box::new(closure));
@@ -117,7 +119,8 @@ impl Callback {
     /// This closure gets executed quite often, once every ~10kB progress.
     /// If it's too slow, some on_progress events will be dropped.
     /// If you are looking fore something that will be executed more seldom, look for
-    /// [Callback::connect_on_progress_closure_async_slow](crate::stream::Callback::connect_on_progress_closure_async_slow)
+    /// [Callback::connect_on_progress_closure_async_slow](crate::stream::callback::Callback::connect_on_progress_closure_async_slow)
+    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn connect_on_progress_closure_async<Fut: Future<Output = ()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static>(mut self, closure: F) -> Self {
         self.on_progress = OnProgressType::AsyncClosure(box move |arg| closure(arg).boxed());
@@ -126,6 +129,7 @@ impl Callback {
 
     /// Attach a async closure to be executed on progress. This closure will be executed
     /// more seldom, around once for every MB downloaded.
+    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn connect_on_progress_closure_async_slow<Fut: Future<Output = ()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static + Sync + Send>(mut self, closure: F) -> Self {
         self.on_progress = OnProgressType::SlowAsyncClosure(box move |arg| closure(arg).boxed());
@@ -138,6 +142,7 @@ impl Callback {
     /// ### Warning:
     /// This sender gets messages quite often, once every ~10kB progress.
     /// If it's too slow, some on_progress events will be dropped.
+    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn connect_on_progress_sender(
         mut self,
@@ -152,6 +157,7 @@ impl Callback {
     /// cancel_or_close indicates whether or not to cancel the download, if the receiver is closed
     ///
     /// This closure will be executed more seldom, around once for every MB downloaded.
+    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn connect_on_progress_sender_slow(
         mut self,
@@ -163,6 +169,7 @@ impl Callback {
     }
 
     /// Attach a closure to be executed on complete
+    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn connect_on_complete_closure(mut self, closure: impl Fn(Option<PathBuf>) + 'static) -> Self {
         self.on_complete = OnCompleteType::Closure(Box::new(closure));
@@ -170,6 +177,7 @@ impl Callback {
     }
 
     /// Attach a async closure to be executed on complete
+    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn connect_on_complete_closure_async<Fut: Future<Output = ()> + Send + 'static, F: Fn(Option<PathBuf>) -> Fut + 'static>(mut self, closure: F) -> Self {
         self.on_complete = OnCompleteType::AsyncClosure(box move |arg| closure(arg).boxed());

@@ -164,7 +164,7 @@ impl Stream {
 
     /// Attempts to downloads the [`Stream`]s resource.
     /// This will download the video to <video_id>.mp4 in the current working directory.
-    /// Takes an [`Callback`](crate::stream::Callback)
+    /// Takes an [`Callback`](crate::stream::callback::Callback)
     #[cfg(any(feature = "callback", doc))]
     #[doc(cfg(feature = "callback"))]
     #[inline]
@@ -190,7 +190,7 @@ impl Stream {
 
     /// Attempts to downloads the [`Stream`]s resource.
     /// This will download the video to <video_id>.mp4 in the provided directory. 
-    /// Takes an [`Callback`](crate::stream::Callback)
+    /// Takes an [`Callback`](crate::stream::callback::Callback)
     #[cfg(any(feature = "callback", doc))]
     #[doc(cfg(feature = "callback"))]
     #[inline]
@@ -227,7 +227,7 @@ impl Stream {
 
     /// Attempts to downloads the [`Stream`]s resource.
     /// This will download the video to the provided file path.
-    /// Takes an [`Callback`](crate::stream::Callback)
+    /// Takes an [`Callback`](crate::stream::callback::Callback)
     #[cfg(any(feature = "callback", doc))]
     #[doc(cfg(feature = "callback"))]
     #[inline]

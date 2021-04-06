@@ -200,6 +200,9 @@ pub use crate::id::{EMBED_URL_PATTERN, ID_PATTERN, ID_PATTERNS, SHARE_URL_PATTER
 #[cfg(any(feature = "stream", doc))]
 #[doc(cfg(feature = "stream"))]
 pub use crate::stream::Stream;
+#[cfg(any(feature = "callback", doc))]
+#[doc(cfg(feature = "callback"))]
+pub use crate::stream::callback::{CallbackArguments, Callback, OnCompleteType, OnProgressType};
 #[doc(inline)]
 #[cfg(any(feature = "descramble", doc))]
 #[doc(cfg(feature = "descramble"))]
