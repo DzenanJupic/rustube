@@ -252,7 +252,7 @@ impl Stream {
             None
         };
 
-        let result = match self.download_full(&self.signature_cipher.url, &mut file, &callback).await {
+        let result = match self.download_full(&self.signature_cipher.url, &mut file, &callback, 0).await {
             Ok(_) => {
                 log::info!(
                     "downloaded {} successfully to {:?}",
@@ -328,11 +328,12 @@ impl Stream {
         let res = self.get(&url).await?;
         let segment_count = Stream::extract_segment_count(&res)?;
         // No callback action since this is not really part of the progress
-        self.write_stream_to_file(res.bytes_stream(), file, &None).await?;
+        self.write_stream_to_file(res.bytes_stream(), file, &None, 0).await?;
+        let mut count = 0;
 
         for i in 1..segment_count {
             Self::set_url_seq_query(&mut url, &base_query, i);
-            self.download_full(&url, file, &callback).await?;
+            count = self.download_full(&url, file, &callback, count).await?;
         }
 
         Ok(())
@@ -343,10 +344,11 @@ impl Stream {
         &self,
         url: &url::Url,
         file: &mut File,
-        callback: &Option<Callback>
+        callback: &Option<Callback>,
+        count: usize,
     ) -> Result<usize> {
         let res = self.get(url).await?;
-        self.write_stream_to_file(res.bytes_stream(), file, &callback).await
+        self.write_stream_to_file(res.bytes_stream(), file, &callback, count).await
     }
 
     #[inline]
@@ -362,16 +364,15 @@ impl Stream {
     }
 
     #[inline]
-    #[allow(unused_variables)]
+    #[allow(unused_variables, unused_mut)]
     async fn write_stream_to_file(
         &self,
         mut stream: impl tokio_stream::Stream<Item=reqwest::Result<bytes::Bytes>> + Unpin,
         file: &mut File,
         callback: &Option<Callback>,
+        mut counter: usize,
     ) -> Result<usize> {
         // Counter will be 0 if callback is not enabled
-        #[allow(unused_mut)]
-        let mut counter = 0;
         #[cfg(feature = "callback")]
         let channel = callback
             .as_ref()
