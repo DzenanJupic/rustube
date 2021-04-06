@@ -188,7 +188,7 @@ impl Callback {
 impl super::Stream {
     #[inline]
     pub(crate) async fn on_progress(mut receiver: Receiver<usize>, on_progress: OnProgressType) {
-        let counter = Mutex::new(1000001);
+        let counter = Mutex::new(100);
         match on_progress {
             OnProgressType::None => {},
             OnProgressType::Closure(closure) => {
@@ -217,8 +217,8 @@ impl super::Stream {
             OnProgressType::SlowClosure(closure) => {
                 while let Some(data) = receiver.recv().await {
                     if let Ok(mut counter) = counter.try_lock() {
-                        *counter += data;
-                        if *counter > 1000000 {
+                        *counter += 1;
+                        if *counter > 100 {
                             *counter = 0;
                             let arguments = CallbackArguments { current_chunk: data };
                             closure(arguments)
@@ -229,8 +229,8 @@ impl super::Stream {
             OnProgressType::SlowAsyncClosure(closure) => {
                 while let Some(data) = receiver.recv().await {
                     if let Ok(mut counter) = counter.try_lock() {
-                        *counter += data;
-                        if *counter > 1000000 {
+                        *counter += 1;
+                        if *counter > 100 {
                             *counter = 0;
                             let arguments = CallbackArguments { current_chunk: data };
                             closure(arguments).await
@@ -241,8 +241,8 @@ impl super::Stream {
             OnProgressType::SlowChannel(sender, cancel_on_close) => {
                 while let Some(data) = receiver.recv().await {
                     if let Ok(mut counter) = counter.try_lock() {
-                        *counter += data;
-                        if *counter > 1000000 {
+                        *counter += 1;
+                        if *counter > 100 {
                             *counter = 0;
                             let arguments = CallbackArguments { current_chunk: data };
                             match sender.send(arguments).await {
