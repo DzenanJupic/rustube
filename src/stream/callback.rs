@@ -1,11 +1,9 @@
-#![feature(async_closure, box_syntax)]
 use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
-use std::sync::Arc;
 
 use futures::FutureExt;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 // maybe:
@@ -27,12 +25,21 @@ pub struct CallbackArguments {
 pub enum OnProgressType {
     /// Box containing a closure to execute on progress
     Closure(Box<dyn Fn(CallbackArguments)>),
-    // fixme: Find a way to store async closures
     /// Box containing a async closure to execute on progress
     AsyncClosure(Box<dyn Fn(CallbackArguments) -> Pin<Box<dyn Future<Output = ()>>>>),
     /// Channel to send a message to on progress,
     /// bool indicates whether or not to cancel on a closed channel
     Channel(Sender<CallbackArguments>, bool),
+    /// Box containing a closure to execute on progress
+    /// Will get executed for every MB downloaded
+    SlowClosure(Box<dyn Fn(CallbackArguments)>),
+    /// Box containing a async closure to execute on progress
+    /// Will get executed for every MB downloaded
+    SlowAsyncClosure(Box<dyn Fn(CallbackArguments) -> Pin<Box<dyn Future<Output = ()>>>>),
+    /// Channel to send a message to on progress,
+    /// bool indicates whether or not to cancel on a closed channel
+    /// Will get executed for every MB downloaded
+    SlowChannel(Sender<CallbackArguments>, bool),
     None,
 }
 
@@ -107,18 +114,7 @@ impl Callback {
     /// more seldom, around once for every MB downloaded.
     #[inline]
     pub fn connect_on_progress_closure_slow(mut self, closure: impl Fn(CallbackArguments) + 'static) -> Self {
-        let counter = Mutex::new(0);
-        self.on_progress = OnProgressType::Closure(Box::new(move |event| {
-            if let Ok(mut counter) = counter.try_lock() {
-                if *counter == 0 {
-                    closure(event.clone());
-                }
-                *counter += event.current_chunk;
-                if *counter > 1000000 {
-                    *counter = 0;
-                }
-            }
-        }));
+        self.on_progress = OnProgressType::SlowClosure(Box::new(closure));
         self
     }
 
@@ -139,20 +135,7 @@ impl Callback {
     /// more seldom, around once for every MB downloaded.
     #[inline]
     pub fn connect_on_progress_closure_async_slow<Fut: Future<Output = ()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static + Sync + Send>(mut self, closure: F) -> Self {
-        let counter = Arc::new(Mutex::new(0));
-        self.on_progress = OnProgressType::AsyncClosure(box move |arg| {
-            let counter_clone = counter.clone();
-            async move {
-                let mut counter_ref = counter_clone.lock().await;
-                if *counter_ref == 0 {
-                    closure(arg.clone()).await;
-                }
-                *counter_ref += arg.current_chunk;
-                if *counter_ref > 1000000 {
-                    *counter_ref = 0;
-                }
-            }.boxed()
-        });
+        self.on_progress = OnProgressType::SlowAsyncClosure(box move |arg| closure(arg).boxed());
         self
     }
 
@@ -169,6 +152,20 @@ impl Callback {
         cancel_on_close: bool
     ) -> Self {
         self.on_progress = OnProgressType::Channel(sender, cancel_on_close);
+        self
+    }
+
+    /// Attach a bounded sender that receives messages on progress
+    /// cancel_or_close indicates whether or not to cancel the download, if the receiver is closed
+    ///
+    /// This closure will be executed more seldom, around once for every MB downloaded.
+    #[inline]
+    pub fn connect_on_progress_sender_slow(
+        mut self,
+        sender: Sender<CallbackArguments>,
+        cancel_on_close: bool
+    ) -> Self {
+        self.on_progress = OnProgressType::SlowChannel(sender, cancel_on_close);
         self
     }
 

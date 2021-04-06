@@ -15,7 +15,7 @@ use tokio::{
 };
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
-use tokio::{sync::mpsc::{error::TrySendError, Receiver}, task};
+use tokio::{sync::{mpsc::{error::TrySendError, Receiver}, Mutex}, task};
 #[cfg(any(feature = "download", doc))]
 #[doc(cfg(feature = "download"))]
 use tokio_stream::StreamExt;
@@ -220,6 +220,7 @@ impl Stream {
     #[cfg(feature = "callback")]
     #[inline]
     async fn on_progress(mut receiver: Receiver<usize>, on_progress: OnProgressType) {
+        let counter = Mutex::new(1000001);
         match on_progress {
             OnProgressType::None => {},
             OnProgressType::Closure(closure) => {
@@ -242,6 +243,46 @@ impl Stream {
                         // close channel to internal loop on closed outer channel
                         Err(_) => if cancel_on_close {receiver.close()}
                         _ => {}
+                    }
+                }
+            }
+            OnProgressType::SlowClosure(closure) => {
+                while let Some(data) = receiver.recv().await {
+                    if let Ok(mut counter) = counter.try_lock() {
+                        *counter += data;
+                        if *counter > 1000000 {
+                            *counter = 0;
+                            let arguments = CallbackArguments { current_chunk: data };
+                            closure(arguments)
+                        }
+                    }
+                }
+            }
+            OnProgressType::SlowAsyncClosure(closure) => {
+                while let Some(data) = receiver.recv().await {
+                    if let Ok(mut counter) = counter.try_lock() {
+                        *counter += data;
+                        if *counter > 1000000 {
+                            *counter = 0;
+                            let arguments = CallbackArguments { current_chunk: data };
+                            closure(arguments).await
+                        }
+                    }
+                }
+            }
+            OnProgressType::SlowChannel(sender, cancel_on_close) => {
+                while let Some(data) = receiver.recv().await {
+                    if let Ok(mut counter) = counter.try_lock() {
+                        *counter += data;
+                        if *counter > 1000000 {
+                            *counter = 0;
+                            let arguments = CallbackArguments { current_chunk: data };
+                            match sender.send(arguments).await {
+                                // close channel to internal loop on closed outer channel
+                                Err(_) => if cancel_on_close {receiver.close()}
+                                _ => {}
+                            }
+                        }
                     }
                 }
             }
@@ -287,6 +328,7 @@ impl Stream {
         // fixme: Requires 'static
         #[cfg(feature = "callback")]
         let handle = if let Some(ref mut callback) = callback {
+
             Some(task::spawn_local(Self::on_progress(
                 callback.internal_receiver.take().expect("Callback cannot be used twice"),
                 std::mem::take(&mut callback.on_progress)
@@ -339,7 +381,7 @@ impl Stream {
                 None
             };
             if let Some(ref mut callback) = callback {
-                Self::on_complete(std::mem::take(&mut callback.on_complete), path);
+                Self::on_complete(std::mem::take(&mut callback.on_complete), path).await;
             }
         }
 
