@@ -139,6 +139,7 @@ pub enum Quality {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[non_exhaustive]
 pub enum QualityLabel {
     #[serde(rename = "144p")]
     P144,
@@ -160,6 +161,10 @@ pub enum QualityLabel {
     P1080Hz60,
     #[serde(rename = "1440p")]
     P1440,
+    #[serde(rename = "1440p60")]
+    P1440Hz60,
     #[serde(rename = "2160p")]
     P2160,
+    #[serde(rename = "2160p60")]
+    P2160Hz60,
 }
