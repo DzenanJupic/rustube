@@ -15,7 +15,9 @@ const PRE_SIGNED: &[&str] = &[
     "MAoOAa_izh0",
 
     // todo: this video is not pre_signed
-    "qG7kqns7SVM"
+    "qG7kqns7SVM",
+    // todo: idk what pre_signed is
+    "JgGuRKgvWQ4",
 ];
 const AGE_RESTRICTED: &[&str] = &[
     "VXDsM-1McE0",
