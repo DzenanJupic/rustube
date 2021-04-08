@@ -113,6 +113,8 @@ pub struct ButtonRenderer {
 pub enum ButtonRendererStyle {
     #[serde(rename = "STYLE_OVERLAY")]
     Overlay,
+    #[serde(rename = "STYLE_PRIMARY")]
+    Primary,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
@@ -126,7 +128,7 @@ pub enum ButtonRendererSize {
 pub struct NavigationEndpoint {
     #[serde(flatten)]
     pub endpoint: Endpoint,
-    pub sign_in_endpoint: SignInEndpoint,
+    pub sign_in_endpoint: Option<SignInEndpoint>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
