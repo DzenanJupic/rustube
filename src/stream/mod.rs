@@ -217,7 +217,6 @@ impl Stream {
             .map(|_| path)
     }
 
-    #[cfg(feature = "callback")]
     /// Attempts to downloads the [`Stream`]s resource.
     /// This will download the video to the provided file path.
     #[inline]
