@@ -1,6 +1,7 @@
 use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
+use std::fmt;
 
 use futures::FutureExt;
 use tokio::sync::mpsc;
@@ -17,7 +18,6 @@ pub struct CallbackArguments {
     pub current_chunk: usize,
 }
 
-// TODO: Add Debug
 /// Type to process on_progress
 #[doc(cfg(feature = "callback"))]
 pub enum OnProgressType {
@@ -41,6 +41,21 @@ pub enum OnProgressType {
     None,
 }
 
+impl fmt::Debug for OnProgressType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            &OnProgressType::AsyncClosure(_) => "AsyncClosure(async Fn)",
+            &OnProgressType::Channel(_, _) => "Channel(Sender, bool)",
+            &OnProgressType::Closure(_) => "Closure(Fn)",
+            &OnProgressType::None => "None",
+            &OnProgressType::SlowAsyncClosure(_) => "SlowAsyncClosure(async Fn)",
+            &OnProgressType::SlowChannel(_, _) => "SlowChannel(Sender, bool)",
+            &OnProgressType::SlowClosure(_) => "SlowClosure(Fn)",
+        };
+        f.write_str(name)
+    }
+}
+
 #[doc(cfg(feature = "callback"))]
 impl Default for OnProgressType {
     fn default() -> Self {
@@ -48,7 +63,6 @@ impl Default for OnProgressType {
     }
 }
 
-// TODO: Add Debug
 /// Type to process on_progress
 #[doc(cfg(feature = "callback"))]
 pub enum OnCompleteType {
@@ -58,6 +72,17 @@ pub enum OnCompleteType {
     /// Box containing a async closure to execute on complete
     AsyncClosure(Box<dyn Fn(Option<PathBuf>) -> Pin<Box<dyn Future<Output = ()>>>>),
     None,
+}
+
+impl fmt::Debug for OnCompleteType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            &OnCompleteType::AsyncClosure(_) => "AsyncClosure(async Fn)",
+            &OnCompleteType::Closure(_) => "Closure(Fn)",
+            &OnCompleteType::None => "None",
+        };
+        f.write_str(name)
+    }
 }
 
 #[doc(cfg(feature = "callback"))]
@@ -70,6 +95,7 @@ impl Default for OnCompleteType {
 // TODO: Add Debug
 /// Methods and streams to process either on_progress or on_complete
 #[doc(cfg(feature = "callback"))]
+#[derive(Debug)]
 pub struct Callback {
     pub on_progress: OnProgressType,
     pub on_complete: OnCompleteType,
