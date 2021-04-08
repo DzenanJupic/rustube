@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use rand::Rng;
 
-use rustube::{Error, Id, IdBuf, Video, VideoFetcher, block};
+use rustube::{block, Error, Id, IdBuf, Video, VideoFetcher};
 use rustube::video_info::player_response::playability_status::PlayabilityStatus;
 
 const SIGNATURE_CIPHER: &[&str] = &[
@@ -12,7 +12,10 @@ const PRE_SIGNED: &[&str] = &[
     "2lAe1cqCOXo",
     "QRS8MkLhQmM",
     "xQDsI2ptfgg",
-    "MAoOAa_izh0"
+    "MAoOAa_izh0",
+
+    // todo: this video is not pre_signed
+    "qG7kqns7SVM"
 ];
 const AGE_RESTRICTED: &[&str] = &[
     "VXDsM-1McE0",
@@ -359,9 +362,3 @@ async fn live_stream() {
 
     assert!(video.video_details().is_live_content);
 }
-
-
-
-
-
-

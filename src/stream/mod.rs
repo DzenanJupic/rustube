@@ -1,12 +1,13 @@
-use chrono::{DateTime, Utc};
-use mime::Mime;
-use reqwest::Client;
 use std::ops::Range;
 #[cfg(any(feature = "download", doc))]
 #[doc(cfg(feature = "download"))]
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+
+use chrono::{DateTime, Utc};
+use mime::Mime;
+use reqwest::Client;
 #[cfg(any(feature = "download", doc))]
 #[doc(cfg(feature = "download"))]
 use tokio::{
@@ -308,7 +309,8 @@ impl Stream {
         // To test it, I would need an url of a video, which does require sequenced downloading.
         log::warn!(
             "`download_full_seq` is not tested yet and probably broken!\n\
-            Please open a GitHub issue and paste the whole warning message in:\n\
+            Please open a GitHub issue (https://github.com/DzenanJupic/rustube/issues) and paste \
+            the whole warning message in:\n\
             id: {}\n\
             url: {}",
             self.video_details.video_id,
