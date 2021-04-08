@@ -196,13 +196,13 @@ pub use crate::id::{Id, IdBuf};
 #[cfg(any(feature = "regex", doc))]
 #[doc(cfg(feature = "regex"))]
 pub use crate::id::{EMBED_URL_PATTERN, ID_PATTERN, ID_PATTERNS, SHARE_URL_PATTERN, WATCH_URL_PATTERN};
+#[cfg(any(feature = "callback", doc))]
+#[doc(cfg(feature = "callback"))]
+pub use crate::stream::callback::{Callback, CallbackArguments, OnCompleteType, OnProgressType};
 #[doc(inline)]
 #[cfg(any(feature = "stream", doc))]
 #[doc(cfg(feature = "stream"))]
 pub use crate::stream::Stream;
-#[cfg(any(feature = "callback", doc))]
-#[doc(cfg(feature = "callback"))]
-pub use crate::stream::callback::{CallbackArguments, Callback, OnCompleteType, OnProgressType};
 #[doc(inline)]
 #[cfg(any(feature = "descramble", doc))]
 #[doc(cfg(feature = "descramble"))]
@@ -251,6 +251,8 @@ pub mod descrambler;
 #[cfg(any(feature = "descramble", doc))]
 #[doc(cfg(feature = "descramble"))]
 pub mod video;
+
+mod serde_impl;
 
 /// The absolute most straightforward way of downloading a YouTube video in high quality!
 /// 

@@ -7,8 +7,6 @@ use serde_with::{DefaultOnNull, json::JsonString};
 use serde_with::serde_as;
 use url::Url;
 
-mod serde_impl;
-
 #[serde_as]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -45,21 +43,21 @@ pub struct RawFormat {
     pub height: Option<u64>,
     pub high_replication: Option<bool>,
     #[serde(default)]
-    #[serde_as(as = "Option<serde_impl::range::Range>")]
+    #[serde_as(as = "Option<crate::serde_impl::range::Range>")]
     pub index_range: Option<Range<u64>>,
     #[serde(default)]
-    #[serde_as(as = "Option<serde_impl::range::Range>")]
+    #[serde_as(as = "Option<crate::serde_impl::range::Range>")]
     pub init_range: Option<Range<u64>>,
     pub itag: u64,
-    #[serde(with = "serde_impl::unix_timestamp_micro_secs")]
+    #[serde(with = "crate::serde_impl::unix_timestamp_micro_secs")]
     pub last_modified: DateTime<Utc>,
     pub loudness_db: Option<f64>,
-    #[serde(with = "serde_impl::mime_type")]
+    #[serde(with = "crate::serde_impl::mime_type")]
     pub mime_type: MimeType,
     pub projection_type: ProjectionType,
     pub quality: Quality,
     pub quality_label: Option<QualityLabel>,
-    #[serde(flatten, deserialize_with = "serde_impl::signature_cipher::deserialize")]
+    #[serde(flatten, deserialize_with = "crate::serde_impl::signature_cipher::deserialize")]
     pub signature_cipher: SignatureCipher,
     pub width: Option<u64>,
 }
