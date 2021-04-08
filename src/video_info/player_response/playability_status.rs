@@ -19,8 +19,8 @@ pub enum PlayabilityStatus {
         messages: Vec<String>,
         reason: String,
         error_screen: ErrorScreen,
-        playable_in_embed: bool,
-        miniplayer: MiniPlayer,
+        playable_in_embed: Option<bool>,
+        miniplayer: Option<MiniPlayer>,
         context_params: String,
     },
     #[serde(rename_all = "camelCase")]
