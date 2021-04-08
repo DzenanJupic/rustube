@@ -18,6 +18,9 @@ const PRE_SIGNED: &[&str] = &[
     "qG7kqns7SVM",
     // todo: idk what pre_signed is
     "JgGuRKgvWQ4",
+
+    // youtube kids
+    "JsGOGPTVkKg",
 ];
 const AGE_RESTRICTED: &[&str] = &[
     "VXDsM-1McE0",

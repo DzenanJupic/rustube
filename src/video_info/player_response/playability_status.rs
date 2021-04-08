@@ -60,7 +60,9 @@ pub struct MiniplayerRenderer {
 #[serde(rename_all = "camelCase")]
 pub enum PlaybackMode {
     #[serde(rename = "PLAYBACK_MODE_ALLOW")]
-    Allow
+    Allow,
+    #[serde(rename = "PLAYBACK_MODE_PAUSED_ONLY")]
+    PausedOnly,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
