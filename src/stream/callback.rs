@@ -92,7 +92,6 @@ impl Default for OnCompleteType {
     }
 }
 
-// TODO: Add Debug
 /// Methods and streams to process either on_progress or on_complete
 #[doc(cfg(feature = "callback"))]
 #[derive(Debug)]
