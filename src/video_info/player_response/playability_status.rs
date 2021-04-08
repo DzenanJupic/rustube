@@ -61,6 +61,8 @@ pub struct MiniplayerRenderer {
 pub enum PlaybackMode {
     #[serde(rename = "PLAYBACK_MODE_ALLOW")]
     Allow
+    #[serde(rename = "PLAYBACK_MODE_PAUSED_ONLY")]
+    PausedOnly,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
