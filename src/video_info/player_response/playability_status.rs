@@ -1,5 +1,8 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_with::{json::JsonString, serde_as};
 
+use crate::IdBuf;
 use crate::video_info::player_response::video_details::Thumbnail;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
@@ -31,6 +34,14 @@ pub enum PlayabilityStatus {
         desktop_legacy_age_gate_reason: Option<i64>,
         context_params: String,
     },
+    #[serde(rename_all = "camelCase")]
+    LiveStreamOffline {
+        reason: String,
+        playable_in_embed: bool,
+        live_streamability: LiveStreamAbility,
+        miniplayer: MiniPlayer,
+        context_params: String,
+    }
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
@@ -178,4 +189,39 @@ pub struct Icon {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum IconType {
     ErrorOutline
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct LiveStreamAbility {
+    live_streamability_renderer: LiveStreamAbilityRenderer
+}
+
+#[serde_as]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct LiveStreamAbilityRenderer {
+    video_id: IdBuf,
+    offline_slate: OfflineSlate,
+    #[serde_as(as = "JsonString")]
+    poll_delay_ms: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct OfflineSlate {
+    live_stream_offline_slate_renderer: LiveStreamOfflineSlateRenderer,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub struct LiveStreamOfflineSlateRenderer {
+    #[serde(with = "crate::serde_impl::unix_timestamp_secs")]
+    scheduled_start_time: DateTime<Utc>,
+    main_text: Reason,
+    subtitle_text: Reason,
+    #[serde(rename = "thumbnail")]
+    #[serde(serialize_with = "Thumbnail::serialize_vec")]
+    #[serde(deserialize_with = "Thumbnail::deserialize_vec")]
+    pub thumbnails: Vec<Thumbnail>,
 }

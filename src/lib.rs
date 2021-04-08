@@ -252,6 +252,7 @@ pub mod descrambler;
 #[doc(cfg(feature = "descramble"))]
 pub mod video;
 
+#[cfg(feature = "fetch")]
 mod serde_impl;
 
 /// The absolute most straightforward way of downloading a YouTube video in high quality!
