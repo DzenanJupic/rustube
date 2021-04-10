@@ -48,6 +48,7 @@ tokio-test = "0.4.0"
 default = ["download", "std"]
 std = ["regex", "thiserror"]
 callback = ["tokio/sync", "tokio/rt", "futures", "download"]
+microformat = ["fetch"]
 download = [
     "fetch", "tokio/fs", "tokio/io-util", "tokio/parking_lot", "tokio-stream"
 ]
