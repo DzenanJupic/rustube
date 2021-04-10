@@ -44,7 +44,9 @@ pub struct VideoDetails {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum LatencyClass {
     #[serde(rename = "MDE_STREAM_OPTIMIZATIONS_RENDERER_LATENCY_LOW")]
-    LatencyLow,
+    Low,
+    #[serde(rename = "MDE_STREAM_OPTIMIZATIONS_RENDERER_LATENCY_NORMAL")]
+    Normal,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
