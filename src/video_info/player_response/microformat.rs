@@ -12,37 +12,38 @@ pub struct Microformat {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerMicroformatRenderer {
+    pub available_countries: Vec<String>,
+    // TODO: maybe also an enum
+    pub category: String,
+    pub description: SimpleText,
+    pub embed: Embed,
+    pub external_channel_id: String,
+    pub has_ypc_metadate: bool,
+    pub is_unlisted: bool,
+    pub length_seconds: String,
+    pub live_brodcast_details: Option<LiveBroadcastDetails>,
+    pub owner_channel_name: String,
+    pub owner_profile_url: String,
+    #[serde(with = "crate::serde_impl::date")]
+    pub publish_date: DateTime<Utc>,
     #[serde(rename = "thumbnail")]
     #[serde(serialize_with = "Thumbnail::serialize_vec")]
     #[serde(deserialize_with = "Thumbnail::deserialize_vec")]
     pub thumbnails: Vec<Thumbnail>,
-    pub embed: Embed,
     pub title: SimpleText,
-    pub description: SimpleText,
-    pub length_seconds: String,
-    pub owner_profile_url: String,
-    pub external_channel_id: String,
-    pub available_countries: Vec<String>,
-    pub is_unlisted: bool,
-    pub has_ypc_metadate: bool,
-    pub view_count: i32,
-    pub category: String,
-    #[serde(with = "crate::serde_impl::date")]
-    pub publish_date: DateTime<Utc>,
-    pub owner_channel_name: String,
     #[serde(with = "crate::serde_impl::date")]
     pub upload_date: DateTime<Utc>,
-    pub live_brodcast_details: Option<LiveBroadcastDetails>,
+    pub view_count: i32,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Embed {
-    pub iframe_url: String,
     pub flash_url: String,
-    pub width: i32,
-    pub height: i32,
     pub flash_secure_url: String,
+    pub iframe_url: String,
+    pub height: i32,
+    pub width: i32,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
