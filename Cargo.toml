@@ -27,7 +27,7 @@ futures = { version = "0.3.13", optional = true }
 log = "0.4.14"
 mime = { version = "0.3.16", optional = true }
 regex = { version = "1.4.5", optional = true }
-reqwest = { version = "0.11.2", optional = true }
+reqwest = { version = "0.11.2", default_features = false, optional = true }
 serde = { version = "1.0.125", default-features = false, features = ["alloc", "derive"] }
 serde_qs = { version = "0.8.3", optional = true }
 serde_json = { version = "1.0.64", optional = true }
@@ -45,7 +45,7 @@ tokio-test = "0.4.0"
 [features]
 # By default, the minimal features for downloading a video are enabled. If you compile with default-features = false,
 # you get only the Id type as well as the Error type. 
-default = ["download", "std"]
+default = ["download", "std", "default-tls"]
 std = ["regex", "thiserror"]
 callback = ["tokio/sync", "tokio/rt", "futures", "download"]
 download = [
@@ -60,3 +60,6 @@ fetch = [
 descramble = ["fetch", "stream"]
 stream = ["descramble"]
 blocking = ["tokio/rt", "tokio/rt-multi-thread", "std"]
+default-tls = ["reqwest/default-tls"]
+native-tls = ["reqwest/native-tls"]
+rustls-tls = ["reqwest/rustls-tls"]
