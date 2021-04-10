@@ -15,6 +15,7 @@ pub struct StreamingData {
     pub adaptive_formats: Vec<RawFormat>,
     #[serde_as(as = "JsonString")]
     pub expires_in_seconds: u64,
+    #[serde(default)]
     pub formats: Vec<RawFormat>,
 }
 
