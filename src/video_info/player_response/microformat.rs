@@ -12,6 +12,7 @@ pub struct Microformat {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerMicroformatRenderer {
+    // TODO: use something specific for a ISO 3166-1 alpha-2 identifier
     pub available_countries: Vec<String>,
     // TODO: maybe also an enum
     pub category: String,
@@ -24,14 +25,14 @@ pub struct PlayerMicroformatRenderer {
     pub live_brodcast_details: Option<LiveBroadcastDetails>,
     pub owner_channel_name: String,
     pub owner_profile_url: String,
-    #[serde(with = "crate::serde_impl::date")]
+    #[serde(with = "crate::serde_impl::date_ymd")]
     pub publish_date: DateTime<Utc>,
     #[serde(rename = "thumbnail")]
     #[serde(serialize_with = "Thumbnail::serialize_vec")]
     #[serde(deserialize_with = "Thumbnail::deserialize_vec")]
     pub thumbnails: Vec<Thumbnail>,
     pub title: SimpleText,
-    #[serde(with = "crate::serde_impl::date")]
+    #[serde(with = "crate::serde_impl::date_ymd")]
     pub upload_date: DateTime<Utc>,
     pub view_count: i32,
 }
