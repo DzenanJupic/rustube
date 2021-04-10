@@ -21,6 +21,9 @@ const PRE_SIGNED: &[&str] = &[
 
     // youtube kids
     "JsGOGPTVkKg",
+
+    // No external
+    "hK4dUSV9erk",
 ];
 const AGE_RESTRICTED: &[&str] = &[
     "VXDsM-1McE0",
