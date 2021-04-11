@@ -16,6 +16,9 @@ include = [
 [workspace]
 members = [".", "cli"]
 
+[package.metadata.docs.rs]
+features = [ "all"]
+
 # todo: add features to opt in/out of deserialization of some data (title, view_count, ...)
 
 [dependencies]
@@ -44,6 +47,8 @@ tokio-test = "0.4.0"
 
 [features]
 # By default, the minimal features for downloading a video are enabled. If you compile with default-features = false,
+# mainly intended to be used by docs
+all = ["default", "callback", "microformat"]
 # you get only the Id type as well as the Error type. 
 default = ["download", "std"]
 std = ["regex", "thiserror"]
