@@ -52,7 +52,24 @@ macro_rules! correct_path {
     };
 }
 
+macro_rules! video {
+    ($id:expr) => {
+        dbg!(
+            dbg!(
+                VideoFetcher::from_id($id)
+                    .expect("Failed to construct a VideoFetcher ")
+                    .fetch()
+                    .await
+                    .expect("Failed to fetch the video")
+            )
+                    .descramble()
+                    .expect("Failed to descramble the video")
+        )
+    };
+}
+
 async fn download_path_from_id(id: Id<'_>) -> PathBuf {
+    tokio::fs::create_dir_all(DOWNLOAD_DIR).await.unwrap();
     std::env::set_current_dir(DOWNLOAD_DIR).unwrap();
     let path = std::path::Path::new(DOWNLOAD_DIR)
         .join(id.as_str())
@@ -146,9 +163,7 @@ async fn download() {
     let id = random_id(SIGNATURE_CIPHER);
     let expected_path = download_path_from_id(id.as_borrowed()).await;
 
-    let path: PathBuf = dbg!(Video::from_id(id.as_owned())
-        .await
-        .unwrap())
+    let path: PathBuf = video!(id.as_owned())
         .worst_quality()
         .unwrap()
         .download()
@@ -164,9 +179,7 @@ async fn download_age_restricted_to_dir() {
     let id = random_id(AGE_RESTRICTED);
     let expected_path = download_path_from_id(id.as_borrowed()).await;
 
-    let path = dbg!(Video::from_id(id)
-        .await
-        .unwrap())
+    let path = video!(id)
         .worst_quality()
         .unwrap()
         .download_to_dir(DOWNLOAD_DIR)
@@ -200,9 +213,7 @@ async fn download_to_dir() {
     let id = random_id(SIGNATURE_CIPHER);
     let expected_path = download_path_from_id(id.as_borrowed()).await;
 
-    let path: PathBuf = dbg!(Video::from_id(id.as_owned())
-        .await
-        .unwrap())
+    let path: PathBuf = video!(id)
         .worst_quality()
         .unwrap()
         .download_to_dir(DOWNLOAD_DIR)
@@ -216,11 +227,9 @@ async fn download_to_dir() {
 #[ignore]
 async fn download_to() {
     let id = random_id(SIGNATURE_CIPHER);
-    let path = download_path_from_id(id.as_borrowed()).await;
+    let path = dbg!(download_path_from_id(id.as_borrowed()).await);
 
-    let _: () = dbg!(Video::from_id(id)
-        .await
-        .unwrap())
+    let _: () = video!(id)
         .worst_quality()
         .unwrap()
         .download_to(&path)
@@ -234,16 +243,7 @@ async fn download_to() {
 #[ignore]
 async fn signature_cipher() {
     let id = random_id(SIGNATURE_CIPHER);
-
-    let video = dbg!(
-        VideoFetcher::from_id(id)
-            .unwrap()
-            .fetch()
-            .await
-            .unwrap()
-            .descramble()
-            .unwrap()
-    );
+    let video = video!(id);
 
     assert!(random_entry(video.streams()).signature_cipher.s.is_some());
 }
@@ -252,16 +252,7 @@ async fn signature_cipher() {
 #[ignore]
 async fn pre_signed() {
     let id = random_id(PRE_SIGNED);
-
-    let video = dbg!(
-        VideoFetcher::from_id(id)
-            .unwrap()
-            .fetch()
-            .await
-            .unwrap()
-            .descramble()
-            .unwrap()
-    );
+    let video = video!(id);
 
     assert!(random_entry(video.streams()).signature_cipher.s.is_none());
 }
@@ -270,16 +261,7 @@ async fn pre_signed() {
 #[ignore]
 async fn age_restricted() {
     let id = random_id(AGE_RESTRICTED);
-
-    let video = dbg!(
-        VideoFetcher::from_id(id)
-            .unwrap()
-            .fetch()
-            .await
-            .unwrap()
-            .descramble()
-            .unwrap()
-    );
+    let video = video!(id);
 
     assert!(video.is_age_restricted());
 }
