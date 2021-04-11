@@ -208,6 +208,10 @@ pub use crate::stream::Stream;
 #[doc(cfg(feature = "descramble"))]
 pub use crate::video::Video;
 #[doc(inline)]
+#[cfg(any(feature = "microformat", doc))]
+#[doc(cfg(feature = "microformat"))]
+pub use crate::video_info::player_response::microformat::Microformat;
+#[doc(inline)]
 #[cfg(any(feature = "fetch", doc))]
 #[doc(cfg(feature = "fetch"))]
 pub use crate::video_info::{
