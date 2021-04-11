@@ -43,11 +43,17 @@ jobs:
             profile: minimal
             toolchain: ${{ matrix.toolchain }}
             default: true
-      - name: Build
-        run: cargo build
-      - name: Build all features
-        run: cargo build --all-features
-      - name: Build CLI
-        run: cargo build -p rustube-cli
+      - name: Install clippy
+        run: rustup component add clippy
+      - name: Install cargo-hack
+        run: cargo install cargo-hack
+      - name: Check workspace each feature
+        run: cargo hack clippy --workspace --each-feature -- -D warnings
+      - name: Build workspace each feature
+        run: cargo hack build --workspace --each-feature
       - name: Run tests
-        run: cargo test --all-features
+        run: cargo test --workspace --all-features
+      - name: Run test `download_to`
+        run: cargo test -p rustube --all-features --test test_download download_to -- --exact --ignored
+      - name: Run test `download_age_restricted_to_dir`
+        run: cargo test -p rustube --all-features --test test_download download_age_restricted_to_dir -- --exact --ignored
