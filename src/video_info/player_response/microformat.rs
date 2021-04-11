@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, NaiveDate};
 use serde::{Deserialize, Serialize};
 
 use crate::video_info::player_response::video_details::Thumbnail;
@@ -19,6 +19,7 @@ pub struct PlayerMicroformatRenderer {
     pub description: SimpleText,
     pub embed: Embed,
     pub external_channel_id: String,
+    #[serde(default)]
     pub has_ypc_metadate: bool,
     pub is_unlisted: bool,
     pub length_seconds: String,
@@ -26,14 +27,14 @@ pub struct PlayerMicroformatRenderer {
     pub owner_channel_name: String,
     pub owner_profile_url: String,
     #[serde(with = "crate::serde_impl::date_ymd")]
-    pub publish_date: DateTime<Utc>,
+    pub publish_date: NaiveDate,
     #[serde(rename = "thumbnail")]
     #[serde(serialize_with = "Thumbnail::serialize_vec")]
     #[serde(deserialize_with = "Thumbnail::deserialize_vec")]
     pub thumbnails: Vec<Thumbnail>,
     pub title: SimpleText,
     #[serde(with = "crate::serde_impl::date_ymd")]
-    pub upload_date: DateTime<Utc>,
+    pub upload_date: NaiveDate,
     pub view_count: i32,
 }
 

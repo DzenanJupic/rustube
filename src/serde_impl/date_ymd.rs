@@ -1,16 +1,15 @@
-use chrono::{DateTime, TimeZone, Utc};
-use serde::{Deserializer, Serializer};
+use chrono::NaiveDate;
+use serde::{Deserializer, Serializer, Deserialize};
 use serde::de::{Error, Unexpected};
-use serde_with::{DeserializeAs, SerializeAs};
-use serde_with::json::JsonString;
 
-const FORMAT: &'static str = "%Y-%m-%d";
+const FORMAT: &'static str = "%F";
 
-pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, <D as Deserializer<'de>>::Error> where
-    D: Deserializer<'de> {
-    let date: String = JsonString::deserialize_as(deserializer)?;
-    Utc
-        .datetime_from_str(&date, FORMAT)
+pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
+where
+    D: Deserializer<'de>
+{
+    let date = <&str>::deserialize(deserializer)?;
+    NaiveDate::parse_from_str(&date, FORMAT)
         .ok()
         .ok_or(D::Error::invalid_value(
             Unexpected::Str(&date),
@@ -18,9 +17,10 @@ pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, <D a
         ))
 }
 
-pub(crate) fn serialize<S>(time: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer {
-    let date: String = time.format(FORMAT).to_string();
-    JsonString::serialize_as(&date, serializer)
+pub(crate) fn serialize<S>(date: &NaiveDate, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer
+{
+    let date_str: String = format!("{}", date.format(FORMAT));
+    serializer.serialize_str(&date_str)
 }
