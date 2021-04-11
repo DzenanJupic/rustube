@@ -6,14 +6,12 @@ on:
       - master
     paths:
       - '**.rs'
-      - '**/Cargo.toml'
       - 'Cargo.lock'
   pull_request:
     branches:
       - master
     paths:
       - '**.rs'
-      - '**/Cargo.toml'
       - 'Cargo.lock'
   schedule:
     - cron: "0 2 * * 0-6"
