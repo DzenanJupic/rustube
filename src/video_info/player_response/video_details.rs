@@ -17,10 +17,14 @@ pub struct VideoDetails {
     #[serde(default)]
     pub is_live_default_broadcast: bool,
     #[serde(default)]
+    pub is_live_dvr_enabled: bool,
+    #[serde(default)]
     pub is_low_latency_live_stream: bool,
     pub is_owner_viewing: bool,
     pub is_private: bool,
     pub is_unplugged_corpus: bool,
+    pub latency_class: Option<LatencyClass>,
+    pub live_chunk_readahead: Option<u64>,
     #[serde(default)]
     pub key_words: Vec<String>,
     #[serde_as(as = "JsonString")]
@@ -34,6 +38,15 @@ pub struct VideoDetails {
     pub video_id: IdBuf,
     #[serde_as(as = "JsonString")]
     pub view_count: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum LatencyClass {
+    #[serde(rename = "MDE_STREAM_OPTIMIZATIONS_RENDERER_LATENCY_LOW")]
+    Low,
+    #[serde(rename = "MDE_STREAM_OPTIMIZATIONS_RENDERER_LATENCY_NORMAL")]
+    Normal,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
