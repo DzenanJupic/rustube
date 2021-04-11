@@ -1,5 +1,6 @@
-use chrono::{DateTime, Utc, NaiveDate};
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
+use serde_with::{json::JsonString, serde_as};
 
 use crate::video_info::player_response::video_details::Thumbnail;
 
@@ -9,6 +10,7 @@ pub struct Microformat {
     pub player_microformat_renderer: PlayerMicroformatRenderer,
 }
 
+#[serde_as]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerMicroformatRenderer {
@@ -35,6 +37,7 @@ pub struct PlayerMicroformatRenderer {
     pub title: SimpleText,
     #[serde(with = "crate::serde_impl::date_ymd")]
     pub upload_date: NaiveDate,
+    #[serde_as(as = "JsonString")]
     pub view_count: i32,
 }
 
@@ -60,5 +63,3 @@ pub struct LiveBroadcastDetails {
     is_live_now: bool,
     start_simestamp: DateTime<Utc>,
 }
-
-
