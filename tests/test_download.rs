@@ -300,7 +300,7 @@ async fn private_video() {
         Error::VideoUnavailable(ps) => {
             match ps {
                 PlayabilityStatus::LoginRequired { .. } => {}
-                ps => panic!("expected LoginRequired, got: {:?}", ps)
+                ps => panic!("expected LoginRequired, got: {:?}", *ps)
             }
         }
         e => panic!("expected Error::VideoUnavailable, got: {:?}", e)

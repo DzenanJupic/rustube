@@ -57,7 +57,7 @@ impl Cipher {
             js_fun(signature, argument);
         }
 
-        if let Err(_) = std::str::from_utf8(signature) {
+        if std::str::from_utf8(signature).is_err() {
             let err = self.invalid_utf8_err(signature);
             // signature **must** be cleared, it does not contain valid utf-8
             signature.clear();
@@ -100,14 +100,14 @@ impl Cipher {
     }
 
     #[inline]
-    fn invalid_utf8_err(&self, signature: &Vec<u8>) -> String {
+    fn invalid_utf8_err(&self, signature: &[u8]) -> String {
         let error = format!(
             "`decrypt_signature` produced invalid utf-8!\
             Please open an issue on GitHub and paste the whole error message in.\n\
             final signature: {:?}\n\
             transform_plan: {:?}\n\
             transform_map: {:?}",
-            signature.as_slice(), self.transform_plan, self.transform_map_dbg()
+            signature, self.transform_plan, self.transform_map_dbg()
         );
         log::error!("{}", error);
         eprintln!("{}", error);
@@ -268,4 +268,3 @@ fn get_transform_object(js: &str, var: &str) -> Result<String> {
             .replace('\n', " ")
     )
 }
-

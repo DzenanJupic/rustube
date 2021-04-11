@@ -1,8 +1,8 @@
 use chrono::NaiveDate;
-use serde::{Deserializer, Serializer, Deserialize};
+use serde::{Deserialize, Deserializer, Serializer};
 use serde::de::{Error, Unexpected};
 
-const FORMAT: &'static str = "%F";
+const FORMAT: &str = "%F";
 
 pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
 where
@@ -11,9 +11,9 @@ where
     let date = <&str>::deserialize(deserializer)?;
     NaiveDate::parse_from_str(&date, FORMAT)
         .ok()
-        .ok_or(D::Error::invalid_value(
+        .ok_or_else(|| D::Error::invalid_value(
             Unexpected::Str(&date),
-            &"Expected a yyyy-mm-dd date string",
+            &"a yyyy-mm-dd date string",
         ))
 }
 

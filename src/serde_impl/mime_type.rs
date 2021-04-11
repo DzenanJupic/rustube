@@ -22,7 +22,7 @@ pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<MimeType, <D as Des
         .captures(&s)
         .ok_or_else(|| D::Error::invalid_value(
             Unexpected::Str(&s),
-            &"Expected a valid mime type with the format <TYPE>/<SUBTYPE>",
+            &"a valid mime type with the format <TYPE>/<SUBTYPE>",
         ))?
         .iter()
         // skip group 0, which is the whole match
@@ -33,13 +33,13 @@ pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<MimeType, <D as Des
         .flatten()
         .ok_or_else(|| D::Error::invalid_value(
             Unexpected::Str(&s),
-            &"Expected a valid mime type with the format <TYPE>/<SUBTYPE>",
+            &"a valid mime type with the format <TYPE>/<SUBTYPE>",
         ))?;
 
     let mime = Mime::from_str(mime_type)
         .map_err(|_| D::Error::invalid_value(
             Unexpected::Str(mime_type),
-            &r#"Expected a valid mime type with the format `(\w+/\w+);\scodecs="([a-zA-Z-0-9.,\s]*)"`"#,
+            &r#"a valid mime type with the format `(\w+/\w+);\scodecs="([a-zA-Z-0-9.,\s]*)"`"#,
         ))?;
 
     let codecs = codecs

@@ -30,9 +30,9 @@ fn deserialize_signature_cipher<'de, D>(deserializer: D) -> Result<Option<Signat
     D: Deserializer<'de> {
     let s = String::deserialize(deserializer)?;
     serde_qs::from_str::<SignatureCipher>(s.as_str())
-        .map(|s| Some(s))
+        .map(Some)
         .map_err(|_| D::Error::invalid_value(
             Unexpected::Str(s.as_str()),
-            &"Expected a valid SignatureCipher",
+            &"a valid SignatureCipher",
         ))
 }

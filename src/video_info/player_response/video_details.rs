@@ -69,11 +69,11 @@ impl Thumbnail {
                 .thumbnails
         )
     }
-    pub(crate) fn serialize_vec<S>(thumbnails: &Vec<Thumbnail>, serializer: S) -> Result<S::Ok, S::Error>
+    pub(crate) fn serialize_vec<S>(thumbnails: &[Thumbnail], serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer {
         #[derive(Serialize)]
-        struct Thumbnails<'a> { thumbnails: &'a Vec<Thumbnail> }
+        struct Thumbnails<'a> { thumbnails: &'a [Thumbnail] }
 
         Thumbnails { thumbnails }.serialize(serializer)
     }

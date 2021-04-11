@@ -208,7 +208,7 @@ impl VideoFetcher {
             // the PlayerResponse, and then use this one again?
             PlayabilityStatus::Ok { .. } => Ok(()),
             PlayabilityStatus::LoginRequired { .. } if is_age_restricted => Ok(()),
-            ps => Err(Error::VideoUnavailable(ps))
+            ps => Err(Error::VideoUnavailable(box ps))
         }
     }
 
@@ -395,11 +395,11 @@ fn parse_for_object<'a>(html: &'a str, regex: &Regex) -> crate::Result<&'a str> 
         .ok_or(Error::Internal("The regex does not match"))?
         .end();
 
-    Ok(json_object(
+    json_object(
         html
             .get(json_obj_start..)
             .ok_or(Error::Internal("The regex does not match meaningful"))?
-    )?)
+    )
 }
 
 /// Deserializes the [`PalyerResponse`] which can be found in the watch html.
@@ -432,9 +432,9 @@ fn get_ytplayer_js(html: &str) -> crate::Result<&str> {
 
     match JS_URL_PATTERNS.captures(html) {
         Some(function_match) => Ok(function_match.get(1).unwrap().as_str()),
-        None => Err(Error::UnexpectedResponse(format!(
-            "could not extract the ytplayer-javascript url from the watch html",
-        ).into()))
+        None => Err(Error::UnexpectedResponse(
+            "could not extract the ytplayer-javascript url from the watch html".into()
+        ))
     }
 }
 

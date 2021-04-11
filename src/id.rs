@@ -87,6 +87,7 @@ pub static ID_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
 #[derive(Clone, Debug, Serialize, Hash)]
 pub struct Id<'a>(Cow<'a, str>);
 
+#[allow(clippy::should_implement_trait)]
 impl<'a> Id<'a> {
     #[cfg(any(all(feature = "regex", feature = "std"), doc))]
     #[doc(cfg(all(feature = "regex", feature = "std")))]
@@ -124,7 +125,9 @@ impl<'a> Id<'a> {
             Err(_) => None
         }
     }
+}
 
+impl<'a> Id<'a> {
     #[inline]
     #[cfg(any(any(not(feature = "regex"), not(feature = "std")), doc))]
     #[doc(cfg(any(not(feature = "regex"), not(feature = "std"))))]
@@ -197,8 +200,8 @@ impl<'a> Id<'a> {
     pub fn as_static(&'a self) -> &'a IdBuf {
         // SAFETY:
         // This method returns a reference with the lifetime of 'a.
-        // Therefore the returned IdBuf cannot outlive self (also have a look at the doc-test). 
-        unsafe { core::mem::transmute::<&'a Id<'a>, &'a Id<'static>>(&self) }
+        // Therefore the returned IdBuf cannot outlive self (also have a look at the doc-test).
+        unsafe { &*(&self as *const &Id<'a> as *const IdBuf) }
     }
 
     #[inline]

@@ -7,6 +7,7 @@ use crate::video_info::player_response::video_details::Thumbnail;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(tag = "status", rename_all = "SCREAMING_SNAKE_CASE")]
+#[allow(clippy::large_enum_variant)] // todo
 pub enum PlayabilityStatus {
     #[serde(rename_all = "camelCase")]
     Ok {
@@ -41,7 +42,7 @@ pub enum PlayabilityStatus {
         live_streamability: LiveStreamAbility,
         miniplayer: MiniPlayer,
         context_params: String,
-    }
+    },
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]

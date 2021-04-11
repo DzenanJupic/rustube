@@ -95,7 +95,7 @@ impl VideoDescrambler {
     pub fn descramble(mut self) -> crate::Result<Video> {
         let streaming_data = self.video_info.player_response.streaming_data
             .as_mut()
-            .ok_or(Error::Custom(
+            .ok_or_else(|| Error::Custom(
                 "VideoInfo contained no StreamingData, which is essential for downloading.".into()
             ))?;
 

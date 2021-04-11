@@ -1,15 +1,17 @@
+use std::fmt;
 use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
-use std::fmt;
 
 use futures::FutureExt;
-use tokio::sync::mpsc;
 use tokio::sync::{mpsc::{Receiver, Sender}, Mutex};
+use tokio::sync::mpsc;
 
-// maybe:
-//  pub type OnProgress = Box<dyn Fn(&dyn Any, &[u8], u32)>;
-//  pub type OnComplete = Box<dyn Fn(&dyn Any, Option<PathBuf>)>;
+pub type OnProgressClosure = Box<dyn Fn(CallbackArguments)>;
+pub type OnProgressAsyncClosure = Box<dyn Fn(CallbackArguments) -> Pin<Box<dyn Future<Output=()>>>>;
+pub type OnCompleteClosure = Box<dyn Fn(Option<PathBuf>)>;
+pub type OnCompleteAsyncClosure = Box<dyn Fn(Option<PathBuf>) -> Pin<Box<dyn Future<Output=()>>>>;
+
 /// Arguments given either to a on_progress callback or on_progress receiver
 #[doc(cfg(feature = "callback"))]
 #[derive(Clone, derivative::Derivative)]
@@ -22,18 +24,18 @@ pub struct CallbackArguments {
 #[doc(cfg(feature = "callback"))]
 pub enum OnProgressType {
     /// Box containing a closure to execute on progress
-    Closure(Box<dyn Fn(CallbackArguments)>),
+    Closure(OnProgressClosure),
     /// Box containing a async closure to execute on progress
-    AsyncClosure(Box<dyn Fn(CallbackArguments) -> Pin<Box<dyn Future<Output = ()>>>>),
+    AsyncClosure(OnProgressAsyncClosure),
     /// Channel to send a message to on progress,
     /// bool indicates whether or not to cancel on a closed channel
     Channel(Sender<CallbackArguments>, bool),
     /// Box containing a closure to execute on progress
     /// Will get executed for every MB downloaded
-    SlowClosure(Box<dyn Fn(CallbackArguments)>),
+    SlowClosure(OnProgressClosure),
     /// Box containing a async closure to execute on progress
     /// Will get executed for every MB downloaded
-    SlowAsyncClosure(Box<dyn Fn(CallbackArguments) -> Pin<Box<dyn Future<Output = ()>>>>),
+    SlowAsyncClosure(OnProgressAsyncClosure),
     /// Channel to send a message to on progress,
     /// bool indicates whether or not to cancel on a closed channel
     /// Will get executed for every MB downloaded
@@ -44,13 +46,13 @@ pub enum OnProgressType {
 impl fmt::Debug for OnProgressType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
-            &OnProgressType::AsyncClosure(_) => "AsyncClosure(async Fn)",
-            &OnProgressType::Channel(_, _) => "Channel(Sender, bool)",
-            &OnProgressType::Closure(_) => "Closure(Fn)",
-            &OnProgressType::None => "None",
-            &OnProgressType::SlowAsyncClosure(_) => "SlowAsyncClosure(async Fn)",
-            &OnProgressType::SlowChannel(_, _) => "SlowChannel(Sender, bool)",
-            &OnProgressType::SlowClosure(_) => "SlowClosure(Fn)",
+            OnProgressType::AsyncClosure(_) => "AsyncClosure(async Fn)",
+            OnProgressType::Channel(_, _) => "Channel(Sender, bool)",
+            OnProgressType::Closure(_) => "Closure(Fn)",
+            OnProgressType::None => "None",
+            OnProgressType::SlowAsyncClosure(_) => "SlowAsyncClosure(async Fn)",
+            OnProgressType::SlowChannel(_, _) => "SlowChannel(Sender, bool)",
+            OnProgressType::SlowClosure(_) => "SlowClosure(Fn)",
         };
         f.write_str(name)
     }
@@ -67,19 +69,18 @@ impl Default for OnProgressType {
 #[doc(cfg(feature = "callback"))]
 pub enum OnCompleteType {
     /// Box containing a closure to execute on complete
-    Closure(Box<dyn Fn(Option<PathBuf>)>),
-    // fixme: Find a way to store async closures
+    Closure(OnCompleteClosure),
     /// Box containing a async closure to execute on complete
-    AsyncClosure(Box<dyn Fn(Option<PathBuf>) -> Pin<Box<dyn Future<Output = ()>>>>),
+    AsyncClosure(OnCompleteAsyncClosure),
     None,
 }
 
 impl fmt::Debug for OnCompleteType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
-            &OnCompleteType::AsyncClosure(_) => "AsyncClosure(async Fn)",
-            &OnCompleteType::Closure(_) => "Closure(Fn)",
-            &OnCompleteType::None => "None",
+            OnCompleteType::AsyncClosure(_) => "AsyncClosure(async Fn)",
+            OnCompleteType::Closure(_) => "Closure(Fn)",
+            OnCompleteType::None => "None",
         };
         f.write_str(name)
     }
@@ -111,7 +112,7 @@ impl Callback {
             on_progress: OnProgressType::None,
             on_complete: OnCompleteType::None,
             internal_sender: tx,
-            internal_receiver: Some(rx)
+            internal_receiver: Some(rx),
         }
     }
 
@@ -147,7 +148,7 @@ impl Callback {
     /// [Callback::connect_on_progress_closure_async_slow](crate::stream::callback::Callback::connect_on_progress_closure_async_slow)
     #[doc(cfg(feature = "callback"))]
     #[inline]
-    pub fn connect_on_progress_closure_async<Fut: Future<Output = ()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static>(mut self, closure: F) -> Self {
+    pub fn connect_on_progress_closure_async<Fut: Future<Output=()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static>(mut self, closure: F) -> Self {
         self.on_progress = OnProgressType::AsyncClosure(box move |arg| closure(arg).boxed());
         self
     }
@@ -156,7 +157,7 @@ impl Callback {
     /// more seldom, around once for every MB downloaded.
     #[doc(cfg(feature = "callback"))]
     #[inline]
-    pub fn connect_on_progress_closure_async_slow<Fut: Future<Output = ()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static + Sync + Send>(mut self, closure: F) -> Self {
+    pub fn connect_on_progress_closure_async_slow<Fut: Future<Output=()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static + Sync + Send>(mut self, closure: F) -> Self {
         self.on_progress = OnProgressType::SlowAsyncClosure(box move |arg| closure(arg).boxed());
         self
     }
@@ -172,7 +173,7 @@ impl Callback {
     pub fn connect_on_progress_sender(
         mut self,
         sender: Sender<CallbackArguments>,
-        cancel_on_close: bool
+        cancel_on_close: bool,
     ) -> Self {
         self.on_progress = OnProgressType::Channel(sender, cancel_on_close);
         self
@@ -187,7 +188,7 @@ impl Callback {
     pub fn connect_on_progress_sender_slow(
         mut self,
         sender: Sender<CallbackArguments>,
-        cancel_on_close: bool
+        cancel_on_close: bool,
     ) -> Self {
         self.on_progress = OnProgressType::SlowChannel(sender, cancel_on_close);
         self
@@ -204,9 +205,15 @@ impl Callback {
     /// Attach a async closure to be executed on complete
     #[doc(cfg(feature = "callback"))]
     #[inline]
-    pub fn connect_on_complete_closure_async<Fut: Future<Output = ()> + Send + 'static, F: Fn(Option<PathBuf>) -> Fut + 'static>(mut self, closure: F) -> Self {
+    pub fn connect_on_complete_closure_async<Fut: Future<Output=()> + Send + 'static, F: Fn(Option<PathBuf>) -> Fut + 'static>(mut self, closure: F) -> Self {
         self.on_complete = OnCompleteType::AsyncClosure(box move |arg| closure(arg).boxed());
         self
+    }
+}
+
+impl Default for Callback {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -215,7 +222,7 @@ impl super::Stream {
     pub(crate) async fn on_progress(mut receiver: Receiver<usize>, on_progress: OnProgressType) {
         let counter = Mutex::new(100);
         match on_progress {
-            OnProgressType::None => {},
+            OnProgressType::None => {}
             OnProgressType::Closure(closure) => {
                 while let Some(data) = receiver.recv().await {
                     let arguments = CallbackArguments { current_chunk: data };
@@ -232,10 +239,8 @@ impl super::Stream {
                 while let Some(data) = receiver.recv().await {
                     let arguments = CallbackArguments { current_chunk: data };
                     // await if channel is full
-                    match sender.send(arguments).await {
-                        // close channel to internal loop on closed outer channel
-                        Err(_) => if cancel_on_close {receiver.close()}
-                        _ => {}
+                    if sender.send(arguments).await.is_err() && cancel_on_close {
+                        receiver.close()
                     }
                 }
             }
@@ -270,10 +275,8 @@ impl super::Stream {
                         if *counter > 100 {
                             *counter = 0;
                             let arguments = CallbackArguments { current_chunk: data };
-                            match sender.send(arguments).await {
-                                // close channel to internal loop on closed outer channel
-                                Err(_) => if cancel_on_close {receiver.close()}
-                                _ => {}
+                            if sender.send(arguments).await.is_err() && cancel_on_close {
+                                receiver.close()
                             }
                         }
                     }
@@ -285,7 +288,7 @@ impl super::Stream {
     #[inline]
     pub(crate) async fn on_complete(on_complete: OnCompleteType, path: Option<PathBuf>) {
         match on_complete {
-            OnCompleteType::None => {},
+            OnCompleteType::None => {}
             OnCompleteType::Closure(closure) => {
                 closure(path)
             }

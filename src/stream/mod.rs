@@ -198,7 +198,7 @@ impl Stream {
     pub async fn download_to_dir_callback<P: AsRef<Path>>(
         &self,
         dir: P,
-        callback: Callback
+        callback: Callback,
     ) -> Result<PathBuf> {
         self.internal_download_to_dir(dir, Some(callback)).await
     }
@@ -207,7 +207,7 @@ impl Stream {
     async fn internal_download_to_dir<P: AsRef<Path>>(
         &self,
         dir: P,
-        callback: Option<Callback>
+        callback: Option<Callback>,
     ) -> Result<PathBuf> {
         let mut path = dir
             .as_ref()
@@ -242,11 +242,10 @@ impl Stream {
 
         // fixme: Requires 'static
         #[cfg(feature = "callback")]
-        let handle = if let Some(ref mut callback) = callback {
-
+            let handle = if let Some(ref mut callback) = callback {
             Some(task::spawn_local(Self::on_progress(
                 callback.internal_receiver.take().expect("Callback cannot be used twice"),
-                std::mem::take(&mut callback.on_progress)
+                std::mem::take(&mut callback.on_progress),
             )))
         } else {
             None
@@ -284,21 +283,21 @@ impl Stream {
         };
 
         #[cfg(feature = "callback")]
-        {
-            if let Some(handle) = handle {
-                handle.abort();
+            {
+                if let Some(handle) = handle {
+                    handle.abort();
+                }
+                let path = if result.is_ok() {
+                    let mut pathbuf = PathBuf::new();
+                    pathbuf.push(path);
+                    Some(pathbuf)
+                } else {
+                    None
+                };
+                if let Some(ref mut callback) = callback {
+                    Self::on_complete(std::mem::take(&mut callback.on_complete), path).await;
+                }
             }
-            let path = if let Ok(_) = &result {
-                let mut pathbuf = PathBuf::new();
-                pathbuf.push(path);
-                Some(pathbuf)
-            } else {
-                None
-            };
-            if let Some(ref mut callback) = callback {
-                Self::on_complete(std::mem::take(&mut callback.on_complete), path).await;
-            }
-        }
 
 
         result
@@ -321,7 +320,7 @@ impl Stream {
         let base_query = url
             .query()
             .map(str::to_owned)
-            .unwrap_or_else(|| String::new());
+            .unwrap_or_else(String::new);
 
         // The 0th sequential request provides the file headers, which tell us
         // information about how the file is segmented.
@@ -375,7 +374,7 @@ impl Stream {
     ) -> Result<usize> {
         // Counter will be 0 if callback is not enabled
         #[cfg(feature = "callback")]
-        let channel = callback
+            let channel = callback
             .as_ref()
             .map(|c| c.internal_sender.clone());
         while let Some(chunk) = stream.next().await {
@@ -388,9 +387,8 @@ impl Stream {
                 counter += chunk.len();
                 // Will continue even if the receiver is closed
                 // Will ignore if the channel is full and thus not slow down the download
-                match channel.try_send(counter) {
-                    Err(TrySendError::Closed(_)) => return Err(Error::ChannelClosed),
-                    _ => {}
+                if let Err(TrySendError::Closed(_)) = channel.try_send(counter) {
+                    return Err(Error::ChannelClosed)
                 }
             }
         }
@@ -407,22 +405,20 @@ impl Stream {
 
     #[inline]
     fn extract_segment_count(res: &reqwest::Response) -> Result<u64> {
-        Ok(
-            res
-                .headers()
-                .get("Segment-Count")
-                .ok_or_else(|| Error::UnexpectedResponse(
-                    "sequence download request did not contain a Segment-Count".into()
-                ))?
-                .to_str()
-                .map_err(|_| Error::UnexpectedResponse(
-                    "Segment-Count is not valid utf-8".into()
-                ))?
-                .parse::<u64>()
-                .map_err(|_| Error::UnexpectedResponse(
-                    "Segment-Count could not be parsed into an integer".into()
-                ))?
-        )
+        res
+            .headers()
+            .get("Segment-Count")
+            .ok_or_else(|| Error::UnexpectedResponse(
+                "sequence download request did not contain a Segment-Count".into()
+            ))?
+            .to_str()
+            .map_err(|_| Error::UnexpectedResponse(
+                "Segment-Count is not valid utf-8".into()
+            ))?
+            .parse::<u64>()
+            .map_err(|_| Error::UnexpectedResponse(
+                "Segment-Count could not be parsed into an integer".into()
+            ))
     }
 }
 
@@ -432,7 +428,7 @@ impl Stream {
     /// A synchronous wrapper around [`Stream::download`](crate::Stream::download).
     #[inline]
     pub fn blocking_download(&self) -> Result<PathBuf> {
-        Ok(crate::block!(self.download())?)
+        crate::block!(self.download())
     }
 
     /// A synchronous wrapper around [`Stream::download_callback`](crate::Stream::download_callback).
@@ -440,13 +436,13 @@ impl Stream {
     #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn blocking_download_callback(&self, callback: Callback) -> Result<PathBuf> {
-        Ok(crate::block!(self.download_callback(callback))?)
+        crate::block!(self.download_callback(callback))
     }
 
     /// A synchronous wrapper around [`Stream::download_to_dir`](crate::Stream::download_to_dir). 
     #[inline]
     pub fn blocking_download_to_dir<P: AsRef<Path>>(&self, dir: P) -> Result<PathBuf> {
-        Ok(crate::block!(self.download_to_dir(dir))?)
+        crate::block!(self.download_to_dir(dir))
     }
 
     /// A synchronous wrapper around [`Stream::download_to_dir_callback`](crate::Stream::download_to_dir_callback).
@@ -456,21 +452,21 @@ impl Stream {
     pub fn blocking_download_to_dir_callback<P: AsRef<Path>>(
         &self,
         dir: P,
-        callback: Callback
+        callback: Callback,
     ) -> Result<PathBuf> {
-        Ok(crate::block!(self.download_to_dir_callback(dir, callback))?)
+        crate::block!(self.download_to_dir_callback(dir, callback))
     }
 
     /// A synchronous wrapper around [`Stream::download_to`](crate::Stream::download_to).
     pub fn blocking_download_to<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        Ok(crate::block!(self.download_to(path))?)
+        crate::block!(self.download_to(path))
     }
 
     /// A synchronous wrapper around [`Stream::download_to_callback`](crate::Stream::download_to_callback).
     #[cfg(any(feature = "callback", doc))]
     #[doc(cfg(feature = "callback"))]
     pub fn blocking_download_to_callback<P: AsRef<Path>>(&self, path: P, callback: Callback) -> Result<()> {
-        Ok(crate::block!(self.download_to_callback(path, callback))?)
+        crate::block!(self.download_to_callback(path, callback))
     }
 
     /// A synchronous wrapper around [`Stream::content_length`](crate::Stream::content_length).
@@ -481,22 +477,22 @@ impl Stream {
 }
 
 #[inline]
-fn is_adaptive(codecs: &Vec<String>) -> bool {
+fn is_adaptive(codecs: &[String]) -> bool {
     codecs.len() % 2 != 0
 }
 
 #[inline]
-fn includes_video_track(codecs: &Vec<String>, mime: &Mime) -> bool {
+fn includes_video_track(codecs: &[String], mime: &Mime) -> bool {
     is_progressive(codecs) || mime.type_() == "video"
 }
 
 #[inline]
-fn includes_audio_track(codecs: &Vec<String>, mime: &Mime) -> bool {
+fn includes_audio_track(codecs: &[String], mime: &Mime) -> bool {
     is_progressive(codecs) || mime.type_() == "audio"
 }
 
 #[inline]
-fn is_progressive(codecs: &Vec<String>) -> bool {
+fn is_progressive(codecs: &[String]) -> bool {
     !is_adaptive(codecs)
 }
 

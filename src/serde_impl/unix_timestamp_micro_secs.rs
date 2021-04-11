@@ -10,9 +10,9 @@ pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, <D a
     Utc
         .timestamp_millis_opt(micro_seconds / 1000)
         .single()
-        .ok_or(D::Error::invalid_value(
+        .ok_or_else(|| D::Error::invalid_value(
             Unexpected::Signed(micro_seconds),
-            &"Expected a valid UNIX time stamp in microseconds",
+            &"a valid UNIX time stamp in microseconds",
         ))
 }
 

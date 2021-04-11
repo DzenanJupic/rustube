@@ -8,7 +8,7 @@ pub enum Error {
     #[cfg(any(feature = "fetch", doc))]
     #[doc(cfg(feature = "fetch"))]
     #[error("the video you requested is unavailable:\n{0:#?}")]
-    VideoUnavailable(crate::video_info::player_response::playability_status::PlayabilityStatus),
+    VideoUnavailable(Box<crate::video_info::player_response::playability_status::PlayabilityStatus>),
     #[cfg(any(feature = "download", doc))]
     #[doc(cfg(feature = "download"))]
     #[error("the video contains no streams")]

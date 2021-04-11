@@ -157,10 +157,10 @@ async fn download(args: DownloadArgs) -> Result<PathBuf> {
         .into_streams()
         .into_iter()
         .filter(|stream| {
-            let no_video_ok = (args.no_video && !stream.includes_video_track) || !args.no_video;
-            let no_audio_ok = (args.no_audio && !stream.includes_audio_track) || !args.no_audio;
-            let ignore_video_ok = (!args.ignore_missing_video && stream.includes_video_track) || args.ignore_missing_video;
-            let ignore_audi_ok = (!args.ignore_missing_audio && stream.includes_audio_track) || args.ignore_missing_audio;
+            let no_video_ok = !args.no_video ^ !stream.includes_video_track;
+            let no_audio_ok = !args.no_audio ^ !stream.includes_audio_track;
+            let ignore_video_ok = args.ignore_missing_video || stream.includes_video_track;
+            let ignore_audio_ok = args.ignore_missing_audio || stream.includes_audio_track;
 
             let quality_ok = args.quality
                 .map(|q| stream.quality == q)
@@ -172,7 +172,7 @@ async fn download(args: DownloadArgs) -> Result<PathBuf> {
                 .map(|q| stream.audio_quality.contains(&q))
                 .unwrap_or(true);
 
-            no_video_ok && no_audio_ok && ignore_video_ok && ignore_audi_ok && quality_ok && quality_label_ok && audio_quality_ok
+            no_video_ok && no_audio_ok && ignore_video_ok && ignore_audio_ok && quality_ok && quality_label_ok && audio_quality_ok
         })
         .max_by(|stream0, stream1| {
             if args.worst_quality {
@@ -249,21 +249,11 @@ fn cmp_quality(args: &DownloadArgs, stream0: &Stream, stream1: &Stream) -> std::
         stream0.audio_quality.cmp(&stream1.audio_quality)
     } else if args.no_audio {
         stream0.quality_label.cmp(&stream1.quality_label)
+    } else if let (Some(q0), Some(q1)) = (stream0.quality_label, stream1.quality_label) {
+        q0.cmp(&q1)
+    } else if let (Some(q0), Some(q1)) = (stream0.audio_quality, stream1.audio_quality) {
+        q0.cmp(&q1)
     } else {
-        match (stream0.quality_label, stream1.quality_label) {
-            (Some(q0), Some(q1)) => {
-                return q0.cmp(&q1);
-            }
-            _ => {}
-        }
-
-        match (stream0.audio_quality, stream1.audio_quality) {
-            (Some(q0), Some(q1)) => {
-                return q0.cmp(&q1);
-            }
-            _ => {}
-        }
-
         stream0.quality.cmp(&stream1.quality)
     }
 }
