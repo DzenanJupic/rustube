@@ -298,9 +298,9 @@ async fn private_video() {
 
     match res.unwrap_err() {
         Error::VideoUnavailable(ps) => {
-            match ps {
+            match *ps {
                 PlayabilityStatus::LoginRequired { .. } => {}
-                ps => panic!("expected LoginRequired, got: {:?}", *ps)
+                ps => panic!("expected LoginRequired, got: {:?}", ps)
             }
         }
         e => panic!("expected Error::VideoUnavailable, got: {:?}", e)
@@ -321,7 +321,7 @@ async fn region_blocked() {
 
     match res.unwrap_err() {
         Error::VideoUnavailable(ps) => {
-            match ps {
+            match *ps {
                 PlayabilityStatus::LoginRequired { .. } => {}
                 ps => panic!("expected LoginRequired, got: {:?}", ps)
             }
@@ -344,7 +344,7 @@ async fn missing_recording() {
 
     match res.unwrap_err() {
         Error::VideoUnavailable(ps) => {
-            match ps {
+            match *ps {
                 PlayabilityStatus::Unplayable { .. } => {}
                 ps => panic!("expected LoginRequired, got: {:?}", ps)
             }
