@@ -117,8 +117,7 @@ impl<'a> Id<'a> {
     }
 
     #[inline]
-    #[cfg(any(any(not(feature = "regex"), not(feature = "std")), doc))]
-    #[doc(cfg(any(not(feature = "regex"), not(feature = "std"))))]
+    #[cfg(any(not(feature = "regex"), not(feature = "std")))]
     pub fn from_str(id: &'a str) -> Option<Self> {
         match Self::check_str(id) {
             Ok(_) => Some(Self(Cow::Borrowed(id))),
@@ -129,8 +128,7 @@ impl<'a> Id<'a> {
 
 impl<'a> Id<'a> {
     #[inline]
-    #[cfg(any(any(not(feature = "regex"), not(feature = "std")), doc))]
-    #[doc(cfg(any(not(feature = "regex"), not(feature = "std"))))]
+    #[cfg(any(not(feature = "regex"), not(feature = "std")))]
     fn check_str(id: &'_ str) -> Result<(), ()> {
         if id.len() != 11 {
             return Err(());
@@ -257,8 +255,7 @@ impl IdBuf {
     }
 
     #[inline]
-    #[cfg(any(any(not(feature = "regex"), not(feature = "std")), doc))]
-    #[doc(cfg(any(not(feature = "regex"), not(feature = "std"))))]
+    #[cfg(any(not(feature = "regex"), not(feature = "std")))]
     pub fn from_string(id: String) -> Result<Self, String> {
         match Self::check_str(&id) {
             Ok(_) => Ok(Self(Cow::Owned(id))),
@@ -273,7 +270,7 @@ impl<'de> Id<'de> {
         where
             D: Deserializer<'de> {
         let raw = <&'de str>::deserialize(deserializer)?;
-        #[cfg(any(not(all(feature = "regex", feature = "std")), doc))]
+        #[cfg(not(all(feature = "regex", feature = "std")))]
             let res = Self::from_str(raw).ok_or(());
         #[cfg(any(all(feature = "regex", feature = "std"), doc))]
             let res = Self::from_raw(raw);
