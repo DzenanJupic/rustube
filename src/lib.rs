@@ -140,6 +140,11 @@ unreachable_pub
 //!
 //! The [`Callback`] struct can take up to one `on_progress` method and one `on_complete` method.
 //! 
+//! For even more control, or when you just want to access the videos URL, have a look at the 
+//! [`url`](crate::video_info::player_response::streaming_data::SignatureCipher::url) field inside 
+//! of [`Stream::signature_cipher`]. This field contains the video URL of that particular Stream. 
+//! You can, i.e., use this URL to watch the video directly in your browser.  
+//! 
 //! ## Feature flags
 //! One of the goals of `rustube` is to eventually deserialize the complete video information, so 
 //! even the weirdest niche cases get all the information they need. Another goal is to become the 
@@ -174,9 +179,9 @@ unreachable_pub
 //! 
 //!
 //! [view count]: crate::video_info::player_response::video_details::VideoDetails::view_count 
-//! [title]: crate::video_info::player_response::video_details::VideoDetails::title 
+//! [title]: crate::video_info::player_response::video_details::VideoDetails::title
 //! [is_unplugged_corpus]: crate::video_info::player_response::video_details::VideoDetails::is_unplugged_corpus
-//! [`Iterator`]: std::iter::Iterator
+//! [Iterator]: std::iter::Iterator
 
 extern crate alloc;
 
@@ -215,10 +220,6 @@ pub use crate::stream::Stream;
 #[doc(cfg(feature = "descramble"))]
 pub use crate::video::Video;
 #[doc(inline)]
-#[cfg(any(feature = "microformat", doc))]
-#[doc(cfg(feature = "microformat"))]
-pub use crate::video_info::player_response::microformat::Microformat;
-#[doc(inline)]
 #[cfg(any(feature = "fetch", doc))]
 #[doc(cfg(feature = "fetch"))]
 pub use crate::video_info::{
@@ -228,6 +229,10 @@ pub use crate::video_info::{
     },
     VideoInfo,
 };
+#[doc(inline)]
+#[cfg(any(feature = "microformat", doc))]
+#[doc(cfg(feature = "microformat"))]
+pub use crate::video_info::player_response::microformat::Microformat;
 
 /// Alias for `Result`, with the default error type [`Error`].
 #[cfg(any(feature = "std", doc))]
