@@ -43,7 +43,7 @@ pub mod callback;
 //  there are different types of streams: video, audio, and video + audio
 //  make Stream and RawFormat an enum, so there are less options in it
 
-#[cfg(not(any(feature = "callback", doc)))]
+#[cfg(all(not(feature = "callback"), feature = "download"))]
 type InternalCommunication = ();
 
 /// A downloadable video Stream, that contains all the important information. 
