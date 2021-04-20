@@ -265,20 +265,15 @@ impl super::Stream {
         }, callback).await.map(|_| ())
     }
 
-    async fn aid_callback(callback: &mut Callback) {
-        Self::on_progress(
-            callback.internal_receiver.take().expect("Callback cannot be used twice"),
-            std::mem::take(&mut callback.on_progress),
-        ).await
-    }
-
     async fn wrap_callback<F: Future<Output = Result<PathBuf>>>(
         to_wrap: impl FnOnce(Option<InternalCommunication>)-> F,
         mut callback: Callback
     ) -> Result<PathBuf> {
         let wrap_fut = to_wrap(Some(callback.internal_sender.clone()));
-        let aid_fut = Self::aid_callback(&mut callback);
-
+        let aid_fut = Self::on_progress(
+            callback.internal_receiver.take().expect("Callback cannot be used twice"),
+            std::mem::take(&mut callback.on_progress),
+        );
         let (result, _) = futures::future::join(wrap_fut, aid_fut).await;
 
         let path = result.as_ref().map(|p| p.clone()).ok();
