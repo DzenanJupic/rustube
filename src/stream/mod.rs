@@ -201,7 +201,8 @@ impl Stream {
     /// This will download the video to the provided file path.
     #[inline]
     pub async fn download_to<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        self.internal_download_to(path, None).await.map(|_| ())
+        let _ = self.internal_download_to(path, None).await?;
+        Ok(())
     }
 
     #[allow(unused_mut)]
@@ -246,7 +247,7 @@ impl Stream {
 
         #[cfg(feature = "callback")]
         if let Some(channel) = channel {
-            channel.send(InternalSignal::Finished).await.unwrap_or(())
+            let _ = channel.send(InternalSignal::Finished).await;
         }
 
         result

@@ -260,9 +260,10 @@ impl super::Stream {
     #[doc(cfg(feature = "callback"))]
     #[inline]
     pub async fn download_to_callback<P: AsRef<Path>>(&self, path: P, callback: Callback) -> Result<()> {
-        Self::wrap_callback(|channel| {
+        let _ = Self::wrap_callback(|channel| {
             self.internal_download_to(path, channel)
-        }, callback).await.map(|_| ())
+        }, callback).await?;
+        Ok(())
     }
 
     async fn wrap_callback<F: Future<Output = Result<PathBuf>>>(
