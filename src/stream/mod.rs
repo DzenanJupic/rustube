@@ -330,8 +330,9 @@ impl Stream {
                 .await?;
             #[cfg(feature = "callback")]
             if let Some(channel) = &channel {
+                // network chunks of ~10kb size
                 counter += chunk.len();
-                // Will continue even if the receiver is closed
+                // Will abort if the receiver is closed
                 // Will ignore if the channel is full and thus not slow down the download
                 if let Err(TrySendError::Closed(_)) = channel.try_send(InternalSignal::Value(counter)) {
                     return Err(Error::ChannelClosed)
