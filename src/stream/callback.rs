@@ -15,12 +15,12 @@ pub type OnCompleteClosure = Box<dyn Fn(Option<PathBuf>)>;
 pub type OnCompleteAsyncClosure = Box<dyn Fn(Option<PathBuf>) -> Pin<Box<dyn Future<Output=()>>>>;
 
 #[derive(Debug)]
-pub(crate) enum InternalSignals {
+pub(crate) enum InternalSignal {
     Value(usize),
     Finished,
 }
 
-pub(crate) type InternalCommunication = Sender<InternalSignals>;
+pub(crate) type InternalSender = Sender<InternalSignal>;
 
 /// Arguments given either to a on_progress callback or on_progress receiver
 #[doc(cfg(feature = "callback"))]
@@ -109,8 +109,8 @@ impl Default for OnCompleteType {
 pub struct Callback {
     pub on_progress: OnProgressType,
     pub on_complete: OnCompleteType,
-    pub(crate) internal_sender: InternalCommunication,
-    pub(crate) internal_receiver: Option<Receiver<InternalSignals>>,
+    pub(crate) internal_sender: InternalSender,
+    pub(crate) internal_receiver: Option<Receiver<InternalSignal>>,
 }
 
 #[doc(cfg(feature = "callback"))]
@@ -266,7 +266,7 @@ impl super::Stream {
     }
 
     async fn wrap_callback<F: Future<Output = Result<PathBuf>>>(
-        to_wrap: impl FnOnce(Option<InternalCommunication>)-> F,
+        to_wrap: impl FnOnce(Option<InternalSender>)-> F,
         mut callback: Callback
     ) -> Result<PathBuf> {
         let wrap_fut = to_wrap(Some(callback.internal_sender.clone()));
@@ -284,50 +284,50 @@ impl super::Stream {
     }
 
     #[inline]
-    async fn on_progress(mut receiver: Receiver<InternalSignals>, on_progress: OnProgressType) {
+    async fn on_progress(mut receiver: Receiver<InternalSignal>, on_progress: OnProgressType) {
         let counter = Mutex::new(100);
         match on_progress {
             OnProgressType::None => {}
             OnProgressType::Closure(closure) => {
                 while let Some(data) = receiver.recv().await {
                     match data {
-                        InternalSignals::Value(data) => {
+                        InternalSignal::Value(data) => {
                             let arguments = CallbackArguments { current_chunk: data };
                             closure(arguments);
                         }
-                        InternalSignals::Finished => break,
+                        InternalSignal::Finished => break,
                     }
                 }
             }
             OnProgressType::AsyncClosure(closure) => {
                 while let Some(data) = receiver.recv().await {
                     match data {
-                        InternalSignals::Value(data) => {
+                        InternalSignal::Value(data) => {
                             let arguments = CallbackArguments { current_chunk: data };
                             closure(arguments).await;
                         }
-                        InternalSignals::Finished => break,
+                        InternalSignal::Finished => break,
                     }
                 }
             }
             OnProgressType::Channel(sender, cancel_on_close) => {
                 while let Some(data) = receiver.recv().await {
                     match data {
-                        InternalSignals::Value(data) => {
+                        InternalSignal::Value(data) => {
                             let arguments = CallbackArguments { current_chunk: data };
                             // await if channel is full
                             if sender.send(arguments).await.is_err() && cancel_on_close {
                                 receiver.close()
                             }
                         }
-                        InternalSignals::Finished => break,
+                        InternalSignal::Finished => break,
                     }
                 }
             }
             OnProgressType::SlowClosure(closure) => {
                 while let Some(data) = receiver.recv().await {
                     match data {
-                        InternalSignals::Value(data) => {
+                        InternalSignal::Value(data) => {
                             if let Ok(mut counter) = counter.try_lock() {
                                 *counter += 1;
                                 if *counter > 100 {
@@ -337,14 +337,14 @@ impl super::Stream {
                                 }
                             }
                         }
-                        InternalSignals::Finished => break,
+                        InternalSignal::Finished => break,
                     }
                 }
             }
             OnProgressType::SlowAsyncClosure(closure) => {
                 while let Some(data) = receiver.recv().await {
                     match data {
-                        InternalSignals::Value(data) => {
+                        InternalSignal::Value(data) => {
                             if let Ok(mut counter) = counter.try_lock() {
                                 *counter += 1;
                                 if *counter > 100 {
@@ -354,14 +354,14 @@ impl super::Stream {
                                 }
                             }
                         }
-                        InternalSignals::Finished => break,
+                        InternalSignal::Finished => break,
                     }
                 }
             }
             OnProgressType::SlowChannel(sender, cancel_on_close) => {
                 while let Some(data) = receiver.recv().await {
                     match data {
-                        InternalSignals::Value(data) => {
+                        InternalSignal::Value(data) => {
                             if let Ok(mut counter) = counter.try_lock() {
                                 *counter += 1;
                                 if *counter > 100 {
@@ -373,7 +373,7 @@ impl super::Stream {
                                 }
                             }
                         }
-                        InternalSignals::Finished => break,
+                        InternalSignal::Finished => break,
                     }
                 }
             }
