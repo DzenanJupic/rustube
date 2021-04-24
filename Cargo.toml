@@ -48,7 +48,7 @@ tokio-test = "0.4.0"
 [features]
 # By default, the minimal features for downloading a video are enabled. If you compile with default-features = false,
 # you get only the Id type as well as the Error type. 
-default = ["download", "std", "default-tls", "callback"]
+default = ["download", "std", "default-tls"]
 std = ["regex", "thiserror"]
 callback = ["tokio/sync", "futures", "download"]
 microformat = ["fetch", "chrono/serde"]
