@@ -286,7 +286,7 @@ impl super::Stream {
 
     #[inline]
     async fn on_progress(mut receiver: Receiver<InternalSignal>, on_progress: OnProgressType) {
-        let counter = Mutex::new(100);
+        let last_trigger = Mutex::new(100);
         match on_progress {
             OnProgressType::None => {}
             OnProgressType::Closure(closure) => {
@@ -329,10 +329,11 @@ impl super::Stream {
                 while let Some(data) = receiver.recv().await {
                     match data {
                         InternalSignal::Value(data) => {
-                            if let Ok(mut counter) = counter.try_lock() {
-                                *counter += 1;
-                                if *counter > 100 {
-                                    *counter = 0;
+                            if let Ok(mut trigger) = last_trigger.try_lock() {
+                                // discard any digits beyond the million digit
+                                let current_million = data / 1_000_000;
+                                if *trigger < current_million {
+                                    *trigger = current_million;
                                     let arguments = CallbackArguments { current_chunk: data };
                                     closure(arguments)
                                 }
@@ -346,10 +347,11 @@ impl super::Stream {
                 while let Some(data) = receiver.recv().await {
                     match data {
                         InternalSignal::Value(data) => {
-                            if let Ok(mut counter) = counter.try_lock() {
-                                *counter += 1;
-                                if *counter > 100 {
-                                    *counter = 0;
+                            if let Ok(mut trigger) = last_trigger.try_lock() {
+                                // discard any digits beyond the million digit
+                                let current_million = data / 1_000_000;
+                                if *trigger < current_million {
+                                    *trigger = current_million;
                                     let arguments = CallbackArguments { current_chunk: data };
                                     closure(arguments).await
                                 }
@@ -363,10 +365,11 @@ impl super::Stream {
                 while let Some(data) = receiver.recv().await {
                     match data {
                         InternalSignal::Value(data) => {
-                            if let Ok(mut counter) = counter.try_lock() {
-                                *counter += 1;
-                                if *counter > 100 {
-                                    *counter = 0;
+                            if let Ok(mut trigger) = last_trigger.try_lock() {
+                                // discard any digits beyond the million digit
+                                let current_million = data / 1_000_000;
+                                if *trigger < current_million {
+                                    *trigger = current_million;
                                     let arguments = CallbackArguments { current_chunk: data };
                                     if sender.send(arguments).await.is_err() && cancel_on_close {
                                         receiver.close()
