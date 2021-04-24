@@ -239,11 +239,7 @@ impl Stream {
                 tokio::fs::remove_file(path.as_ref()).await?;
                 Err(e)
             }
-        }.map(|_| {
-            let mut pathbuf = PathBuf::new();
-            pathbuf.push(path);
-            pathbuf
-        });
+        }.map(|_| path.as_ref().to_path_buf());
 
         #[cfg(feature = "callback")]
         if let Some(channel) = channel {
