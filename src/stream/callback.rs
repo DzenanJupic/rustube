@@ -286,7 +286,7 @@ impl super::Stream {
 
     #[inline]
     async fn on_progress(mut receiver: Receiver<InternalSignal>, on_progress: OnProgressType) {
-        let last_trigger = Mutex::new(100);
+        let last_trigger = Mutex::new(0);
         match on_progress {
             OnProgressType::None => {}
             OnProgressType::Closure(closure) => {
