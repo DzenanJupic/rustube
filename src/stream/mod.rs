@@ -172,7 +172,6 @@ impl Stream {
             .with_extension("mp4");
         self.internal_download_to(&path, channel)
             .await
-            .map(|_| path)
     }
 
     /// Attempts to downloads the [`Stream`]s resource.
@@ -194,7 +193,6 @@ impl Stream {
         path.set_extension("mp4");
         self.internal_download_to(&path, channel)
             .await
-            .map(|_| path)
     }
 
     /// Attempts to downloads the [`Stream`]s resource.
