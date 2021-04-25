@@ -28,6 +28,9 @@ pub(crate) type InternalSender = Sender<InternalSignal>;
 #[derivative(Debug)]
 pub struct CallbackArguments {
     pub current_chunk: usize,
+    /// It's more idiomatic to use this content length instead of a prefetched value
+    /// since the content of this field might change in the future during the download.
+    pub content_length: Option<u64>,
 }
 
 /// Type to process on_progress
@@ -234,7 +237,7 @@ impl super::Stream {
     #[doc(cfg(feature = "callback"))]
     #[inline]
     pub async fn download_callback(&self, callback: Callback) -> Result<PathBuf> {
-        Self::wrap_callback(|channel| {
+        self.wrap_callback(|channel| {
             self.internal_download(channel)
         }, callback).await
     }
@@ -249,7 +252,7 @@ impl super::Stream {
         dir: P,
         callback: Callback,
     ) -> Result<PathBuf> {
-        Self::wrap_callback(|channel| {
+        self.wrap_callback(|channel| {
             self.internal_download_to_dir(dir, channel)
         }, callback).await
     }
@@ -260,18 +263,19 @@ impl super::Stream {
     #[doc(cfg(feature = "callback"))]
     #[inline]
     pub async fn download_to_callback<P: AsRef<Path>>(&self, path: P, callback: Callback) -> Result<()> {
-        let _ = Self::wrap_callback(|channel| {
+        let _ = self.wrap_callback(|channel| {
             self.internal_download_to(path, channel)
         }, callback).await?;
         Ok(())
     }
 
     async fn wrap_callback<F: Future<Output = Result<PathBuf>>>(
+        &self,
         to_wrap: impl FnOnce(Option<InternalSender>)-> F,
         mut callback: Callback
     ) -> Result<PathBuf> {
         let wrap_fut = to_wrap(Some(callback.internal_sender.clone()));
-        let aid_fut = Self::on_progress(
+        let aid_fut = self.on_progress(
             callback.internal_receiver.take().expect("Callback cannot be used twice"),
             std::mem::take(&mut callback.on_progress),
         );
@@ -285,15 +289,19 @@ impl super::Stream {
     }
 
     #[inline]
-    async fn on_progress(mut receiver: Receiver<InternalSignal>, on_progress: OnProgressType) {
+    async fn on_progress(&self, mut receiver: Receiver<InternalSignal>, on_progress: OnProgressType) {
         let last_trigger = Mutex::new(0);
+        let content_length = self.content_length().await.ok();
         match on_progress {
             OnProgressType::None => {}
             OnProgressType::Closure(closure) => {
                 while let Some(data) = receiver.recv().await {
                     match data {
                         InternalSignal::Value(data) => {
-                            let arguments = CallbackArguments { current_chunk: data };
+                            let arguments = CallbackArguments {
+                                current_chunk: data,
+                                content_length,
+                            };
                             closure(arguments);
                         }
                         InternalSignal::Finished => break,
@@ -304,7 +312,10 @@ impl super::Stream {
                 while let Some(data) = receiver.recv().await {
                     match data {
                         InternalSignal::Value(data) => {
-                            let arguments = CallbackArguments { current_chunk: data };
+                            let arguments = CallbackArguments {
+                                current_chunk: data,
+                                content_length,
+                            };
                             closure(arguments).await;
                         }
                         InternalSignal::Finished => break,
@@ -315,7 +326,10 @@ impl super::Stream {
                 while let Some(data) = receiver.recv().await {
                     match data {
                         InternalSignal::Value(data) => {
-                            let arguments = CallbackArguments { current_chunk: data };
+                            let arguments = CallbackArguments {
+                                current_chunk: data,
+                                content_length,
+                            };
                             // await if channel is full
                             if sender.send(arguments).await.is_err() && cancel_on_close {
                                 receiver.close()
@@ -334,7 +348,10 @@ impl super::Stream {
                                 let current_million = data / 1_000_000;
                                 if *trigger < current_million {
                                     *trigger = current_million;
-                                    let arguments = CallbackArguments { current_chunk: data };
+                                    let arguments = CallbackArguments {
+                                        current_chunk: data,
+                                        content_length,
+                                    };
                                     closure(arguments)
                                 }
                             }
@@ -352,7 +369,10 @@ impl super::Stream {
                                 let current_million = data / 1_000_000;
                                 if *trigger < current_million {
                                     *trigger = current_million;
-                                    let arguments = CallbackArguments { current_chunk: data };
+                                    let arguments = CallbackArguments {
+                                        current_chunk: data,
+                                        content_length,
+                                    };
                                     closure(arguments).await
                                 }
                             }
@@ -370,7 +390,10 @@ impl super::Stream {
                                 let current_million = data / 1_000_000;
                                 if *trigger < current_million {
                                     *trigger = current_million;
-                                    let arguments = CallbackArguments { current_chunk: data };
+                                    let arguments = CallbackArguments {
+                                        current_chunk: data,
+                                        content_length,
+                                    };
                                     if sender.send(arguments).await.is_err() && cancel_on_close {
                                         receiver.close()
                                     }
