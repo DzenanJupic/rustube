@@ -133,6 +133,12 @@ unreachable_pub
 //! 
 //! [`Stream::download_to_dir`] and [`Stream::download_to`] have your back! Those methods allow you
 //! to specify exactly, where the video should be downloaded too.
+//!
+//! If you want to do something, while the download is progressing, enable the `callback`
+//! feature and use the then availabe `*_callback` methods, for example
+//! [`Stream::download_callback`].
+//!
+//! The [`Callback`] struct can take up to one `on_progress` method and one `on_complete` method.
 //! 
 //! ## Feature flags
 //! One of the goals of `rustube` is to eventually deserialize the complete video information, so 
@@ -164,6 +170,7 @@ unreachable_pub
 //! - `blocking`: Enables the [`blocking`] API, which internally creates a [`tokio`] runtime for you
 //!   , so you don't have to care about it yourself. (Keep in mind, that this feature does not enable
 //!   any of the other features above automatically)
+//! - `callback`: Enables to add callbacks to downlaods and the [`Callback`] struct itself
 //! 
 //!
 //! [view count]: crate::video_info::player_response::video_details::VideoDetails::view_count 

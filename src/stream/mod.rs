@@ -16,13 +16,17 @@ use tokio::{
 };
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
-use tokio::{sync::mpsc::error::TrySendError, task};
+use tokio::sync::mpsc::error::TrySendError;
 #[cfg(any(feature = "download", doc))]
 #[doc(cfg(feature = "download"))]
 use tokio_stream::StreamExt;
 
 #[cfg(any(feature = "callback", doc))]
 #[doc(cfg(feature = "callback"))]
+use callback::{InternalSender, InternalSignal};
+
+#[cfg(all(feature = "callback", feature = "stream", feature = "blocking"))]
+#[doc(cfg(all(feature = "callback", feature = "stream", feature = "blocking")))]
 use callback::Callback;
 
 #[cfg(any(feature = "download", doc))]
@@ -39,9 +43,8 @@ pub mod callback;
 //  there are different types of streams: video, audio, and video + audio
 //  make Stream and RawFormat an enum, so there are less options in it
 
-#[cfg(not(any(feature = "callback", doc)))]
-#[derive(Debug)]
-pub struct Callback {}
+#[cfg(all(not(feature = "callback"), feature = "download"))]
+type InternalSender = ();
 
 /// A downloadable video Stream, that contains all the important information. 
 #[derive(Clone, derivative::Derivative)]
@@ -163,23 +166,12 @@ impl Stream {
         self.internal_download(None).await
     }
 
-    /// Attempts to downloads the [`Stream`]s resource.
-    /// This will download the video to <video_id>.mp4 in the current working directory.
-    /// Takes an [`Callback`](crate::stream::callback::Callback)
-    #[cfg(any(feature = "callback", doc))]
-    #[doc(cfg(feature = "callback"))]
     #[inline]
-    pub async fn download_callback(&self, callback: Callback) -> Result<PathBuf> {
-        self.internal_download(Some(callback)).await
-    }
-
-    #[inline]
-    async fn internal_download(&self, callback: Option<Callback>) -> Result<PathBuf> {
+    async fn internal_download(&self, channel: Option<InternalSender>) -> Result<PathBuf> {
         let path = Path::new(self.video_details.video_id.as_str())
             .with_extension("mp4");
-        self.internal_download_to(&path, callback)
+        self.internal_download_to(&path, channel)
             .await
-            .map(|_| path)
     }
 
     /// Attempts to downloads the [`Stream`]s resource.
@@ -189,69 +181,34 @@ impl Stream {
         self.internal_download_to_dir(dir, None).await
     }
 
-    /// Attempts to downloads the [`Stream`]s resource.
-    /// This will download the video to <video_id>.mp4 in the provided directory. 
-    /// Takes an [`Callback`](crate::stream::callback::Callback)
-    #[cfg(any(feature = "callback", doc))]
-    #[doc(cfg(feature = "callback"))]
-    #[inline]
-    pub async fn download_to_dir_callback<P: AsRef<Path>>(
-        &self,
-        dir: P,
-        callback: Callback,
-    ) -> Result<PathBuf> {
-        self.internal_download_to_dir(dir, Some(callback)).await
-    }
-
     #[inline]
     async fn internal_download_to_dir<P: AsRef<Path>>(
         &self,
         dir: P,
-        callback: Option<Callback>,
+        channel: Option<InternalSender>,
     ) -> Result<PathBuf> {
         let mut path = dir
             .as_ref()
             .join(self.video_details.video_id.as_str());
         path.set_extension("mp4");
-        self.internal_download_to(&path, callback)
+        self.internal_download_to(&path, channel)
             .await
-            .map(|_| path)
     }
 
     /// Attempts to downloads the [`Stream`]s resource.
     /// This will download the video to the provided file path.
     #[inline]
     pub async fn download_to<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        self.internal_download_to(path, None).await
-    }
-
-    /// Attempts to downloads the [`Stream`]s resource.
-    /// This will download the video to the provided file path.
-    /// Takes an [`Callback`](crate::stream::callback::Callback)
-    #[cfg(any(feature = "callback", doc))]
-    #[doc(cfg(feature = "callback"))]
-    #[inline]
-    pub async fn download_to_callback<P: AsRef<Path>>(&self, path: P, callback: Callback) -> Result<()> {
-        self.internal_download_to(path, Some(callback)).await
+        let _ = self.internal_download_to(path, None).await?;
+        Ok(())
     }
 
     #[allow(unused_mut)]
-    async fn internal_download_to<P: AsRef<Path>>(&self, path: P, mut callback: Option<Callback>) -> Result<()> {
+    async fn internal_download_to<P: AsRef<Path>>(&self, path: P, channel: Option<InternalSender>) -> Result<PathBuf> {
         log::trace!("download_to: {:?}", path.as_ref());
         let mut file = File::create(&path).await?;
 
-        // fixme: Requires 'static
-        #[cfg(feature = "callback")]
-            let handle = if let Some(ref mut callback) = callback {
-            Some(task::spawn_local(Self::on_progress(
-                callback.internal_receiver.take().expect("Callback cannot be used twice"),
-                std::mem::take(&mut callback.on_progress),
-            )))
-        } else {
-            None
-        };
-
-        let result = match self.download_full(&self.signature_cipher.url, &mut file, &callback, 0).await {
+        let result = match self.download_full(&self.signature_cipher.url, &mut file, &channel, 0).await {
             Ok(_) => {
                 log::info!(
                     "downloaded {} successfully to {:?}",
@@ -264,7 +221,7 @@ impl Stream {
                 log::error!("failed to download {}: {:?}", self.video_details.video_id, e);
                 log::info!("try to download {} using sequenced download", self.video_details.video_id);
                 // Some adaptive streams need to be requested with sequence numbers
-                self.download_full_seq(&mut file, &callback)
+                self.download_full_seq(&mut file, &channel)
                     .await
                     .map_err(|e| {
                         log::error!(
@@ -280,30 +237,17 @@ impl Stream {
                 tokio::fs::remove_file(path.as_ref()).await?;
                 Err(e)
             }
-        };
+        }.map(|_| path.as_ref().to_path_buf());
 
         #[cfg(feature = "callback")]
-            {
-                if let Some(handle) = handle {
-                    handle.abort();
-                }
-                let path = if result.is_ok() {
-                    let mut pathbuf = PathBuf::new();
-                    pathbuf.push(path);
-                    Some(pathbuf)
-                } else {
-                    None
-                };
-                if let Some(ref mut callback) = callback {
-                    Self::on_complete(std::mem::take(&mut callback.on_complete), path).await;
-                }
-            }
-
+        if let Some(channel) = channel {
+            let _ = channel.send(InternalSignal::Finished).await;
+        }
 
         result
     }
 
-    async fn download_full_seq(&self, file: &mut File, callback: &Option<Callback>) -> Result<()> {
+    async fn download_full_seq(&self, file: &mut File, channel: &Option<InternalSender>) -> Result<()> {
         // fixme: this implementation is **not** tested yet!
         // To test it, I would need an url of a video, which does require sequenced downloading.
         log::warn!(
@@ -333,7 +277,7 @@ impl Stream {
 
         for i in 1..segment_count {
             Self::set_url_seq_query(&mut url, &base_query, i);
-            count = self.download_full(&url, file, &callback, count).await?;
+            count = self.download_full(&url, file, &channel, count).await?;
         }
 
         Ok(())
@@ -344,11 +288,11 @@ impl Stream {
         &self,
         url: &url::Url,
         file: &mut File,
-        callback: &Option<Callback>,
+        channel: &Option<InternalSender>,
         count: usize,
     ) -> Result<usize> {
         let res = self.get(url).await?;
-        self.write_stream_to_file(res.bytes_stream(), file, &callback, count).await
+        self.write_stream_to_file(res.bytes_stream(), file, &channel, count).await
     }
 
     #[inline]
@@ -369,14 +313,10 @@ impl Stream {
         &self,
         mut stream: impl tokio_stream::Stream<Item=reqwest::Result<bytes::Bytes>> + Unpin,
         file: &mut File,
-        callback: &Option<Callback>,
+        channel: &Option<InternalSender>,
         mut counter: usize,
     ) -> Result<usize> {
         // Counter will be 0 if callback is not enabled
-        #[cfg(feature = "callback")]
-            let channel = callback
-            .as_ref()
-            .map(|c| c.internal_sender.clone());
         while let Some(chunk) = stream.next().await {
             let chunk = chunk?;
             file
@@ -384,10 +324,11 @@ impl Stream {
                 .await?;
             #[cfg(feature = "callback")]
             if let Some(channel) = &channel {
+                // network chunks of ~10kb size
                 counter += chunk.len();
-                // Will continue even if the receiver is closed
+                // Will abort if the receiver is closed
                 // Will ignore if the channel is full and thus not slow down the download
-                if let Err(TrySendError::Closed(_)) = channel.try_send(counter) {
+                if let Err(TrySendError::Closed(_)) = channel.try_send(InternalSignal::Value(counter)) {
                     return Err(Error::ChannelClosed)
                 }
             }

@@ -1,16 +1,26 @@
 use std::fmt;
 use std::future::Future;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::pin::Pin;
 
 use futures::FutureExt;
 use tokio::sync::{mpsc::{Receiver, Sender}, Mutex};
 use tokio::sync::mpsc;
 
+use crate::Result;
+
 pub type OnProgressClosure = Box<dyn Fn(CallbackArguments)>;
 pub type OnProgressAsyncClosure = Box<dyn Fn(CallbackArguments) -> Pin<Box<dyn Future<Output=()>>>>;
 pub type OnCompleteClosure = Box<dyn Fn(Option<PathBuf>)>;
 pub type OnCompleteAsyncClosure = Box<dyn Fn(Option<PathBuf>) -> Pin<Box<dyn Future<Output=()>>>>;
+
+#[derive(Debug)]
+pub(crate) enum InternalSignal {
+    Value(usize),
+    Finished,
+}
+
+pub(crate) type InternalSender = Sender<InternalSignal>;
 
 /// Arguments given either to a on_progress callback or on_progress receiver
 #[doc(cfg(feature = "callback"))]
@@ -18,6 +28,9 @@ pub type OnCompleteAsyncClosure = Box<dyn Fn(Option<PathBuf>) -> Pin<Box<dyn Fut
 #[derivative(Debug)]
 pub struct CallbackArguments {
     pub current_chunk: usize,
+    /// It's more idiomatic to use this content length instead of a prefetched value
+    /// since the content of this field might change in the future during the download.
+    pub content_length: Option<u64>,
 }
 
 /// Type to process on_progress
@@ -99,8 +112,8 @@ impl Default for OnCompleteType {
 pub struct Callback {
     pub on_progress: OnProgressType,
     pub on_complete: OnCompleteType,
-    pub(crate) internal_sender: Sender<usize>,
-    pub(crate) internal_receiver: Option<Receiver<usize>>,
+    pub(crate) internal_sender: InternalSender,
+    pub(crate) internal_receiver: Option<Receiver<InternalSignal>>,
 }
 
 #[doc(cfg(feature = "callback"))]
@@ -218,67 +231,176 @@ impl Default for Callback {
 }
 
 impl super::Stream {
+    /// Attempts to downloads the [`Stream`](super::Stream)s resource.
+    /// This will download the video to <video_id>.mp4 in the current working directory.
+    /// Takes an [`Callback`](crate::stream::callback::Callback)
+    #[doc(cfg(feature = "callback"))]
     #[inline]
-    pub(crate) async fn on_progress(mut receiver: Receiver<usize>, on_progress: OnProgressType) {
-        let counter = Mutex::new(100);
+    pub async fn download_callback(&self, callback: Callback) -> Result<PathBuf> {
+        self.wrap_callback(|channel| {
+            self.internal_download(channel)
+        }, callback).await
+    }
+
+    /// Attempts to downloads the [`Stream`](super::Stream)s resource.
+    /// This will download the video to <video_id>.mp4 in the provided directory. 
+    /// Takes an [`Callback`](crate::stream::callback::Callback)
+    #[doc(cfg(feature = "callback"))]
+    #[inline]
+    pub async fn download_to_dir_callback<P: AsRef<Path>>(
+        &self,
+        dir: P,
+        callback: Callback,
+    ) -> Result<PathBuf> {
+        self.wrap_callback(|channel| {
+            self.internal_download_to_dir(dir, channel)
+        }, callback).await
+    }
+
+    /// Attempts to downloads the [`Stream`](super::Stream)s resource.
+    /// This will download the video to the provided file path.
+    /// Takes an [`Callback`](crate::stream::callback::Callback)
+    #[doc(cfg(feature = "callback"))]
+    #[inline]
+    pub async fn download_to_callback<P: AsRef<Path>>(&self, path: P, callback: Callback) -> Result<()> {
+        let _ = self.wrap_callback(|channel| {
+            self.internal_download_to(path, channel)
+        }, callback).await?;
+        Ok(())
+    }
+
+    async fn wrap_callback<F: Future<Output = Result<PathBuf>>>(
+        &self,
+        to_wrap: impl FnOnce(Option<InternalSender>)-> F,
+        mut callback: Callback
+    ) -> Result<PathBuf> {
+        let wrap_fut = to_wrap(Some(callback.internal_sender.clone()));
+        let aid_fut = self.on_progress(
+            callback.internal_receiver.take().expect("Callback cannot be used twice"),
+            std::mem::take(&mut callback.on_progress),
+        );
+        let (result, _) = futures::future::join(wrap_fut, aid_fut).await;
+
+        let path = result.as_ref().map(|p| p.clone()).ok();
+
+        Self::on_complete(std::mem::take(&mut callback.on_complete), path).await;
+
+        result
+    }
+
+    #[inline]
+    async fn on_progress(&self, mut receiver: Receiver<InternalSignal>, on_progress: OnProgressType) {
+        let last_trigger = Mutex::new(0);
+        let content_length = self.content_length().await.ok();
         match on_progress {
             OnProgressType::None => {}
             OnProgressType::Closure(closure) => {
                 while let Some(data) = receiver.recv().await {
-                    let arguments = CallbackArguments { current_chunk: data };
-                    closure(arguments);
+                    match data {
+                        InternalSignal::Value(data) => {
+                            let arguments = CallbackArguments {
+                                current_chunk: data,
+                                content_length,
+                            };
+                            closure(arguments);
+                        }
+                        InternalSignal::Finished => break,
+                    }
                 }
             }
             OnProgressType::AsyncClosure(closure) => {
                 while let Some(data) = receiver.recv().await {
-                    let arguments = CallbackArguments { current_chunk: data };
-                    closure(arguments).await;
+                    match data {
+                        InternalSignal::Value(data) => {
+                            let arguments = CallbackArguments {
+                                current_chunk: data,
+                                content_length,
+                            };
+                            closure(arguments).await;
+                        }
+                        InternalSignal::Finished => break,
+                    }
                 }
             }
             OnProgressType::Channel(sender, cancel_on_close) => {
                 while let Some(data) = receiver.recv().await {
-                    let arguments = CallbackArguments { current_chunk: data };
-                    // await if channel is full
-                    if sender.send(arguments).await.is_err() && cancel_on_close {
-                        receiver.close()
+                    match data {
+                        InternalSignal::Value(data) => {
+                            let arguments = CallbackArguments {
+                                current_chunk: data,
+                                content_length,
+                            };
+                            // await if channel is full
+                            if sender.send(arguments).await.is_err() && cancel_on_close {
+                                receiver.close()
+                            }
+                        }
+                        InternalSignal::Finished => break,
                     }
                 }
             }
             OnProgressType::SlowClosure(closure) => {
                 while let Some(data) = receiver.recv().await {
-                    if let Ok(mut counter) = counter.try_lock() {
-                        *counter += 1;
-                        if *counter > 100 {
-                            *counter = 0;
-                            let arguments = CallbackArguments { current_chunk: data };
-                            closure(arguments)
+                    match data {
+                        InternalSignal::Value(data) => {
+                            if let Ok(mut trigger) = last_trigger.try_lock() {
+                                // discard any digits beyond the million digit
+                                let current_million = data / 1_000_000;
+                                if *trigger < current_million {
+                                    *trigger = current_million;
+                                    let arguments = CallbackArguments {
+                                        current_chunk: data,
+                                        content_length,
+                                    };
+                                    closure(arguments)
+                                }
+                            }
                         }
+                        InternalSignal::Finished => break,
                     }
                 }
             }
             OnProgressType::SlowAsyncClosure(closure) => {
                 while let Some(data) = receiver.recv().await {
-                    if let Ok(mut counter) = counter.try_lock() {
-                        *counter += 1;
-                        if *counter > 100 {
-                            *counter = 0;
-                            let arguments = CallbackArguments { current_chunk: data };
-                            closure(arguments).await
+                    match data {
+                        InternalSignal::Value(data) => {
+                            if let Ok(mut trigger) = last_trigger.try_lock() {
+                                // discard any digits beyond the million digit
+                                let current_million = data / 1_000_000;
+                                if *trigger < current_million {
+                                    *trigger = current_million;
+                                    let arguments = CallbackArguments {
+                                        current_chunk: data,
+                                        content_length,
+                                    };
+                                    closure(arguments).await
+                                }
+                            }
                         }
+                        InternalSignal::Finished => break,
                     }
                 }
             }
             OnProgressType::SlowChannel(sender, cancel_on_close) => {
                 while let Some(data) = receiver.recv().await {
-                    if let Ok(mut counter) = counter.try_lock() {
-                        *counter += 1;
-                        if *counter > 100 {
-                            *counter = 0;
-                            let arguments = CallbackArguments { current_chunk: data };
-                            if sender.send(arguments).await.is_err() && cancel_on_close {
-                                receiver.close()
+                    match data {
+                        InternalSignal::Value(data) => {
+                            if let Ok(mut trigger) = last_trigger.try_lock() {
+                                // discard any digits beyond the million digit
+                                let current_million = data / 1_000_000;
+                                if *trigger < current_million {
+                                    *trigger = current_million;
+                                    let arguments = CallbackArguments {
+                                        current_chunk: data,
+                                        content_length,
+                                    };
+                                    if sender.send(arguments).await.is_err() && cancel_on_close {
+                                        receiver.close()
+                                    }
+                                }
                             }
                         }
+                        InternalSignal::Finished => break,
                     }
                 }
             }
@@ -286,7 +408,7 @@ impl super::Stream {
     }
 
     #[inline]
-    pub(crate) async fn on_complete(on_complete: OnCompleteType, path: Option<PathBuf>) {
+    async fn on_complete(on_complete: OnCompleteType, path: Option<PathBuf>) {
         match on_complete {
             OnCompleteType::None => {}
             OnCompleteType::Closure(closure) => {

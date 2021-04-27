@@ -50,7 +50,7 @@ tokio-test = "0.4.0"
 # you get only the Id type as well as the Error type. 
 default = ["download", "std", "default-tls"]
 std = ["regex", "thiserror"]
-callback = ["tokio/sync", "tokio/rt", "futures", "download"]
+callback = ["tokio/sync", "futures", "download"]
 microformat = ["fetch", "chrono/serde"]
 download = [
     "fetch", "tokio/fs", "tokio/io-util", "tokio/parking_lot", "tokio-stream"
