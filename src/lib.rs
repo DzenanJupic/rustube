@@ -190,32 +190,25 @@ extern crate alloc;
 pub use tokio;
 pub use url;
 
-#[doc(inline)]
 #[cfg(feature = "descramble")]
 #[doc(cfg(feature = "descramble"))]
 pub use crate::descrambler::VideoDescrambler;
-#[doc(inline)]
 #[cfg(feature = "std")]
 #[doc(cfg(feature = "std"))]
 pub use crate::error::Error;
-#[doc(inline)]
 #[cfg(feature = "fetch")]
 #[doc(cfg(feature = "fetch"))]
 pub use crate::fetcher::VideoFetcher;
-#[doc(inline)]
 pub use crate::id::{Id, IdBuf};
-#[doc(inline)]
 #[cfg(feature = "regex")]
 #[doc(cfg(feature = "regex"))]
 pub use crate::id::{EMBED_URL_PATTERN, ID_PATTERN, ID_PATTERNS, SHARE_URL_PATTERN, WATCH_URL_PATTERN};
 #[cfg(feature = "callback")]
 #[doc(cfg(feature = "callback"))]
 pub use crate::stream::callback::{Callback, CallbackArguments, OnCompleteType, OnProgressType};
-#[doc(inline)]
 #[cfg(feature = "stream")]
 #[doc(cfg(feature = "stream"))]
 pub use crate::stream::Stream;
-#[doc(inline)]
 #[cfg(feature = "descramble")]
 #[doc(cfg(feature = "descramble"))]
 pub use crate::video::Video;
