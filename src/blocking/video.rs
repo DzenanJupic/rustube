@@ -1,9 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use url::Url;
-
-use crate::{IdBuf, Result, Stream};
-use crate::video::Video as AsyncVideo;
+use crate::{Stream, Video as AsyncVideo};
 
 /// A synchronous wrapper around [`Video`](crate::Video).
 #[derive(Clone, Debug, derive_more::Display, PartialEq)]
@@ -12,7 +9,7 @@ pub struct Video(pub(super) AsyncVideo);
 impl Video {
     /// A synchronous wrapper around [`Video::form_url`](crate::Video::from_url).
     /// 
-    /// Creates a [`Video`] from an [`Url`].
+    /// Creates a [`Video`] from an [`Url`](url::Url).
     /// ### Errors
     /// - When [`VideoFetcher::from_url`](crate::VideoFetcher::from_url) fails.
     /// - When [`VideoFetcher::fetch`](crate::VideoFetcher::fetch) fails.

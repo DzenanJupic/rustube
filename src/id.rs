@@ -89,61 +89,58 @@ pub struct Id<'a>(Cow<'a, str>);
 
 #[allow(clippy::should_implement_trait)]
 impl<'a> Id<'a> {
-    #[cfg(any(all(feature = "regex", feature = "std"), doc))]
-    #[doc(cfg(all(feature = "regex", feature = "std")))]
-    pub fn from_raw(raw: &'a str) -> Result<Self> {
-        ID_PATTERNS
-            .iter()
-            .find_map(|pattern|
-                pattern
-                    .captures(raw)
-                    .map(|c| {
-                        // will never panic due to guarantees by [`ID_PATTERNS`]
-                        let id = c.name("id").unwrap().as_str();
-                        Self(Cow::Borrowed(id))
-                    })
-            )
-            .ok_or(Error::BadIdFormat)
-    }
-
-    #[inline]
-    #[cfg(any(all(feature = "regex", feature = "std"), doc))]
-    #[doc(cfg(all(feature = "regex", feature = "std")))]
-    pub fn from_str(id: &'a str) -> Result<Self> {
-        match ID_PATTERN.is_match(id) {
-            true => Ok(Self(Cow::Borrowed(id))),
-            false => Err(Error::BadIdFormat)
-        }
-    }
-
-    #[inline]
-    #[cfg(any(not(feature = "regex"), not(feature = "std")))]
-    pub fn from_str(id: &'a str) -> Option<Self> {
-        match Self::check_str(id) {
-            Ok(_) => Some(Self(Cow::Borrowed(id))),
-            Err(_) => None
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "regex")] {
+            pub fn from_raw(raw: &'a str) -> Result<Self> {
+                ID_PATTERNS
+                    .iter()
+                    .find_map(|pattern|
+                        pattern
+                            .captures(raw)
+                            .map(|c| {
+                                // will never panic due to guarantees by [`ID_PATTERNS`]
+                                let id = c.name("id").unwrap().as_str();
+                                Self(Cow::Borrowed(id))
+                            })
+                    )
+                    .ok_or(Error::BadIdFormat)
+            }
+            
+            #[inline]
+            pub fn from_str(id: &'a str) -> Result<Self> {
+                match ID_PATTERN.is_match(id) {
+                    true => Ok(Self(Cow::Borrowed(id))),
+                    false => Err(Error::BadIdFormat)
+                }
+            }
+        } else {
+            #[inline]
+            pub fn from_str(id: &'a str) -> Option<Self> {
+                match Self::check_str(id) {
+                    Ok(_) => Some(Self(Cow::Borrowed(id))),
+                    Err(_) => None
+                }
+            }
+            
+            #[inline]
+            fn check_str(id: &'_ str) -> Result<(), ()> {
+                if id.len() != 11 {
+                    return Err(());
+                }
+        
+                let only_allowed_chars = id
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+        
+                if only_allowed_chars {
+                    Ok(())
+                } else {
+                    Err(())
+                }
+            }
         }
     }
 }
-
-impl<'a> Id<'a> {
-    #[inline]
-    #[cfg(any(not(feature = "regex"), not(feature = "std")))]
-    fn check_str(id: &'_ str) -> Result<(), ()> {
-        if id.len() != 11 {
-            return Err(());
-        }
-
-        let only_allowed_chars = id
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
-
-        if only_allowed_chars {
-            Ok(())
-        } else {
-            Err(())
-        }
-    }
 
 impl<'a> Id<'a> {
     #[inline]
@@ -245,22 +242,23 @@ impl<'a> Id<'a> {
 }
 
 impl IdBuf {
-    #[inline]
-    #[cfg(any(all(feature = "regex", feature = "std"), doc))]
-    #[doc(cfg(all(feature = "regex", feature = "std")))]
-    pub fn from_string(id: String) -> Result<Self, String> {
-        match ID_PATTERN.is_match(id.as_str()) {
-            true => Ok(Self(Cow::Owned(id))),
-            false => Err(id)
-        }
-    }
-
-    #[inline]
-    #[cfg(any(not(feature = "regex"), not(feature = "std")))]
-    pub fn from_string(id: String) -> Result<Self, String> {
-        match Self::check_str(&id) {
-            Ok(_) => Ok(Self(Cow::Owned(id))),
-            Err(_) => Err(id)
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "regex")] {
+            #[inline]
+            pub fn from_string(id: String) -> Result<Self, String> {
+                match ID_PATTERN.is_match(id.as_str()) {
+                    true => Ok(Self(Cow::Owned(id))),
+                    false => Err(id)
+                }
+            }
+        } else {
+            #[inline]
+            pub fn from_string(id: String) -> Result<Self, String> {
+                match Self::check_str(&id) {
+                    Ok(_) => Ok(Self(Cow::Owned(id))),
+                    Err(_) => Err(id)
+                }
+            }
         }
     }
 }
