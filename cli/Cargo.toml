@@ -13,10 +13,18 @@ include = [
     "src/**/*", "Cargo.toml",
 ]
 
+[[bin]]
+name = "rustube"
+path = "src/main.rs"
+
 [dependencies]
 anyhow = "1.0.38"
+chrono = { version = "0.4.19", default-features = false }
 clap = "3.0.0-beta.2"
+fern = { version = "0.6.0", features = ["colored"] }
+log = "0.4.14"
 rustube = { path = "..", version = "0.2.7", features = ["download", "std"] }
 tokio = { version = "1.1.1", features = ["rt-multi-thread"] }
 serde = "1.0.123"
+strum = { version = "0.20.0", features = ["derive"] }
 serde_json = "1.0.61"

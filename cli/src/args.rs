@@ -1,8 +1,15 @@
 use std::cmp::Ordering;
+use std::fmt::Arguments;
 use std::path::PathBuf;
 
 use anyhow::Context;
 use clap::Clap;
+use fern::{
+    colors::{Color, ColoredLevelConfig},
+    FormatCallback,
+};
+use log::{LevelFilter, Record};
+use strum::EnumString;
 
 use rustube::{
     Id,
@@ -41,11 +48,13 @@ pub struct DownloadArgs {
     pub quality_filter: QualityFilter,
     #[clap(flatten)]
     pub stream_filter: StreamFilter,
+    #[clap(flatten)]
+    pub logging: LoggingArgs,
 
     #[clap(
     short,
     long,
-    about = "Where to download the video to [default: working directory]"
+    about = "Where to download the video to [default: .]"
     )]
     pub dir: Option<PathBuf>,
     #[clap(
@@ -66,12 +75,16 @@ pub struct FetchArgs {
     pub quality: QualityFilter,
     #[clap(flatten)]
     pub stream: StreamFilter,
+    #[clap(flatten)]
+    pub logging: LoggingArgs,
 }
 
 #[derive(Clap)]
 pub struct CheckArgs {
     #[clap(flatten)]
     pub identifier: Identifier,
+    #[clap(flatten)]
+    pub logging: LoggingArgs,
 }
 
 #[derive(Clap)]
@@ -90,11 +103,107 @@ impl Identifier {
 }
 
 #[derive(Clap)]
+pub struct LoggingArgs {
+    #[clap(
+    long, short,
+    parse(from_occurrences),
+    about = "\
+    Sets the log-level of rustube [default: Info]\n\
+    (-v = Error, ..., -vvvvv = Trace)\n\
+    (other crates have log level Warn)\n\
+    "
+    )]
+    verbose: u8,
+
+    #[clap(
+    long,
+    default_value = "always",
+    possible_values = & ["always", "never"],
+    value_name = "WHEN",
+    about = "When to log coloredd"
+    )]
+    color: ColorUsage,
+
+    #[clap(
+    long, short,
+    conflicts_with = "verbose",
+    about = "Turn off logging for all crates",
+    )]
+    quiet: bool,
+}
+
+#[derive(Clap, EnumString)]
+#[strum(serialize_all = "kebab-case")]
+enum ColorUsage {
+    Always,
+    Never,
+}
+
+
+impl LoggingArgs {
+    pub fn init_logger(&self) {
+        if self.quiet { return; }
+
+        let formatter = self.log_msg_formatter();
+
+        fern::Dispatch::new()
+            .level(log::LevelFilter::Warn)
+            .level_for("rustube", self.level_filter())
+            .format(formatter)
+            .chain(std::io::stdout())
+            .apply()
+            .expect("The global logger was already initialized");
+    }
+
+    fn log_msg_formatter(&self) -> fn(FormatCallback, &Arguments, &Record) {
+        macro_rules! msg_formatter {
+            ($out:ident, $message:ident, $log_level:expr) => {
+                $out.finish(format_args!(
+                    "{:<5}: {}",
+                    $log_level,
+                    $message
+                ))
+            };
+        }
+
+        match self.color {
+            ColorUsage::Always => {
+                |out: FormatCallback, message: &Arguments, record: &Record| {
+                    static COLORS: ColoredLevelConfig = ColoredLevelConfig {
+                        error: Color::Red,
+                        warn: Color::Yellow,
+                        info: Color::Green,
+                        debug: Color::BrightBlue,
+                        trace: Color::White,
+                    };
+
+                    msg_formatter!(out, message, COLORS.color(record.level()));
+                }
+            }
+            ColorUsage::Never => {
+                |out: FormatCallback, message: &Arguments, record: &Record| {
+                    msg_formatter!(out, message, record.level());
+                }
+            }
+        }
+    }
+
+    fn level_filter(&self) -> log::LevelFilter {
+        match self.verbose {
+            1 => LevelFilter::Error,
+            2 => LevelFilter::Warn,
+            0 | 3 => LevelFilter::Info,
+            4 => LevelFilter::Debug,
+            _ => LevelFilter::Trace,
+        }
+    }
+}
+
+#[derive(Clap)]
 pub struct StreamFilter {
     #[clap(
     short, long,
     about = "Download the best quality available [default]",
-    default_value_if("worst-quality", None, "true"),
     conflicts_with_all(& ["worst-quality", "video-quality"]),
     )]
     #[allow(unused)]
@@ -128,7 +237,7 @@ pub struct StreamFilter {
     #[clap(
     long,
     conflicts_with_all(& ["ignore-missing-video", "no-audio", "no-video"]),
-    about = "Pick a Stream, even if it has no audi track"
+    about = "Pick a Stream, even if it has no audio track"
     )]
     ignore_missing_audio: bool,
 }
@@ -144,12 +253,10 @@ impl StreamFilter {
     }
 
     pub fn max_stream(&self, lhs: &Stream, rhs: &Stream) -> Ordering {
-        if self.best_quality {
+        if self.best_quality || !self.worst_quality {
             self.cmp_stream(lhs, rhs)
-        } else if self.worst_quality {
+        } else /* if self.worst_quality */ {
             self.cmp_stream(rhs, lhs)
-        } else {
-            unreachable!("clap should set best_quality by default");
         }
     }
 
@@ -186,7 +293,7 @@ impl StreamFilter {
 #[derive(Clap)]
 pub struct QualityFilter {
     #[clap(
-    short, long,
+    long,
     about = "Download the stream with this quality",
     conflicts_with_all(& ["best-quality", "worst-quality"]),
     parse(try_from_str = parse_json)
@@ -205,7 +312,7 @@ pub struct QualityFilter {
     conflicts_with_all(& ["best-quality", "worst-quality", "no-audio"]),
     parse(try_from_str = parse_json)
     )]
-    audi_quality: Option<AudioQuality>,
+    audio_quality: Option<AudioQuality>,
 }
 
 impl QualityFilter {
@@ -216,7 +323,7 @@ impl QualityFilter {
         let video_quality_ok = self.video_quality
             .map(|ref q| stream.quality_label.contains(q))
             .unwrap_or(true);
-        let audio_quality_ok = self.audi_quality
+        let audio_quality_ok = self.audio_quality
             .map(|ref q| stream.audio_quality.contains(q))
             .unwrap_or(true);
 

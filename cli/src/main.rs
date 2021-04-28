@@ -16,10 +16,7 @@ async fn main() -> Result<()> {
     let command: Command = Command::parse();
 
     match command {
-        Command::Download(args) => {
-            let path = download(args).await?;
-            println!("Successfully downloaded the video to `{:?}`", path);
-        }
+        Command::Download(args) => download(args).await?,
         Command::Fetch(args) => {
             let video = fetch(args).await?;
             println!("{:#?}", video);
@@ -33,22 +30,28 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn download(args: DownloadArgs) -> Result<PathBuf> {
+async fn download(args: DownloadArgs) -> Result<()> {
+    args.logging.init_logger();
+
     let id = args.identifier.id()?;
     let download_path = download_path(args.filename, args.dir, id.as_borrowed());
     let stream = get_stream(id, args.stream_filter, args.quality_filter).await?;
 
-    stream.download_to(&download_path).await?;
+    stream.download_to(download_path).await?;
 
-    Ok(download_path)
+    Ok(())
 }
 
 async fn fetch(args: FetchArgs) -> Result<Video> {
+    args.logging.init_logger();
+
     let id = args.identifier.id()?;
     get_video(id).await
 }
 
 async fn check(args: CheckArgs) -> Result<Vec<Stream>> {
+    args.logging.init_logger();
+
     let id = args.identifier.id()?;
     let video = get_video(id).await?;
 
@@ -61,7 +64,7 @@ async fn check(args: CheckArgs) -> Result<Vec<Stream>> {
 async fn get_stream(
     id: IdBuf,
     stream_filter: StreamFilter,
-    quality_filter: QualityFilter,
+    quality_filter: QualityFilter
 ) -> Result<Stream> {
     get_streams(id, &stream_filter, &quality_filter)
         .await?
