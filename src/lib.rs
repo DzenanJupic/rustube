@@ -135,8 +135,8 @@ unreachable_pub
 //! to specify exactly, where the video should be downloaded too.
 //!
 //! If you want to do something, while the download is progressing, enable the `callback`
-//! feature and use the then availabe `*_callback` methods, for example
-//! [`Stream::download_callback`].
+//! feature and use the then availabe `*_with_callback` methods, like 
+//! [`Stream::download_with_callback`].
 //!
 //! The [`Callback`] struct can take up to one `on_progress` method and one `on_complete` method.
 //! 

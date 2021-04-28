@@ -1,6 +1,6 @@
 use std::fmt;
 use std::future::Future;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
 use futures::FutureExt;
@@ -236,7 +236,7 @@ impl super::Stream {
     /// Takes an [`Callback`](crate::stream::callback::Callback)
     #[doc(cfg(feature = "callback"))]
     #[inline]
-    pub async fn download_callback(&self, callback: Callback) -> Result<PathBuf> {
+    pub async fn download_with_callback(&self, callback: Callback) -> Result<PathBuf> {
         self.wrap_callback(|channel| {
             self.internal_download(channel)
         }, callback).await
@@ -247,7 +247,7 @@ impl super::Stream {
     /// Takes an [`Callback`](crate::stream::callback::Callback)
     #[doc(cfg(feature = "callback"))]
     #[inline]
-    pub async fn download_to_dir_callback<P: AsRef<Path>>(
+    pub async fn download_to_dir_with_callback<P: AsRef<Path>>(
         &self,
         dir: P,
         callback: Callback,
@@ -262,7 +262,7 @@ impl super::Stream {
     /// Takes an [`Callback`](crate::stream::callback::Callback)
     #[doc(cfg(feature = "callback"))]
     #[inline]
-    pub async fn download_to_callback<P: AsRef<Path>>(&self, path: P, callback: Callback) -> Result<()> {
+    pub async fn download_to_with_callback<P: AsRef<Path>>(&self, path: P, callback: Callback) -> Result<()> {
         let _ = self.wrap_callback(|channel| {
             self.internal_download_to(path, channel)
         }, callback).await?;
