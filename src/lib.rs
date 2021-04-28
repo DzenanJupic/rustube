@@ -32,8 +32,11 @@ unreachable_pub
 //! And with the `blocking` feature enabled, you don't even have to bring your own runtime:
 //! ```no_run
 //!# fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!# #[cfg(feature = "blocking")]
+//!# {
 //! let url = "https://youtu.be/nv2wQvn6Wxc";
 //! let path_to_video = rustube::blocking::download_best_quality(url)?;
+//!# }
 //!# Ok(())
 //!# }
 //! ``` 
