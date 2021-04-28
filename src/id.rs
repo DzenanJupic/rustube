@@ -3,7 +3,6 @@ use alloc::string::String;
 use core::cmp::Ordering;
 
 #[cfg(feature = "regex")]
-#[doc(cfg(feature = "regex"))]
 use regex::Regex;
 use serde::{
     de::{Error as SerdeError, Unexpected},
@@ -12,7 +11,6 @@ use serde::{
 use url::Url;
 
 #[cfg(feature = "std")]
-#[doc(cfg(feature = "std"))]
 use crate::{Error, Result};
 
 /// Alias for an owned [`Id`].

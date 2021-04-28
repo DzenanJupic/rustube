@@ -1,6 +1,5 @@
 use std::ops::Range;
 #[cfg(feature = "download")]
-#[doc(cfg(feature = "download"))]
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -9,30 +8,29 @@ use chrono::{DateTime, Utc};
 use mime::Mime;
 use reqwest::Client;
 #[cfg(feature = "download")]
-#[doc(cfg(feature = "download"))]
 use tokio::{
     fs::File,
     io::AsyncWriteExt,
 };
 #[cfg(feature = "callback")]
-#[doc(cfg(feature = "callback"))]
 use tokio::sync::mpsc::error::TrySendError;
 #[cfg(feature = "download")]
-#[doc(cfg(feature = "download"))]
 use tokio_stream::StreamExt;
 
 #[cfg(feature = "callback")]
-#[doc(cfg(feature = "callback"))]
 use callback::{InternalSender, InternalSignal};
 #[cfg(all(feature = "callback", feature = "stream", feature = "blocking"))]
-#[doc(cfg(all(feature = "callback", feature = "stream", feature = "blocking")))]
 use callback::Callback;
 
 #[cfg(feature = "download")]
-#[doc(cfg(feature = "download"))]
 use crate::{Error, Result};
-use crate::video_info::player_response::streaming_data::{AudioQuality, ColorInfo, FormatType, ProjectionType, Quality, QualityLabel, RawFormat, SignatureCipher};
-use crate::VideoDetails;
+use crate::{
+    video_info::player_response::streaming_data::{
+        AudioQuality, ColorInfo, FormatType, ProjectionType,
+        Quality, QualityLabel, RawFormat, SignatureCipher,
+    },
+    VideoDetails,
+};
 
 #[cfg(feature = "callback")]
 #[doc(cfg(feature = "callback"))]

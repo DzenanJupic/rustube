@@ -3,7 +3,6 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "microformat")]
-#[doc(cfg(feature = "microformat"))]
 use microformat::Microformat;
 use playability_status::PlayabilityStatus;
 use streaming_data::StreamingData;
