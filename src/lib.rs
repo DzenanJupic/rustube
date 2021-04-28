@@ -185,42 +185,42 @@ unreachable_pub
 
 extern crate alloc;
 
-#[cfg(any(feature = "tokio", doc))]
+#[cfg(feature = "tokio")]
 #[doc(cfg(feature = "tokio"))]
 pub use tokio;
 pub use url;
 
 #[doc(inline)]
-#[cfg(any(feature = "descramble", doc))]
+#[cfg(feature = "descramble")]
 #[doc(cfg(feature = "descramble"))]
 pub use crate::descrambler::VideoDescrambler;
 #[doc(inline)]
-#[cfg(any(feature = "std", doc))]
+#[cfg(feature = "std")]
 #[doc(cfg(feature = "std"))]
 pub use crate::error::Error;
 #[doc(inline)]
-#[cfg(any(feature = "fetch", doc))]
+#[cfg(feature = "fetch")]
 #[doc(cfg(feature = "fetch"))]
 pub use crate::fetcher::VideoFetcher;
 #[doc(inline)]
 pub use crate::id::{Id, IdBuf};
 #[doc(inline)]
-#[cfg(any(feature = "regex", doc))]
+#[cfg(feature = "regex")]
 #[doc(cfg(feature = "regex"))]
 pub use crate::id::{EMBED_URL_PATTERN, ID_PATTERN, ID_PATTERNS, SHARE_URL_PATTERN, WATCH_URL_PATTERN};
-#[cfg(any(feature = "callback", doc))]
+#[cfg(feature = "callback")]
 #[doc(cfg(feature = "callback"))]
 pub use crate::stream::callback::{Callback, CallbackArguments, OnCompleteType, OnProgressType};
 #[doc(inline)]
-#[cfg(any(feature = "stream", doc))]
+#[cfg(feature = "stream")]
 #[doc(cfg(feature = "stream"))]
 pub use crate::stream::Stream;
 #[doc(inline)]
-#[cfg(any(feature = "descramble", doc))]
+#[cfg(feature = "descramble")]
 #[doc(cfg(feature = "descramble"))]
 pub use crate::video::Video;
 #[doc(inline)]
-#[cfg(any(feature = "fetch", doc))]
+#[cfg(feature = "fetch")]
 #[doc(cfg(feature = "fetch"))]
 pub use crate::video_info::{
     player_response::{
@@ -230,41 +230,41 @@ pub use crate::video_info::{
     VideoInfo,
 };
 #[doc(inline)]
-#[cfg(any(feature = "microformat", doc))]
+#[cfg(feature = "microformat")]
 #[doc(cfg(feature = "microformat"))]
 pub use crate::video_info::player_response::microformat::Microformat;
 
 /// Alias for `Result`, with the default error type [`Error`].
-#[cfg(any(feature = "std", doc))]
+#[cfg(feature = "std")]
 #[doc(cfg(feature = "std"))]
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
-#[cfg(any(feature = "blocking", doc))]
+#[cfg(feature = "blocking")]
 #[doc(cfg(feature = "blocking"))]
 pub mod blocking;
 #[doc(hidden)]
-#[cfg(any(feature = "std", doc))]
+#[cfg(feature = "std")]
 #[doc(cfg(feature = "std"))]
 pub mod error;
 #[doc(hidden)]
 pub mod id;
 #[doc(hidden)]
-#[cfg(any(feature = "stream", doc))]
+#[cfg(feature = "stream")]
 #[doc(cfg(feature = "stream"))]
 pub mod stream;
-#[cfg(any(feature = "fetch", doc))]
+#[cfg(feature = "fetch")]
 #[doc(cfg(feature = "fetch"))]
 pub mod video_info;
 #[doc(hidden)]
-#[cfg(any(feature = "fetch", doc))]
+#[cfg(feature = "fetch")]
 #[doc(cfg(feature = "fetch"))]
 pub mod fetcher;
 #[doc(hidden)]
-#[cfg(any(feature = "descramble", doc))]
+#[cfg(feature = "descramble")]
 #[doc(cfg(feature = "descramble"))]
 pub mod descrambler;
 #[doc(hidden)]
-#[cfg(any(feature = "descramble", doc))]
+#[cfg(feature = "descramble")]
 #[doc(cfg(feature = "descramble"))]
 pub mod video;
 
@@ -278,7 +278,7 @@ mod serde_impl;
 /// 
 /// For more control over the download process have a look at the [`crate`] level documentation,
 /// or at the [`Video`] struct. 
-#[cfg(any(all(feature = "download", feature = "regex"), doc))]
+#[cfg(all(feature = "download", feature = "regex"))]
 #[doc(cfg(all(feature = "download", feature = "regex")))]
 pub async fn download_best_quality(video_identifier: &str) -> Result<std::path::PathBuf> {
     let id = Id::from_raw(video_identifier)?;
@@ -297,7 +297,7 @@ pub async fn download_best_quality(video_identifier: &str) -> Result<std::path::
 ///
 /// For more control over the download process have a look at the [`crate`] level documentation,
 /// or at the [`Video`] struct. 
-#[cfg(any(all(feature = "download", feature = "regex"), doc))]
+#[cfg(all(feature = "download", feature = "regex"))]
 #[doc(cfg(all(feature = "download", feature = "regex")))]
 pub async fn download_worst_quality(video_identifier: &str) -> Result<std::path::PathBuf> {
     let id = Id::from_raw(video_identifier)?;

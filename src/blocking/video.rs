@@ -18,7 +18,8 @@ impl Video {
     /// - When [`VideoFetcher::fetch`](crate::VideoFetcher::fetch) fails.
     /// - When [`VideoDescrambler::descramble`](crate::VideoDescrambler::descramble) fails.
     #[inline]
-    pub fn from_url(url: &Url) -> Result<Self> {
+    #[cfg(all(feature = "download", feature = "regex"))]
+    pub fn from_url(url: &url::Url) -> crate::Result<Self> {
         Ok(Self(block!(AsyncVideo::from_url(url))?))
     }
 
@@ -30,7 +31,8 @@ impl Video {
     /// - When [`VideoFetcher::fetch`](crate::VideoFetcher::fetch) fails.
     /// - When [`VideoDescrambler::descramble`](crate::VideoDescrambler::descramble) fails.
     #[inline]
-    pub fn from_id(id: IdBuf) -> Result<Self> {
+    #[cfg(feature = "download")]
+    pub fn from_id(id: crate::IdBuf) -> crate::Result<Self> {
         Ok(Self(block!(AsyncVideo::from_id(id))?))
     }
 

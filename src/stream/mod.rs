@@ -1,5 +1,5 @@
 use std::ops::Range;
-#[cfg(any(feature = "download", doc))]
+#[cfg(feature = "download")]
 #[doc(cfg(feature = "download"))]
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -8,34 +8,33 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use chrono::{DateTime, Utc};
 use mime::Mime;
 use reqwest::Client;
-#[cfg(any(feature = "download", doc))]
+#[cfg(feature = "download")]
 #[doc(cfg(feature = "download"))]
 use tokio::{
     fs::File,
     io::AsyncWriteExt,
 };
-#[cfg(any(feature = "callback", doc))]
+#[cfg(feature = "callback")]
 #[doc(cfg(feature = "callback"))]
 use tokio::sync::mpsc::error::TrySendError;
-#[cfg(any(feature = "download", doc))]
+#[cfg(feature = "download")]
 #[doc(cfg(feature = "download"))]
 use tokio_stream::StreamExt;
 
-#[cfg(any(feature = "callback", doc))]
+#[cfg(feature = "callback")]
 #[doc(cfg(feature = "callback"))]
 use callback::{InternalSender, InternalSignal};
-
 #[cfg(all(feature = "callback", feature = "stream", feature = "blocking"))]
 #[doc(cfg(all(feature = "callback", feature = "stream", feature = "blocking")))]
 use callback::Callback;
 
-#[cfg(any(feature = "download", doc))]
+#[cfg(feature = "download")]
 #[doc(cfg(feature = "download"))]
 use crate::{Error, Result};
 use crate::video_info::player_response::streaming_data::{AudioQuality, ColorInfo, FormatType, ProjectionType, Quality, QualityLabel, RawFormat, SignatureCipher};
 use crate::VideoDetails;
 
-#[cfg(any(feature = "callback", doc))]
+#[cfg(feature = "callback")]
 #[doc(cfg(feature = "callback"))]
 pub mod callback;
 
@@ -126,7 +125,7 @@ impl Stream {
 // todo: download in ranges
 // todo: blocking download
 
-#[cfg(any(feature = "download", doc))]
+#[cfg(feature = "download")]
 #[doc(cfg(feature = "download"))]
 impl Stream {
     /// The content length of the video.
@@ -363,8 +362,8 @@ impl Stream {
     }
 }
 
-#[cfg(any(all(feature = "stream", feature = "blocking"), doc))]
-#[doc(cfg(all(feature = "stream", feature = "blocking")))]
+#[cfg(all(feature = "download", feature = "blocking"))]
+#[doc(cfg(all(feature = "download", feature = "blocking")))]
 impl Stream {
     /// A synchronous wrapper around [`Stream::download`](crate::Stream::download).
     #[inline]
@@ -373,7 +372,7 @@ impl Stream {
     }
 
     /// A synchronous wrapper around [`Stream::download_callback`](crate::Stream::download_callback).
-    #[cfg(any(feature = "callback", doc))]
+    #[cfg(feature = "callback")]
     #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn blocking_download_callback(&self, callback: Callback) -> Result<PathBuf> {
@@ -387,7 +386,7 @@ impl Stream {
     }
 
     /// A synchronous wrapper around [`Stream::download_to_dir_callback`](crate::Stream::download_to_dir_callback).
-    #[cfg(any(feature = "callback", doc))]
+    #[cfg(feature = "callback")]
     #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn blocking_download_to_dir_callback<P: AsRef<Path>>(
@@ -404,7 +403,7 @@ impl Stream {
     }
 
     /// A synchronous wrapper around [`Stream::download_to_callback`](crate::Stream::download_to_callback).
-    #[cfg(any(feature = "callback", doc))]
+    #[cfg(feature = "callback")]
     #[doc(cfg(feature = "callback"))]
     pub fn blocking_download_to_callback<P: AsRef<Path>>(&self, path: P, callback: Callback) -> Result<()> {
         crate::block!(self.download_to_callback(path, callback))

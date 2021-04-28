@@ -79,7 +79,7 @@ impl VideoFetcher {
     /// - When [`reqwest`] fails to initialize an new [`Client`].
     #[inline]
     #[doc(cfg(feature = "regex"))]
-    #[cfg(any(feature = "regex", doc))]
+    #[cfg(feature = "regex")]
     pub fn from_url(url: &Url) -> crate::Result<Self> {
         let id = Id::from_raw(url.as_str())?
             .into_owned();
@@ -128,7 +128,7 @@ impl VideoFetcher {
     /// Other errors usually mean, that YouTube changed their API, and `rustube` did not adapt to 
     /// this change yet. Please feel free to open a GitHub issue if this is the case.
     #[doc(cfg(feature = "fetch"))]
-    #[cfg(any(feature = "fetch", doc))]
+    #[cfg(feature = "fetch")]
     pub async fn fetch(self) -> crate::Result<VideoDescrambler> {
         // fixme: 
         //  It seems like watch_html also contains a PlayerResponse in all cases. VideoInfo
@@ -172,7 +172,7 @@ impl VideoFetcher {
     /// that YouTube changed their API, and `rustube` did not adapt to this change yet. Please feel
     /// free to open a GitHub issue if this is the case.
     #[doc(cfg(feature = "fetch"))]
-    #[cfg(any(feature = "fetch", doc))]
+    #[cfg(feature = "fetch")]
     pub async fn fetch_info(self) -> crate::Result<VideoInfo> {
         let watch_html = self.get_html(&self.watch_url).await?;
         let is_age_restricted = is_age_restricted(&watch_html);

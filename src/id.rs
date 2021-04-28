@@ -2,7 +2,7 @@ use alloc::borrow::{Cow, ToOwned};
 use alloc::string::String;
 use core::cmp::Ordering;
 
-#[cfg(any(feature = "regex", doc))]
+#[cfg(feature = "regex")]
 #[doc(cfg(feature = "regex"))]
 use regex::Regex;
 use serde::{
@@ -11,7 +11,7 @@ use serde::{
 };
 use url::Url;
 
-#[cfg(any(feature = "std", doc))]
+#[cfg(feature = "std")]
 #[doc(cfg(feature = "std"))]
 use crate::{Error, Result};
 
@@ -24,7 +24,7 @@ pub type IdBuf = Id<'static>;
 /// ## Guarantees:
 /// - each pattern contains an `id` group that will always capture when the pattern matches
 /// - The captured id will always match following regex (defined in [ID_PATTERN]): `^[a-zA-Z0-9_-]{11}$`
-#[cfg(any(feature = "regex", doc))]
+#[cfg(feature = "regex")]
 #[doc(cfg(feature = "regex"))]
 pub static ID_PATTERNS: [&std::lazy::SyncLazy<Regex>; 4] = [
     &WATCH_URL_PATTERN,
@@ -33,28 +33,28 @@ pub static ID_PATTERNS: [&std::lazy::SyncLazy<Regex>; 4] = [
     &ID_PATTERN
 ];
 /// A pattern matching the watch url of a video (i.e. `youtube.com/watch?v=<ID>`).
-#[cfg(any(feature = "regex", doc))]
+#[cfg(feature = "regex")]
 #[doc(cfg(feature = "regex"))]
 pub static WATCH_URL_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
     // watch url    (i.e. https://youtube.com/watch?v=video_id)
     Regex::new(r"^(https?://)?(www\.)?youtube.\w\w\w?/watch\?v=(?P<id>[a-zA-Z0-9_-]{11})(&.*)?$").unwrap()
 );
 /// A pattern matching the embedded url of a video (i.e. `youtube.com/embed/<ID>`).
-#[cfg(any(feature = "regex", doc))]
+#[cfg(feature = "regex")]
 #[doc(cfg(feature = "regex"))]
 pub static EMBED_URL_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
     // embed url    (i.e. https://youtube.com/embed/video_id)
     Regex::new(r"^(https?://)?(www\.)?youtube.\w\w\w?/embed/(?P<id>[a-zA-Z0-9_-]{11})\\?(\?.*)?$").unwrap()
 );
 /// A pattern matching the embedded url of a video (i.e. `youtu.be/<ID>`).
-#[cfg(any(feature = "regex", doc))]
+#[cfg(feature = "regex")]
 #[doc(cfg(feature = "regex"))]
 pub static SHARE_URL_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
     // share url    (i.e. https://youtu.be/video_id)
     Regex::new(r"^(https?://)?youtu\.be/(?P<id>[a-zA-Z0-9_-]{11})$").unwrap()
 );
 /// A pattern matching the id of a video (`^[a-zA-Z0-9_-]{11}$`).
-#[cfg(any(feature = "regex", doc))]
+#[cfg(feature = "regex")]
 #[doc(cfg(feature = "regex"))]
 pub static ID_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
     // id          (i.e. video_id)
@@ -145,6 +145,7 @@ impl<'a> Id<'a> {
         }
     }
 
+impl<'a> Id<'a> {
     #[inline]
     pub fn is_borrowed(&self) -> bool {
         self.0.is_borrowed()
@@ -272,7 +273,7 @@ impl<'de> Id<'de> {
         let raw = <&'de str>::deserialize(deserializer)?;
         #[cfg(not(all(feature = "regex", feature = "std")))]
             let res = Self::from_str(raw).ok_or(());
-        #[cfg(any(all(feature = "regex", feature = "std"), doc))]
+        #[cfg(all(feature = "regex", feature = "std"))]
             let res = Self::from_raw(raw);
 
         res

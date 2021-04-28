@@ -44,15 +44,15 @@ use std::lazy::SyncLazy;
 use tokio::runtime::Runtime;
 
 #[doc(inline)]
-#[cfg(any(feature = "descramble", doc))]
+#[cfg(feature = "descramble")]
 #[doc(cfg(feature = "descramble"))]
 pub use descrambler::VideoDescrambler;
 #[doc(inline)]
-#[cfg(any(feature = "fetch", doc))]
+#[cfg(feature = "fetch")]
 #[doc(cfg(feature = "fetch"))]
 pub use fetcher::VideoFetcher;
 #[doc(inline)]
-#[cfg(any(feature = "descramble", doc))]
+#[cfg(feature = "descramble")]
 #[doc(cfg(feature = "descramble"))]
 pub use video::Video;
 
@@ -64,7 +64,7 @@ pub static RT: SyncLazy<Runtime> = SyncLazy::new(||
 /// A convenient macro for executing asynchronous code in a synchronous context.
 #[macro_export]
 #[doc(cfg(feature = "blocking"))]
-#[cfg(any(feature = "blocking", doc))]
+#[cfg(feature = "blocking")]
 macro_rules! block {
     (async $future:block) => { $crate::blocking::RT.block_on(async $future) };
     (async move $future:block) => { $crate::blocking::RT.block_on(async move $future) };
@@ -76,22 +76,22 @@ macro_rules! block {
 }
 
 #[doc(hidden)]
-#[cfg(any(feature = "fetch", doc))]
+#[cfg(feature = "fetch")]
 #[doc(cfg(feature = "fetch"))]
 pub mod fetcher;
 #[doc(hidden)]
-#[cfg(any(feature = "descramble", doc))]
+#[cfg(feature = "descramble")]
 #[doc(cfg(feature = "descramble"))]
 pub mod descrambler;
 #[doc(hidden)]
-#[cfg(any(feature = "descramble", doc))]
+#[cfg(feature = "descramble")]
 #[doc(cfg(feature = "descramble"))]
 pub mod video;
 
 
 /// A synchronous wrapper around [`download_best_quality`](crate::download_best_quality).
 #[inline]
-#[cfg(any(all(feature = "download", feature = "regex"), doc))]
+#[cfg(all(feature = "download", feature = "regex"))]
 #[doc(cfg(all(feature = "download", feature = "regex")))]
 pub fn download_best_quality(video_identifier: &str) -> crate::Result<std::path::PathBuf> {
     block!(crate::download_best_quality(video_identifier))
@@ -99,7 +99,7 @@ pub fn download_best_quality(video_identifier: &str) -> crate::Result<std::path:
 
 /// A synchronous wrapper around [`download_worst_quality`](crate::download_worst_quality).
 #[inline]
-#[cfg(any(all(feature = "download", feature = "regex"), doc))]
+#[cfg(all(feature = "download", feature = "regex"))]
 #[doc(cfg(all(feature = "download", feature = "regex")))]
 pub fn download_worst_quality(video_identifier: &str) -> crate::Result<std::path::PathBuf> {
     block!(crate::download_worst_quality(video_identifier))

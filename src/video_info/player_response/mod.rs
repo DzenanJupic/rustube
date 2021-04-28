@@ -2,17 +2,17 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "microformat")]
+#[doc(cfg(feature = "microformat"))]
+use microformat::Microformat;
 use playability_status::PlayabilityStatus;
 use streaming_data::StreamingData;
 use video_details::VideoDetails;
-#[cfg(any(feature = "microformat", doc))]
-#[doc(cfg(feature = "microformat"))]
-use microformat::Microformat;
 
 pub mod video_details;
 pub mod streaming_data;
 pub mod playability_status;
-#[cfg(any(feature = "microformat", doc))]
+#[cfg(feature = "microformat")]
 #[doc(cfg(feature = "microformat"))]
 pub mod microformat;
 
@@ -28,7 +28,7 @@ pub struct PlayerResponse {
     // cards: _,
     // endscreen: _,
     // messages: _,
-    #[cfg(any(feature = "microformat", doc))]
+    #[cfg(feature = "microformat")]
     #[doc(cfg(feature = "microformat"))]
     pub microformat: Microformat,
     pub playability_status: PlayabilityStatus,
