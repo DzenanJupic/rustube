@@ -63,7 +63,7 @@ fetch = [
     "std", "descramble", "url/serde", "reqwest/cookies", "reqwest/stream", "reqwest/gzip"
 ]
 descramble = ["fetch", "stream"]
-stream = ["descramble"]
+stream = ["descramble", "chrono/serde"]
 blocking = ["tokio/rt", "tokio/rt-multi-thread", "std"]
 default-tls = ["reqwest/default-tls"]
 native-tls = ["reqwest/native-tls"]

@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use chrono::{DateTime, Utc};
 use mime::Mime;
 use reqwest::Client;
+use serde_with::{DisplayFromStr, serde_as};
 #[cfg(feature = "download")]
 use tokio::{
     fs::File,
@@ -44,9 +45,11 @@ pub mod callback;
 type InternalSender = ();
 
 /// A downloadable video Stream, that contains all the important information. 
-#[derive(Clone, derivative::Derivative)]
+#[serde_as]
+#[derive(Clone, derivative::Derivative, serde::Deserialize, serde::Serialize)]
 #[derivative(Debug, PartialEq)]
 pub struct Stream {
+    #[serde_as(as = "DisplayFromStr")]
     pub mime: Mime,
     pub codecs: Vec<String>,
     pub is_progressive: bool,
@@ -77,6 +80,7 @@ pub struct Stream {
     pub signature_cipher: SignatureCipher,
     pub width: Option<u64>,
     pub video_details: Arc<VideoDetails>,
+    #[serde(skip)]
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
     client: Client,
 }
