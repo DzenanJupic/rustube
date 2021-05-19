@@ -25,6 +25,9 @@ pub const PRE_SIGNED: &[&str] = &[
 
     // No external
     "hK4dUSV9erk",
+
+    // 480p60 and 360p60
+    "zCKk7HiKdko",
 ];
 pub const AGE_RESTRICTED: &[&str] = &[
     "VXDsM-1McE0",
