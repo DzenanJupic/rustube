@@ -306,6 +306,7 @@ impl VideoFetcher {
                 .get(url.as_str())
                 .send()
                 .await?
+                .error_for_status()?
                 .text()
                 .await?
         )
