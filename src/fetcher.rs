@@ -330,10 +330,8 @@ fn is_age_restricted(watch_html: &str) -> bool {
 #[inline]
 fn video_info_url(video_id: Id<'_>, watch_url: &Url) -> Url {
     let params: &[(&str, &str)] = &[
+        ("html5", "1"),
         ("video_id", video_id.as_str()),
-        ("ps", "default"),
-        ("eurl", watch_url.as_str()),
-        ("hl", "en_US")
     ];
     _video_info_url(params)
 }
@@ -350,9 +348,8 @@ fn video_info_url_age_restricted(video_id: Id<'_>, watch_url: &Url) -> Url {
 
     let eurl = format!("https://youtube.googleapis.com/v/{}", video_id.as_str());
     let params: &[(&str, &str)] = &[
+        ("html5", "1"),
         ("video_id", video_id.as_str()),
-        ("eurl", &eurl),
-        ("sts", sts)
     ];
     _video_info_url(params)
 }
