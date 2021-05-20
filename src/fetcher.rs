@@ -275,31 +275,22 @@ impl VideoFetcher {
     /// Requests the [`VideoInfo`] of a video 
     #[inline]
     async fn get_video_info(&self, is_age_restricted: bool) -> crate::Result<VideoInfo> {
-        let video_info_url = self.get_video_info_url(is_age_restricted);
-        let video_info_raw = self.get_html(&video_info_url).await?;
+        let player_response = self.get_player_response().await?;
 
-        let mut video_info = serde_qs::from_str::<VideoInfo>(video_info_raw.as_str())?;
-        video_info.is_age_restricted = is_age_restricted;
-
-        Ok(video_info)
+        Ok(VideoInfo {
+            player_response,
+            is_age_restricted,
+        })
     }
 
-    /// Generates the url under which the [`VideoInfo`] can be requested.
     #[inline]
-    #[log_derive::logfn_inputs(Debug)]
-    #[log_derive::logfn(Trace, fmt = "get_video_info_url() => {}")]
-    fn get_video_info_url(&self, is_age_restricted: bool) -> Url {
-        if is_age_restricted {
-            video_info_url_age_restricted(
-                self.video_id.as_borrowed(),
-                &self.watch_url,
-            )
-        } else {
-            video_info_url(
-                self.video_id.as_borrowed(),
-                &self.watch_url,
-            )
-        }
+    async fn get_player_response(&self) -> crate::Result<PlayerResponse> {
+        Ok(
+            self.request_api(reqwest::Method::POST, "player")
+                .await?
+                .json::<PlayerResponse>()
+                .await?
+        )
     }
 
     /// Requests a website.
@@ -363,46 +354,6 @@ fn is_age_restricted(watch_html: &str) -> bool {
     PATTERN.is_match(watch_html)
 }
 
-/// Generates the url under which the [`VideoInfo`] of a video can be requested. 
-#[inline]
-fn video_info_url(video_id: Id<'_>, watch_url: &Url) -> Url {
-    let params: &[(&str, &str)] = &[
-        ("video_id", video_id.as_str()),
-        ("ps", "default"),
-        ("eurl", watch_url.as_str()),
-        ("hl", "en_US")
-    ];
-    _video_info_url(params)
-}
-
-/// Generates the url under which the [`VideoInfo`] of an age restricted video can be requested.
-#[inline]
-fn video_info_url_age_restricted(video_id: Id<'_>, watch_url: &Url) -> Url {
-    static PATTERN: SyncLazy<Regex> = SyncLazy::new(|| Regex::new(r#""sts"\s*:\s*(\d+)"#).unwrap());
-
-    let sts = match PATTERN.captures(watch_url.as_str()) {
-        Some(c) => c.get(1).unwrap().as_str(),
-        None => ""
-    };
-
-    let eurl = format!("https://youtube.googleapis.com/v/{}", video_id.as_str());
-    let params: &[(&str, &str)] = &[
-        ("video_id", video_id.as_str()),
-        ("eurl", &eurl),
-        ("sts", sts)
-    ];
-    _video_info_url(params)
-}
-
-/// Helper for assembling th video info url.
-#[inline]
-fn _video_info_url(params: &[(&str, &str)]) -> Url {
-    Url::parse_with_params(
-        "https://www.youtube.com/get_video_info?",
-        params,
-    ).unwrap()
-}
-
 /// Generates the url under which the JavaScript used for descrambling can be requested.
 #[inline]
 fn js_url(html: &str) -> crate::Result<(Url, Option<PlayerResponse>)> {
@@ -464,7 +415,9 @@ fn parse_for_object<'a>(html: &'a str, regex: &Regex) -> crate::Result<&'a str> 
 #[inline]
 fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
     #[derive(Deserialize)]
-    struct Args { player_response: PlayerResponse }
+    struct Args {
+        player_response: PlayerResponse,
+    }
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum PlayerConfig { Args { args: Args }, Response(PlayerResponse) }
