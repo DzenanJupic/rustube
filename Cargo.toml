@@ -59,7 +59,7 @@ download = [
 ]
 # could be usefull if you don't want to download videos, but just want to get information like title, view-count, ...
 fetch = [
-    "tokio/macros", "reqwest",
+    "tokio/macros", "reqwest/json",
     "serde/default", "serde/rc", "serde_with/json", "serde_json", "serde_qs", "bytes", "chrono", "mime",
     "std", "descramble", "url/serde", "reqwest/cookies", "reqwest/stream", "reqwest/gzip"
 ]

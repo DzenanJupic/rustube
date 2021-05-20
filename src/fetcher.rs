@@ -317,6 +317,43 @@ impl VideoFetcher {
                 .await?
         )
     }
+
+    #[inline]
+    #[log_derive::logfn_inputs(Debug)]
+    #[log_derive::logfn(ok = "Trace", err = "Error")]
+    async fn request_api(&self, method: reqwest::Method, endpoint: &'static str) -> crate::Result<reqwest::Response> {
+        use serde_json::Value;
+
+        const API_KEY: &str = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
+        static BASE_URL: SyncLazy<Url> = SyncLazy::new(||
+            Url::parse("https://www.youtube.com/youtubei/v1/").unwrap()
+        );
+        static BASE_BODY: SyncLazy<Value> = SyncLazy::new(||
+            serde_json::json!({
+                "context": {
+                    "client": {
+                        "clientName": "WEB",
+                        "clientVersion": "2.20200720.00.02"
+                    }
+                }
+            })
+        );
+
+        let mut url = BASE_URL.join(endpoint)?;
+        url
+            .query_pairs_mut()
+            .append_pair("key", API_KEY)
+            .append_pair("video_id", self.video_id.as_str());
+
+        Ok(
+            self.client
+                .request(method, url)
+                .json(&*BASE_BODY)
+                .send()
+                .await?
+                .error_for_status()?
+        )
+    }
 }
 
 /// Extracts whether or not a particular video is age restricted. 
