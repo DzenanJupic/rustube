@@ -7,7 +7,6 @@ use cipher::Cipher;
 
 use crate::{IdBuf, Stream, Video, VideoDetails, VideoInfo};
 use crate::error::Error;
-use crate::video_info::player_response::streaming_data::RawFormat;
 use crate::video_info::player_response::streaming_data::StreamingData;
 
 mod cipher;
@@ -101,11 +100,6 @@ impl VideoDescrambler {
                 "VideoInfo contained no StreamingData, which is essential for downloading.".into()
             ))?;
 
-        if let Some(ref adaptive_fmts_raw) = self.video_info.adaptive_fmts_raw {
-            // fixme: this should probably be part of fetch.
-            apply_descrambler_adaptive_fmts(streaming_data, adaptive_fmts_raw)?;
-        }
-
         apply_signature(streaming_data, &self.js)?;
         let mut streams = Vec::new();
         Self::initialize_streams(
@@ -162,25 +156,6 @@ impl VideoDescrambler {
             streams.push(stream);
         }
     }
-}
-
-/// Extracts the [`RawFormat`]s from `adaptive_fmts_raw`. (This may be a legacy thing) 
-#[inline]
-fn apply_descrambler_adaptive_fmts(streaming_data: &mut StreamingData, adaptive_fmts_raw: &str) -> crate::Result<()> {
-    for raw_fmt in adaptive_fmts_raw.split(',') {
-        // fixme: this implementation is likely wrong. 
-        // main question: is adaptive_fmts_raw a list of normal RawFormats?
-        // To make is correct, I would need sample data for adaptive_fmts_raw
-        log::warn!(
-            "`apply_descrambler_adaptive_fmts` is probaply broken!\
-             Please open an issue on GitHub and paste in the whole warning message (it may be quite long).\
-             adaptive_fmts_raw: `{}`", raw_fmt
-        );
-        let raw_format = serde_qs::from_str::<RawFormat>(raw_fmt)?;
-        streaming_data.formats.push(raw_format);
-    }
-
-    Ok(())
 }
 
 /// Descrambles the signature of a video.
