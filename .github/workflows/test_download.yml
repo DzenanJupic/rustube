@@ -1,20 +1,8 @@
-name: Build and Test on all major operating systems
+name: Test downloading
 
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - '**.rs'
-      - 'Cargo.lock'
-  pull_request:
-    branches:
-      - master
-    paths:
-      - '**.rs'
-      - 'Cargo.lock'
   schedule:
-    - cron: "0 2 * * 0-6"
+    - cron: "0 2 * * 0"
   workflow_dispatch:
 
 env:
@@ -22,7 +10,7 @@ env:
 
 jobs:
   build_and_test:
-    name: Build and Test on ${{ matrix.os }}
+    name: Test downloading on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -30,17 +18,15 @@ jobs:
           - nightly
         os:
           - ubuntu-latest
-          - windows-latest
-          - macOS-latest
-    
+
     steps:
       - uses: actions/checkout@v2
       - name: Install minimal ${{ matrix.toolchain }} toolchain
         uses: actions-rs/toolchain@v1
         with:
-            profile: minimal
-            toolchain: ${{ matrix.toolchain }}
-            default: true
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          default: true
       - name: Install clippy
         run: rustup component add clippy
       - name: Install cargo-hack

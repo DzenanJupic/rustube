@@ -1,0 +1,51 @@
+name: Check and Build code on all major operating systems
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '**.rs'
+      - 'Cargo.*'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '**.rs'
+      - 'Cargo.*'
+  schedule:
+    - cron: "0 2 * * 0-6"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_test:
+    name: Check and Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        toolchain:
+          - nightly
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install minimal ${{ matrix.toolchain }} toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          default: true
+      - name: Install clippy
+        run: rustup component add clippy
+      - name: Install cargo-hack
+        run: cargo install cargo-hack
+      - name: Check workspace each feature
+        run: cargo hack clippy --workspace --each-feature -- -D warnings
+      - name: Build workspace each feature
+        run: cargo hack build --workspace --each-feature
