@@ -68,7 +68,7 @@ use crate::video_info::player_response::playability_status::PlayabilityStatus;
 pub struct VideoFetcher {
     video_id: IdBuf,
     watch_url: Url,
-    #[derivative(Debug = "ignore", PartialEq = "ignore")]
+    #[derivative(PartialEq = "ignore")]
     client: Client,
 }
 
@@ -129,6 +129,8 @@ impl VideoFetcher {
     /// this change yet. Please feel free to open a GitHub issue if this is the case.
     #[doc(cfg(feature = "fetch"))]
     #[cfg(feature = "fetch")]
+    #[log_derive::logfn(ok = "Trace", err = "Error")]
+    #[log_derive::logfn_inputs(Trace)]
     pub async fn fetch(self) -> crate::Result<VideoDescrambler> {
         // fixme: 
         //  It seems like watch_html also contains a PlayerResponse in all cases. VideoInfo
@@ -284,6 +286,8 @@ impl VideoFetcher {
 
     /// Generates the url under which the [`VideoInfo`] can be requested.
     #[inline]
+    #[log_derive::logfn_inputs(Debug)]
+    #[log_derive::logfn(Trace, fmt = "get_video_info_url() => {}")]
     fn get_video_info_url(&self, is_age_restricted: bool) -> Url {
         if is_age_restricted {
             video_info_url_age_restricted(
@@ -300,6 +304,8 @@ impl VideoFetcher {
 
     /// Requests a website.
     #[inline]
+    #[log_derive::logfn_inputs(Debug)]
+    #[log_derive::logfn(ok = "Trace", err = "Error", fmt = "get_html() => `{}`")]
     async fn get_html(&self, url: &Url) -> crate::Result<String> {
         Ok(
             self.client

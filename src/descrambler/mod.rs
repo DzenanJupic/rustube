@@ -92,6 +92,8 @@ impl VideoDescrambler {
     /// ### Errors
     /// - When the streaming data of the video is incomplete.
     /// - When descrambling the videos signatures fails.
+    #[log_derive::logfn(ok = "Trace", err = "Error")]
+    #[log_derive::logfn_inputs(Trace)]
     pub fn descramble(mut self) -> crate::Result<Video> {
         let streaming_data = self.video_info.player_response.streaming_data
             .as_mut()
