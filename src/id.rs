@@ -211,14 +211,14 @@ impl<'a> Id<'a> {
     #[inline]
     pub fn watch_url(&self) -> Url {
         Url::parse_with_params(
-            "https://youtube.com/watch?",
+            "https://www.youtube.com/watch?",
             &[("v", self.as_str())],
         ).unwrap()
     }
 
     #[inline]
     pub fn embed_url(&self) -> Url {
-        let mut url = Url::parse("https://youtube.com/embed")
+        let mut url = Url::parse("https://www.youtube.com/embed")
             .unwrap();
         url
             .path_segments_mut()
