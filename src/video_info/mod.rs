@@ -12,8 +12,6 @@ pub mod player_response;
 pub struct VideoInfo {
     #[serde_as(deserialize_as = "JsonString")]
     pub player_response: PlayerResponse,
-    #[serde(rename = "adaptive_fmts")]
-    pub adaptive_fmts_raw: Option<String>,
 
     #[serde(skip)]
     pub is_age_restricted: bool,
