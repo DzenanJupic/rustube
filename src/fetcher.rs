@@ -513,7 +513,7 @@ fn is_json_object_end(curr_char: u8, skip: &mut bool, stack: &mut Vec<u8>) -> bo
 }
 
 pub fn recommended_cookies() -> reqwest::cookie::Jar {
-    let cookie = "CONSENT=YES+; Path=/; Domain=www.youtube.com; Secure; Expires=Sun, 10 Jan 2038 07:59:59 GMT;";
+    let cookie = "CONSENT=YES+; Path=/; Domain=youtube.com; Secure; Expires=Fri, 01 Jan 2038 00:00:00 GMT;";
     let url = "https://youtube.com".parse().unwrap();
 
     let jar = reqwest::cookie::Jar::default();
