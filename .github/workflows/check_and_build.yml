@@ -1,4 +1,4 @@
-name: Build and Test on all major operating systems
+name: Check and Build code on all major operating systems
 
 on:
   push:
@@ -6,13 +6,13 @@ on:
       - master
     paths:
       - '**.rs'
-      - 'Cargo.lock'
+      - 'Cargo.*'
   pull_request:
     branches:
       - master
     paths:
       - '**.rs'
-      - 'Cargo.lock'
+      - 'Cargo.*'
   schedule:
     - cron: "0 2 * * 0-6"
   workflow_dispatch:
@@ -22,7 +22,7 @@ env:
 
 jobs:
   build_and_test:
-    name: Build and Test on ${{ matrix.os }}
+    name: Check and Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -32,15 +32,15 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macOS-latest
-    
+
     steps:
       - uses: actions/checkout@v2
       - name: Install minimal ${{ matrix.toolchain }} toolchain
         uses: actions-rs/toolchain@v1
         with:
-            profile: minimal
-            toolchain: ${{ matrix.toolchain }}
-            default: true
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          default: true
       - name: Install clippy
         run: rustup component add clippy
       - name: Install cargo-hack
@@ -49,9 +49,3 @@ jobs:
         run: cargo hack clippy --workspace --each-feature -- -D warnings
       - name: Build workspace each feature
         run: cargo hack build --workspace --each-feature
-      - name: Run tests
-        run: cargo test --workspace --all-features
-      - name: Run test `download_to`
-        run: cargo test -p rustube --all-features --test download download_to -- --exact --ignored
-      - name: Run test `download_age_restricted_to_dir`
-        run: cargo test -p rustube --all-features --test download download_age_restricted_to_dir -- --exact --ignored

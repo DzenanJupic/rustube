@@ -1,0 +1,53 @@
+name: Test fetching
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '**.rs'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '**.rs'
+  schedule:
+    - cron: "0 2 * * 0,2,4"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_test:
+    name: Test fetching on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        toolchain:
+          - nightly
+        os:
+          - ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install minimal ${{ matrix.toolchain }} toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          default: true
+      - name: Install clippy
+        run: rustup component add clippy
+      - name: Install cargo-hack
+        run: cargo install cargo-hack
+      - name: Check workspace each feature
+        run: cargo hack clippy --workspace --each-feature -- -D warnings
+      - name: Build workspace each feature
+        run: cargo hack build --workspace --each-feature
+      - name: Run tests
+        run: cargo test --workspace --all-features
+      - name: Run test `download_to`
+        run: cargo test -p rustube --all-features --test fetch_descramble two_video_descrambler_instances_of_same_video_are_eq -- --exact --ignored
+      - name: Run test `download_age_restricted_to_dir`
+        run: cargo test -p rustube --all-features --test fetch_descramble differently_constructed_videos_are_eq -- --exact --ignored

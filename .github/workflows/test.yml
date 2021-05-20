@@ -1,0 +1,41 @@
+name: Run not ignored tests
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '**.rs'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '**.rs'
+  schedule:
+    - cron: "0 2 * * 0-6"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        toolchain:
+          - nightly
+        os:
+          - ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install minimal ${{ matrix.toolchain }} toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          default: true
+      - name: Run tests
+        run: cargo test --workspace --all-features

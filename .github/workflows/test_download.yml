@@ -1,0 +1,33 @@
+name: Test downloading
+
+on:
+  schedule:
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_test:
+    name: Test downloading on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        toolchain:
+          - nightly
+        os:
+          - ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install minimal ${{ matrix.toolchain }} toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          default: true
+      - name: Run test `download_to`
+        run: cargo test -p rustube --all-features --test download download_to -- --exact --ignored
+      - name: Run test `download_age_restricted_to_dir`
+        run: cargo test -p rustube --all-features --test download download_age_restricted_to_dir -- --exact --ignored
