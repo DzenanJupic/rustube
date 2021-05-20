@@ -275,7 +275,7 @@ impl VideoFetcher {
     /// Requests the [`VideoInfo`] of a video 
     #[inline]
     async fn get_video_info(&self, is_age_restricted: bool) -> crate::Result<VideoInfo> {
-        let video_info_url = self.get_video_info_url(is_age_restricted);
+        let video_info_url = self.get_video_info_url();
         let video_info_raw = self.get_html(&video_info_url).await?;
 
         let mut video_info = serde_qs::from_str::<VideoInfo>(video_info_raw.as_str())?;
@@ -288,18 +288,8 @@ impl VideoFetcher {
     #[inline]
     #[log_derive::logfn_inputs(Debug)]
     #[log_derive::logfn(Trace, fmt = "get_video_info_url() => {}")]
-    fn get_video_info_url(&self, is_age_restricted: bool) -> Url {
-        if is_age_restricted {
-            video_info_url_age_restricted(
-                self.video_id.as_borrowed(),
-                &self.watch_url,
-            )
-        } else {
-            video_info_url(
-                self.video_id.as_borrowed(),
-                &self.watch_url,
-            )
-        }
+    fn get_video_info_url(&self) -> Url {
+        video_info_url(self.video_id.as_borrowed())
     }
 
     /// Requests a website.
@@ -328,38 +318,12 @@ fn is_age_restricted(watch_html: &str) -> bool {
 
 /// Generates the url under which the [`VideoInfo`] of a video can be requested. 
 #[inline]
-fn video_info_url(video_id: Id<'_>, watch_url: &Url) -> Url {
+fn video_info_url(video_id: Id<'_>) -> Url {
     let params: &[(&str, &str)] = &[
+        ("html5", "1"),
         ("video_id", video_id.as_str()),
-        ("ps", "default"),
-        ("eurl", watch_url.as_str()),
-        ("hl", "en_US")
     ];
-    _video_info_url(params)
-}
 
-/// Generates the url under which the [`VideoInfo`] of an age restricted video can be requested.
-#[inline]
-fn video_info_url_age_restricted(video_id: Id<'_>, watch_url: &Url) -> Url {
-    static PATTERN: SyncLazy<Regex> = SyncLazy::new(|| Regex::new(r#""sts"\s*:\s*(\d+)"#).unwrap());
-
-    let sts = match PATTERN.captures(watch_url.as_str()) {
-        Some(c) => c.get(1).unwrap().as_str(),
-        None => ""
-    };
-
-    let eurl = format!("https://youtube.googleapis.com/v/{}", video_id.as_str());
-    let params: &[(&str, &str)] = &[
-        ("video_id", video_id.as_str()),
-        ("eurl", &eurl),
-        ("sts", sts)
-    ];
-    _video_info_url(params)
-}
-
-/// Helper for assembling th video info url.
-#[inline]
-fn _video_info_url(params: &[(&str, &str)]) -> Url {
     Url::parse_with_params(
         "https://www.youtube.com/get_video_info?",
         params,
@@ -427,7 +391,9 @@ fn parse_for_object<'a>(html: &'a str, regex: &Regex) -> crate::Result<&'a str> 
 #[inline]
 fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
     #[derive(Deserialize)]
-    struct Args { player_response: PlayerResponse }
+    struct Args {
+        player_response: PlayerResponse,
+    }
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum PlayerConfig { Args { args: Args }, Response(PlayerResponse) }
@@ -513,7 +479,7 @@ fn is_json_object_end(curr_char: u8, skip: &mut bool, stack: &mut Vec<u8>) -> bo
 }
 
 pub fn recommended_cookies() -> reqwest::cookie::Jar {
-    let cookie = "CONSENT=YES+; Path=/; Domain=www.youtube.com; Secure; Expires=Sun, 10 Jan 2038 07:59:59 GMT;";
+    let cookie = "CONSENT=YES+; Path=/; Domain=youtube.com; Secure; Expires=Fri, 01 Jan 2038 00:00:00 GMT;";
     let url = "https://youtube.com".parse().unwrap();
 
     let jar = reqwest::cookie::Jar::default();
