@@ -28,6 +28,12 @@ pub const PRE_SIGNED: &[&str] = &[
 
     // 480p60 and 360p60
     "zCKk7HiKdko",
+
+    // 4320p
+    "UN3uF3990Q0",
+    
+    // 4320p60
+    "CbxQWAFv7sA",
 ];
 pub const AGE_RESTRICTED: &[&str] = &[
     "VXDsM-1McE0",
