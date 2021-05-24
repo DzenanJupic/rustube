@@ -12,6 +12,7 @@ use url::Url;
 #[serde(rename_all = "camelCase")]
 pub struct StreamingData {
     // todo: remove the field adaptive_formats, and deserialize all formats into formats
+    #[serde(default)]
     pub adaptive_formats: Vec<RawFormat>,
     #[serde_as(as = "JsonString")]
     pub expires_in_seconds: u64,

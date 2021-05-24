@@ -47,7 +47,8 @@ pub const MISSING_RECORDING: &[&str] = &[
     "5YceQ8YqYMc"
 ];
 pub const LIVE_STREAM: &[&str] = &[
-    "ASGNUnPINdM"
+    "ASGNUnPINdM",
+    "FwwgBB8l2vs"
 ];
 
 pub const DOWNLOAD_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/videos");
