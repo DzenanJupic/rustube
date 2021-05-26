@@ -6,6 +6,9 @@
 [![docs.rs](https://img.shields.io/docsrs/rustube?style=flat-square)](https://docs.rs/rustube)
 [![licence](https://img.shields.io/crates/l/rustube?style=flat-square)](https://github.com/DzenanJupic/rustube)
 
+![build](https://img.shields.io/github/workflow/status/DzenanJupic/rustube/Check%20and%20Build%20code%20on%20all%20major%20operating%20systems?style=flat-square)
+![download](https://img.shields.io/github/workflow/status/DzenanJupic/rustube/Test%20downloading?label=download&style=flat-square)
+
 </div>
 
 ---
