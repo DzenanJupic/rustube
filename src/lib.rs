@@ -1,7 +1,7 @@
 #![feature(
 doc_cfg,
 async_closure, bool_to_option, cow_is_borrowed, once_cell, box_syntax,
-str_split_as_str, try_trait, option_result_contains
+str_split_as_str, option_result_contains
 )]
 #![warn(
 missing_debug_implementations,
