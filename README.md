@@ -17,6 +17,9 @@ A complete (WIP), and easy to use YouTube downloader.
 > **Note**: `rustube` is still in development and may see breaking changes! It currently still requires a nightly
 > compiler. This will change over time.
 
+> **Note**: Due to some changes in the YouTube API the `0.2.*` releases probaply don't work any more in most cases. 
+> Therefore it's recommended to pick the latest `0.3.0-beta.*` release.
+
 ## Overview
 
 - [Roadmap](#roadmap)
@@ -76,6 +79,10 @@ For more examples, an overview of the blocking API have a look at the [API docum
 
 > **Note**: Currently, `rustube-cli` still requires a nightly compiler. This, as well as the commands, the flags, and
 > the output, will likely change over time.
+
+> **Note**: Due to some changes in the YouTube API the `0.2.*` releases probaply don't work any more in most cases. 
+> Therefore it's recommended to pick the latest `0.3.0-beta.*` release. You can download beta versions using 
+> `cargo install --version "0.3.0-beta.<LATEST_VERSION>" rustube-cli`.
 
 `rustube` comes with a CLI, `rustube-cli`, so you can download your favorite YouTube videos without having to write a
 single line of code.
