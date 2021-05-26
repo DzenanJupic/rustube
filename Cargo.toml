@@ -1,6 +1,6 @@
 [package]
 name = "rustube"
-version = "0.3.0-beta.0"
+version = "0.3.0-beta.1"
 authors = ["Dzenan Jupic <info@dzenanjupic.de>"]
 edition = "2018"
 description = "A YouTube video downloader, originally inspired by pytube, written in Rust."
