@@ -1,10 +1,10 @@
-# <div style="text-align: center;"> rustube </div>
+# <div align="center"> rustube </div>
 
-<div style="text-align: center;">
+<div align="center">
 
-[![crates.io](https://img.shields.io/crates/v/rustube)](https://crates.io/crates/rustube)
-[![docs.rs](https://docs.rs/rustube/badge.svg)](https://docs.rs/rustube)
-[![licence](https://img.shields.io/crates/l/rustube)](https://github.com/DzenanJupic/rustube)
+[![crates.io](https://img.shields.io/crates/v/rustube?style=flat-square)](https://crates.io/crates/rustube)
+[![docs.rs](https://img.shields.io/docsrs/rustube?style=flat-square)](https://docs.rs/rustube)
+[![licence](https://img.shields.io/crates/l/rustube?style=flat-square)](https://github.com/DzenanJupic/rustube)
 
 </div>
 
