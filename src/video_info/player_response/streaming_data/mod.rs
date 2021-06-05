@@ -138,6 +138,7 @@ pub enum Quality {
     Small,
     Medium,
     Large,
+    Highres,
     Hd720,
     Hd1080,
     Hd1440,
