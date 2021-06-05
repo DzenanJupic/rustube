@@ -49,9 +49,17 @@ async fn download(args: DownloadArgs) -> Result<()> {
 
     let id = args.identifier.id()?;
     let download_path = download_path(args.filename, args.dir, id.as_borrowed());
-    let stream = get_stream(id, args.stream_filter).await?;
+    let (video_info, stream) = get_stream(id, args.stream_filter).await?;
 
     stream.download_to(download_path).await?;
+
+    let video_serializer = VideoSerializer::new(
+        video_info,
+        std::iter::once(stream),
+        args.output.output_level,
+    );
+    let output = args.output.output_format.serialize_output(&video_serializer)?;
+    println!("{}", output);
 
     Ok(())
 }
@@ -73,12 +81,15 @@ async fn fetch(args: FetchArgs) -> Result<()> {
 async fn get_stream(
     id: IdBuf,
     stream_filter: StreamFilter,
-) -> Result<Stream> {
-    get_streams(id, &stream_filter)
-        .await?.1
+) -> Result<(VideoInfo, Stream)> {
+    let (video_info, streams) = get_streams(id, &stream_filter).await?;
+
+    let stream = streams
         .max_by(|lhs, rhs| stream_filter.max_stream(lhs, rhs))
         .ok_or(Error::NoStreams)
-        .context("There are no streams, that match all your criteria")
+        .context("There are no streams, that match all your criteria")?;
+
+    Ok((video_info, stream))
 }
 
 async fn get_streams<'a>(

@@ -4,6 +4,7 @@ use clap::Clap;
 
 use crate::args::Identifier;
 use crate::args::logging::LoggingArgs;
+use crate::args::output::OutputArgs;
 use crate::args::stream_filter::StreamFilter;
 
 #[derive(Clap)]
@@ -14,6 +15,8 @@ pub struct DownloadArgs {
     pub stream_filter: StreamFilter,
     #[clap(flatten)]
     pub logging: LoggingArgs,
+    #[clap(flatten)]
+    pub output: OutputArgs,
 
     #[clap(
     short,
