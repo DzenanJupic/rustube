@@ -138,6 +138,12 @@ impl Video {
         self.streams
     }
 
+    /// Decomposes a `Video` into it's raw parts.
+    #[inline]
+    pub fn into_parts(self) -> (VideoInfo, Vec<Stream>) {
+        (self.video_info, self.streams)
+    }
+
     /// The [`VideoDetails`]s of the video.
     #[inline]
     pub fn video_details(&self) -> Arc<VideoDetails> {

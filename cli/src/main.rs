@@ -85,12 +85,11 @@ async fn get_streams<'a>(
     id: IdBuf,
     stream_filter: &'a StreamFilter,
 ) -> Result<(VideoInfo, impl Iterator<Item=Stream> + 'a)> {
-    let video = get_video(id)
-        .await?;
+    let (video_info, streams) = get_video(id)
+        .await?
+        .into_parts();
 
-    let video_info = video.video_info().clone();
-    let streams = video
-        .into_streams()
+    let streams = streams
         .into_iter()
         .filter(move |stream| stream_filter.stream_matches(stream));
 
