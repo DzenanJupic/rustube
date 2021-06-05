@@ -17,9 +17,6 @@ A complete (WIP), and easy to use YouTube downloader.
 > **Note**: `rustube` is still in development and may see breaking changes! It currently still requires a nightly
 > compiler. This will change over time.
 
-> **Note**: Due to some changes in the YouTube API the `0.2.*` releases probaply don't work any more in most cases. 
-> Therefore it's recommended to pick the latest `0.3.0-beta.*` release.
-
 ## Overview
 
 - [Roadmap](#roadmap)
@@ -80,14 +77,10 @@ For more examples, an overview of the blocking API have a look at the [API docum
 > **Note**: Currently, `rustube-cli` still requires a nightly compiler. This, as well as the commands, the flags, and
 > the output, will likely change over time.
 
-> **Note**: Due to some changes in the YouTube API the `0.2.*` releases probaply don't work any more in most cases. 
-> Therefore it's recommended to pick the latest `0.3.0-beta.*` release. You can download beta versions using 
-> `cargo install --version "0.3.0-beta.<LATEST_VERSION>" rustube-cli`.
-
 `rustube` comes with a CLI, `rustube-cli`, so you can download your favorite YouTube videos without having to write a
 single line of code.
 
-To install it, simply run run
+To install it, simply run
 
 ```
 cargo +nightly install rustube-cli
@@ -96,29 +89,41 @@ cargo +nightly install rustube-cli
 After you successfully installed `rustube-cli`, you have access to the command `rustube`
 
 ```
-> rustube
-rustube-cli
+A simple CLI for the rustube YouTube-downloader library.
+For documentation and more information about rustube or the rustube-cli checkout
+`https://github.com/DzenanJupic/rustube`.
+
+For help with certain subcommands run `rustube <SUBCOMMAND> --help`.
 
 USAGE:
-    rustube <SUBCOMMAND>
+    rustube.exe <SUBCOMMAND>
 
 FLAGS:
     -h, --help       Prints help information
     -V, --version    Prints version information
 
 SUBCOMMANDS:
-    check       Checks whether or not a video can be downloaded and if so, prints all available
-                streams
-                The check includes fetching, parsing, and descrambling the video data, and also
-                ensuring there is at least one Stream
-                Since the video information gets descrambled, you can use all Stream URLs to
-                access the video online
+    check       Checks if a video can be downloaded and fetches information about it
+                This command is similar to fetch, in the way that it also fetches information
+                about a video, but, other then fetch, will also decrypt all stream URLs.
+                Therefore you can use the returned URLs for downloading the video. This of
+                course means that the video has to be downloadable.
+                By default this command will check for any streams that contain a video and an
+                audio track. To specify other behavior, like checking for a stream with a
+                particular quality, have a look at the subcommand help.
     download    Downloads a YouTube video
                 By default, the Stream with the best quality and both a video, and an audio
-                track will be downloaded
-    fetch       Fetches information about a video, and prints it
-                Contrary to the name, this will actually fetch and descramble the video
-                information, so you can directly use all Stream URLs to access the video online
+                track will be downloaded. To specify other download behavior, have a look the
+                the subcommand help.
+    fetch       Fetches information about a YouTube video
+                Fetching information does not require the video to actually be downloadable. So
+                this also works when a video is, i.e., an offline stream. The downside is that
+                you often don't have access to the stream URLs. Some videos come with pre-
+                decrypted urls, in which case you can also use these to download the video, but
+                if the video url is encrypted there's no way for you to download the video using
+                only the returned information. To get decrypted URLs, have a look at `check`.
+                For most use cases it's recommended to use `check` instead, since it gives you
+                both more control and more information.
     help        Prints this message or the help of the given subcommand(s)
 ```
 

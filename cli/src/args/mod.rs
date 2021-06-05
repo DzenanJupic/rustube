@@ -21,7 +21,7 @@ about = "\n\
 A simple CLI for the rustube YouTube-downloader library.\n\
 For documentation and more information about rustube or the rustube-cli checkout \
 `https://github.com/DzenanJupic/rustube`.\n\n\
-For help with certain sub-commands run `rustube <SUBCOMMAND> --help`. 
+For help with certain subcommands run `rustube <SUBCOMMAND> --help`. 
 "
 )]
 pub enum Command {
@@ -38,7 +38,7 @@ pub enum Command {
     #[clap(about = "\
     Downloads a YouTube video\n\
     By default, the Stream with the best quality and both a video, and an audio track will be \
-    downloaded. To specify other download behavior, have a look the the sub-command help.\
+    downloaded. To specify other download behavior, have a look the the subcommand help.\
     ")]
     Download(DownloadArgs),
     #[clap(about = "\
