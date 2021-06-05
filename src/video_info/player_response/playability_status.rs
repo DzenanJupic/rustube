@@ -43,18 +43,24 @@ pub enum PlayabilityStatus {
         miniplayer: MiniPlayer,
         context_params: String,
     },
+    #[serde(rename_all = "camelCase")]
+    Error {
+        reason: String,
+        error_screen: ErrorScreen,
+        context_params: String,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct MiniPlayer {
-    pub miniplayer_renderer: Option<MiniplayerRenderer>
+    pub miniplayer_renderer: Option<MiniplayerRenderer>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct MiniplayerRenderer {
-    pub playback_mode: PlaybackMode
+    pub playback_mode: PlaybackMode,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
@@ -69,7 +75,7 @@ pub enum PlaybackMode {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct ErrorScreen {
-    pub player_error_message_renderer: PlayerErrorMessageRenderer
+    pub player_error_message_renderer: PlayerErrorMessageRenderer,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
@@ -145,7 +151,7 @@ pub struct Endpoint {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandMetadata {
-    pub web_command_metadata: WebCommandMetadata
+    pub web_command_metadata: WebCommandMetadata,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
@@ -166,7 +172,7 @@ pub enum WebPageType {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct SignInEndpoint {
-    pub next_endpoint: NextEndpoint
+    pub next_endpoint: NextEndpoint,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
@@ -181,13 +187,13 @@ pub struct NextEndpoint {
 #[serde(rename_all = "camelCase")]
 pub struct UrlEndpoint {
     /// a relative url
-    url: String
+    url: String,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Icon {
-    pub icon_type: IconType
+    pub icon_type: IconType,
 }
 
 #[derive(Clone, Copy, Debug, derive_more::Display, Deserialize, Serialize, PartialEq, Eq, Hash)]
@@ -199,7 +205,7 @@ pub enum IconType {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct LiveStreamAbility {
-    live_streamability_renderer: LiveStreamAbilityRenderer
+    live_streamability_renderer: LiveStreamAbilityRenderer,
 }
 
 #[serde_as]
