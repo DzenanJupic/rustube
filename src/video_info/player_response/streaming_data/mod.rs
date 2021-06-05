@@ -87,7 +87,9 @@ pub struct ColorInfo {
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum ColorInfoPrimary {
     #[serde(rename = "COLOR_PRIMARIES_BT709")]
-    BT709
+    BT709,
+    #[serde(rename = "COLOR_PRIMARIES_BT2020")]
+    BT2020,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
