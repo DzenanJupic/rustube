@@ -17,6 +17,13 @@ use rustube::{
 };
 
 #[derive(Clap)]
+#[clap(
+version = "0.3.0-beta.1",
+about = "\
+A simple CLI for the rustube YouTube downloader.\n\
+For more information about rustube or the rustube-cli checkout `https://github.com/DzenanJupic/rustube`.\
+"
+)]
 pub enum Command {
     #[clap(about = "\
     Downloads a YouTube video\n\
