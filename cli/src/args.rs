@@ -12,8 +12,8 @@ use log::{LevelFilter, Record};
 use strum::EnumString;
 
 use rustube::{
-    Id,
-    IdBuf, Result, Stream, video_info::player_response::streaming_data::{AudioQuality, Quality, QualityLabel},
+    Id, IdBuf, Result, Stream,
+    video_info::player_response::streaming_data::{AudioQuality, Quality, QualityLabel},
 };
 
 #[derive(Clap)]
@@ -31,20 +31,6 @@ pub enum Command {
     downloaded\
     ")]
     Download(DownloadArgs),
-    #[clap(about = "\
-    Fetches information about a video, and prints it\n\
-    Contrary to the name, this will actually fetch and descramble the video information, so you can \
-    directly use all Stream URLs to access the video online\
-    ")]
-    Fetch(FetchArgs),
-    #[clap(about = "\
-    Checks whether or not a video can be downloaded and if so, prints all available streams\n\
-    The check includes fetching, parsing, and descrambling the video data, and also ensuring there \
-    is at least one Stream\n\
-    Since the video information gets descrambled, you can use all Stream URLs to access the video \
-    online\
-    ")]
-    Check(CheckArgs),
 }
 
 #[derive(Clap)]
@@ -72,26 +58,6 @@ pub struct DownloadArgs {
     "
     )]
     pub filename: Option<PathBuf>,
-}
-
-#[derive(Clap)]
-pub struct FetchArgs {
-    #[clap(flatten)]
-    pub identifier: Identifier,
-    #[clap(flatten)]
-    pub quality: QualityFilter,
-    #[clap(flatten)]
-    pub stream: StreamFilter,
-    #[clap(flatten)]
-    pub logging: LoggingArgs,
-}
-
-#[derive(Clap)]
-pub struct CheckArgs {
-    #[clap(flatten)]
-    pub identifier: Identifier,
-    #[clap(flatten)]
-    pub logging: LoggingArgs,
 }
 
 #[derive(Clap)]
@@ -138,14 +104,6 @@ pub struct LoggingArgs {
     )]
     quiet: bool,
 }
-
-#[derive(Clap, EnumString)]
-#[strum(serialize_all = "kebab-case")]
-enum ColorUsage {
-    Always,
-    Never,
-}
-
 
 impl LoggingArgs {
     pub fn init_logger(&self) {
@@ -204,6 +162,13 @@ impl LoggingArgs {
             _ => LevelFilter::Trace,
         }
     }
+}
+
+#[derive(Clap, EnumString)]
+#[strum(serialize_all = "kebab-case")]
+enum ColorUsage {
+    Always,
+    Never,
 }
 
 #[derive(Clap)]

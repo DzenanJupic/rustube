@@ -7,7 +7,7 @@ use clap::Clap;
 
 use rustube::{Error, Id, IdBuf, Stream, Video, VideoFetcher};
 
-use crate::args::{CheckArgs, Command, DownloadArgs, FetchArgs, QualityFilter, StreamFilter};
+use crate::args::{Command, DownloadArgs, QualityFilter, StreamFilter};
 
 mod args;
 
@@ -17,14 +17,6 @@ async fn main() -> Result<()> {
 
     match command {
         Command::Download(args) => download(args).await?,
-        Command::Fetch(args) => {
-            let video = fetch(args).await?;
-            println!("{:#?}", video);
-        }
-        Command::Check(args) => {
-            let streams = check(args).await?;
-            println!("The video can be downloaded\nThere are following streams:\n{:#?}", streams);
-        }
     }
 
     Ok(())
@@ -40,25 +32,6 @@ async fn download(args: DownloadArgs) -> Result<()> {
     stream.download_to(download_path).await?;
 
     Ok(())
-}
-
-async fn fetch(args: FetchArgs) -> Result<Video> {
-    args.logging.init_logger();
-
-    let id = args.identifier.id()?;
-    get_video(id).await
-}
-
-async fn check(args: CheckArgs) -> Result<Vec<Stream>> {
-    args.logging.init_logger();
-
-    let id = args.identifier.id()?;
-    let video = get_video(id).await?;
-
-    (!video.streams().is_empty())
-        .then_some(video.into_streams())
-        .ok_or(Error::NoStreams)
-        .context("There are not streams available")
 }
 
 async fn get_stream(
