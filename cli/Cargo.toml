@@ -1,6 +1,6 @@
 [package]
 name = "rustube-cli"
-version = "0.3.0-beta.1"
+version = "0.3.0"
 authors = ["Dzenan Jupic <56133904+DzenanJupic@users.noreply.github.com>"]
 edition = "2018"
 description = "A CLI for rustube"
@@ -25,7 +25,7 @@ clap = "3.0.0-beta.2"
 fern = { version = "0.6.0", features = ["colored"] }
 log = "0.4.14"
 mime = "0.3.16"
-rustube = { path = "..", version = "0.3.0-beta.1", features = ["download", "std"] }
+rustube = { path = "..", version = "0.3.0", features = ["download", "std"] }
 tokio = { version = "1.1.1", features = ["rt-multi-thread"] }
 serde = "1.0.123"
 strum = { version = "0.20.0", features = ["derive"] }
