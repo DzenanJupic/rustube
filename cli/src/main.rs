@@ -9,7 +9,7 @@ use args::DownloadArgs;
 use args::StreamFilter;
 use rustube::{Error, Id, IdBuf, Stream, Video, VideoFetcher};
 
-use crate::args::Command;
+use crate::args::{Command, FetchArgs};
 
 mod args;
 
@@ -19,6 +19,7 @@ async fn main() -> Result<()> {
 
     match command {
         Command::Download(args) => download(args).await?,
+        Command::Fetch(args) => fetch(args).await?,
     }
 
     Ok(())
@@ -32,6 +33,19 @@ async fn download(args: DownloadArgs) -> Result<()> {
     let stream = get_stream(id, args.stream_filter).await?;
 
     stream.download_to(download_path).await?;
+
+    Ok(())
+}
+
+async fn fetch(args: FetchArgs) -> Result<()> {
+    args.logging.init_logger();
+
+    let id = args.identifier.id()?;
+    let video_info = rustube::VideoFetcher::from_id(id)?
+        .fetch_info()
+        .await?;
+
+    println!("{:?}", video_info);
 
     Ok(())
 }

@@ -1,11 +1,13 @@
 use clap::Clap;
 
 pub use download::DownloadArgs;
+pub use fetch::FetchArgs;
 pub use logging::LoggingArgs;
 use rustube::{Id, IdBuf, Result};
 pub use stream_filter::StreamFilter;
 
 mod download;
+mod fetch;
 mod logging;
 mod stream_filter;
 
@@ -26,6 +28,14 @@ pub enum Command {
     downloaded. To specify other download behavior, have a look the the sub-command help.\
     ")]
     Download(DownloadArgs),
+    #[clap(about = "\
+    Fetches information about a YouTube video\n\
+    Fetching information does not require the video to actually be downloadable. So this also works \
+    when a video is, i.e., an offline stream. The downside is that you don't have access to the \
+    stream  URLs, so there's no way for you to download the video using only the returned \
+    information.
+    ")]
+    Fetch(FetchArgs),
 }
 
 #[derive(Clap)]
