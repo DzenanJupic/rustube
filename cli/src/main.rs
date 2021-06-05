@@ -12,6 +12,7 @@ use rustube::{Error, Id, IdBuf, Stream, Video, VideoFetcher};
 use crate::args::{Command, FetchArgs};
 
 mod args;
+mod output_format;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -45,7 +46,8 @@ async fn fetch(args: FetchArgs) -> Result<()> {
         .fetch_info()
         .await?;
 
-    println!("{:?}", video_info);
+    let output = args.output.output_format.serialize_output(&video_info)?;
+    println!("{}", output);
 
     Ok(())
 }

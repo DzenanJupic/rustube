@@ -9,6 +9,7 @@ pub use stream_filter::StreamFilter;
 mod download;
 mod fetch;
 mod logging;
+mod output;
 mod stream_filter;
 
 #[derive(Clap)]
