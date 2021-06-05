@@ -7,12 +7,16 @@ use clap::Clap;
 
 use args::DownloadArgs;
 use args::StreamFilter;
-use rustube::{Error, Id, IdBuf, Stream, Video, VideoFetcher};
+use rustube::{Error, Id, IdBuf, Stream, Video, VideoFetcher, VideoInfo};
 
 use crate::args::{CheckArgs, Command, FetchArgs};
+use crate::video_serializer::VideoSerializer;
 
 mod args;
 mod output_format;
+mod output_level;
+mod stream_serializer;
+mod video_serializer;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -31,9 +35,10 @@ async fn check(args: CheckArgs) -> Result<()> {
     args.logging.init_logger();
 
     let id = args.identifier.id()?;
-    let streams = get_streams(id, &args.stream_filter).await?.collect::<Vec<_>>();
+    let (video_info, streams) = get_streams(id, &args.stream_filter).await?;
+    let video_serializer = VideoSerializer::new(video_info, streams, args.output.output_level);
 
-    let output = args.output.output_format.serialize_output(&streams)?;
+    let output = args.output.output_format.serialize_output(&video_serializer)?;
     println!("{}", output);
 
     Ok(())
@@ -70,7 +75,7 @@ async fn get_stream(
     stream_filter: StreamFilter,
 ) -> Result<Stream> {
     get_streams(id, &stream_filter)
-        .await?
+        .await?.1
         .max_by(|lhs, rhs| stream_filter.max_stream(lhs, rhs))
         .ok_or(Error::NoStreams)
         .context("There are no streams, that match all your criteria")
@@ -79,13 +84,17 @@ async fn get_stream(
 async fn get_streams<'a>(
     id: IdBuf,
     stream_filter: &'a StreamFilter,
-) -> Result<impl Iterator<Item=Stream> + 'a> {
-    let streams = get_video(id)
-        .await?
+) -> Result<(VideoInfo, impl Iterator<Item=Stream> + 'a)> {
+    let video = get_video(id)
+        .await?;
+
+    let video_info = video.video_info().clone();
+    let streams = video
         .into_streams()
         .into_iter()
         .filter(move |stream| stream_filter.stream_matches(stream));
-    Ok(streams)
+
+    Ok((video_info, streams))
 }
 
 async fn get_video(id: IdBuf) -> Result<Video> {

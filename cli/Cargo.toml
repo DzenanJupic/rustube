@@ -19,10 +19,12 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.38"
+bitflags = "1.2.1"
 chrono = { version = "0.4.19", default-features = false }
 clap = "3.0.0-beta.2"
 fern = { version = "0.6.0", features = ["colored"] }
 log = "0.4.14"
+mime = "0.3.16"
 rustube = { path = "..", version = "0.3.0-beta.1", features = ["download", "std"] }
 tokio = { version = "1.1.1", features = ["rt-multi-thread"] }
 serde = "1.0.123"
