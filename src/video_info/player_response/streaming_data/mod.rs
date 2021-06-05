@@ -103,7 +103,9 @@ pub enum TransferCharacteristics {
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum MatrixCoefficients {
     #[serde(rename = "COLOR_MATRIX_COEFFICIENTS_BT709")]
-    BT709
+    BT709,
+    #[serde(rename = "COLOR_MATRIX_COEFFICIENTS_BT2020_NCL")]
+    BT2020NCL,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
