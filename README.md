@@ -7,7 +7,7 @@
 [![licence](https://img.shields.io/crates/l/rustube?style=flat-square)](https://github.com/DzenanJupic/rustube)
 
 ![build](https://img.shields.io/github/workflow/status/DzenanJupic/rustube/Check%20and%20Build%20code%20on%20all%20major%20operating%20systems?style=flat-square)
-![download](https://img.shields.io/github/workflow/status/DzenanJupic/rustube/Test%20downloading?label=download&style=flat-square)
+![YT download](https://img.shields.io/github/workflow/status/DzenanJupic/rustube/Test%20downloading?label=YT%20download&style=flat-square)
 
 </div>
 
@@ -96,7 +96,7 @@ For documentation and more information about rustube or the rustube-cli checkout
 For help with certain subcommands run `rustube <SUBCOMMAND> --help`.
 
 USAGE:
-    rustube.exe <SUBCOMMAND>
+    rustube <SUBCOMMAND>
 
 FLAGS:
     -h, --help       Prints help information
