@@ -7,32 +7,19 @@ use rand::Rng;
 use rustube::{Id, IdBuf};
 
 pub const SIGNATURE_CIPHER: &[&str] = &[
-    "5jlI4uzZGjU"
+    "5jlI4uzZGjU",
+    "JgGuRKgvWQ4",
 ];
 pub const PRE_SIGNED: &[&str] = &[
     "2lAe1cqCOXo",
     "QRS8MkLhQmM",
     "xQDsI2ptfgg",
     "MAoOAa_izh0",
-
-    // todo: this video is not pre_signed
     "qG7kqns7SVM",
-    // todo: idk what pre_signed is
-    "JgGuRKgvWQ4",
-
-    // youtube kids
     "JsGOGPTVkKg",
-
-    // No external
     "hK4dUSV9erk",
-
-    // 480p60 and 360p60
     "zCKk7HiKdko",
-
-    // 4320p
     "UN3uF3990Q0",
-    
-    // 4320p60
     "CbxQWAFv7sA",
 ];
 pub const AGE_RESTRICTED: &[&str] = &[
