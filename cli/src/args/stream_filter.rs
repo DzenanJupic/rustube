@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 
-use anyhow::Context;
 use clap::Clap;
 
 use rustube::Stream;
@@ -128,7 +127,7 @@ impl StreamFilter {
     }
 }
 
-fn parse_json<'de, T: serde::Deserialize<'de>>(s: &'de str) -> anyhow::Result<T> {
-    serde_json::from_str(s)
-        .context("Failed to parse the quality")
+fn parse_json<T: for<'de> serde::Deserialize<'de>>(s: &str) -> anyhow::Result<T> {
+    let args = format!("\"{}\"", s);
+    Ok(serde_json::from_str(&args)?)
 }
