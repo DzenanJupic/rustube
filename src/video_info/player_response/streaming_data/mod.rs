@@ -117,11 +117,11 @@ pub enum ProjectionType {
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AudioQuality {
-    #[serde(rename = "AUDIO_QUALITY_LOW")]
+    #[serde(rename = "AUDIO_QUALITY_LOW", alias = "low")]
     Low,
-    #[serde(rename = "AUDIO_QUALITY_MEDIUM")]
+    #[serde(rename = "AUDIO_QUALITY_MEDIUM", alias = "medium")]
     Medium,
-    #[serde(rename = "AUDIO_QUALITY_HIGH")]
+    #[serde(rename = "AUDIO_QUALITY_HIGH", alias = "high")]
     High,
 }
 
