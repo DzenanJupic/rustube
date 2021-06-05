@@ -11,7 +11,7 @@ mod common;
 #[tokio::test]
 #[ignore]
 async fn download() {
-    let id = random_id(SIGNATURE_CIPHER);
+    let id = random_id(PRE_SIGNED);
     let expected_path = download_path_from_id(id.as_borrowed()).await;
 
     let path: PathBuf = video!(id.as_owned())
@@ -47,7 +47,7 @@ fn blocking_download_to_dir() {
     use rustube::block;
     use rustube::blocking::Video;
 
-    let id = random_id(AGE_RESTRICTED);
+    let id = random_id(PRE_SIGNED);
     let expected_path = block!(download_path_from_id(id.as_borrowed()));
 
     let path = dbg!(Video::from_id(id)
@@ -63,7 +63,7 @@ fn blocking_download_to_dir() {
 #[tokio::test]
 #[ignore]
 async fn download_to_dir() {
-    let id = random_id(SIGNATURE_CIPHER);
+    let id = random_id(PRE_SIGNED);
     let expected_path = download_path_from_id(id.as_borrowed()).await;
 
     let path: PathBuf = video!(id)
@@ -79,7 +79,7 @@ async fn download_to_dir() {
 #[tokio::test]
 #[ignore]
 async fn download_to() {
-    let id = random_id(SIGNATURE_CIPHER);
+    let id = random_id(PRE_SIGNED);
     let path = dbg!(download_path_from_id(id.as_borrowed()).await);
 
     let _: () = video!(id)
