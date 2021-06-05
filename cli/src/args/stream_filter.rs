@@ -37,13 +37,13 @@ pub struct StreamFilter {
 
     #[clap(
     long,
-    conflicts_with_all(& ["ignore-missing-audio", "no-audio", "no-video"]),
+    conflicts_with_all(& ["no-audio", "no-video"]),
     about = "Pick a Stream, even if it has no video track"
     )]
     ignore_missing_video: bool,
     #[clap(
     long,
-    conflicts_with_all(& ["ignore-missing-video", "no-audio", "no-video"]),
+    conflicts_with_all(& ["no-audio", "no-video"]),
     about = "Pick a Stream, even if it has no audio track"
     )]
     ignore_missing_audio: bool,
