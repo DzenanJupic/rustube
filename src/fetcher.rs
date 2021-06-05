@@ -147,7 +147,7 @@ impl VideoFetcher {
 
         let watch_html = self.get_html(&self.watch_url).await?;
         let is_age_restricted = is_age_restricted(&watch_html);
-        Self::check_availability(&watch_html, is_age_restricted)?;
+        Self::check_downloadability(&watch_html, is_age_restricted)?;
 
         let (video_info, js) = self.get_video_info_and_js(&watch_html, is_age_restricted).await?;
 
@@ -178,6 +178,7 @@ impl VideoFetcher {
     pub async fn fetch_info(self) -> crate::Result<VideoInfo> {
         let watch_html = self.get_html(&self.watch_url).await?;
         let is_age_restricted = is_age_restricted(&watch_html);
+        Self::check_fetchability(&watch_html, is_age_restricted)?;
         let (video_info, _js) = self.get_video_info_and_js(&watch_html, is_age_restricted).await?;
 
         Ok(video_info)
@@ -195,13 +196,35 @@ impl VideoFetcher {
         &self.watch_url
     }
 
+    fn check_downloadability(watch_html: &str, is_age_restricted: bool) -> crate::Result<()> {
+        let playability_status = Self::extract_playability_status(watch_html)?;
+
+        match playability_status {
+            PlayabilityStatus::Ok { .. } => Ok(()),
+            PlayabilityStatus::LoginRequired { .. } if is_age_restricted => Ok(()),
+            ps => Err(Error::VideoUnavailable(box ps))
+        }
+    }
+
+    fn check_fetchability(watch_html: &str, is_age_restricted: bool) -> crate::Result<()> {
+        let playability_status = Self::extract_playability_status(watch_html)?;
+
+        match playability_status {
+            PlayabilityStatus::Ok { .. } => Ok(()),
+            PlayabilityStatus::Unplayable { .. } => Ok(()),
+            PlayabilityStatus::LiveStreamOffline { .. } => Ok(()),
+            PlayabilityStatus::LoginRequired { .. } if is_age_restricted => Ok(()),
+            ps => Err(Error::VideoUnavailable(box ps))
+        }
+    }
+
     /// Checks, whether or not the video is accessible for normal users. 
-    fn check_availability(watch_html: &str, is_age_restricted: bool) -> crate::Result<()> {
+    fn extract_playability_status(watch_html: &str) -> crate::Result<PlayabilityStatus> {
         static PLAYABILITY_STATUS: SyncLazy<Regex> = SyncLazy::new(||
             Regex::new(r#"["']?playabilityStatus["']?\s*[:=]\s*"#).unwrap()
         );
 
-        let playability_status: PlayabilityStatus = PLAYABILITY_STATUS
+        PLAYABILITY_STATUS
             .find_iter(watch_html)
             .map(|m| json_object(
                 watch_html
@@ -214,15 +237,7 @@ impl VideoFetcher {
             .next()
             .ok_or_else(|| Error::UnexpectedResponse(
                 "watch html did not contain a PlayabilityStatus".into()
-            ))?;
-
-        match playability_status {
-            // maybe we can return the playability status, later skip it when deserializing
-            // the PlayerResponse, and then use this one again?
-            PlayabilityStatus::Ok { .. } => Ok(()),
-            PlayabilityStatus::LoginRequired { .. } if is_age_restricted => Ok(()),
-            ps => Err(Error::VideoUnavailable(box ps))
-        }
+            ))
     }
 
     #[inline]
