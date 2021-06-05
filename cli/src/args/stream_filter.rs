@@ -73,10 +73,8 @@ pub struct StreamFilter {
 
 impl StreamFilter {
     pub fn stream_matches(&self, stream: &Stream) -> bool {
-        let no_video_ok = !self.no_video ^ !stream.includes_video_track;
-        let no_audio_ok = !self.no_audio ^ !stream.includes_audio_track;
-        let ignore_video_ok = self.ignore_missing_video || stream.includes_video_track;
-        let ignore_audio_ok = self.ignore_missing_audio || stream.includes_audio_track;
+        let video_ok = !self.no_video ^ !(stream.includes_video_track || self.ignore_missing_video);
+        let audio_ok = !self.no_audio ^ !(stream.includes_audio_track || self.ignore_missing_audio);
         let quality_ok = self.quality
             .map(|q| stream.quality == q)
             .unwrap_or(true);
@@ -89,7 +87,7 @@ impl StreamFilter {
 
         let quality_ok = quality_ok && video_quality_ok && audio_quality_ok;
 
-        no_video_ok && no_audio_ok && ignore_video_ok && ignore_audio_ok && quality_ok
+        video_ok && audio_ok && quality_ok
     }
 
     pub fn max_stream(&self, lhs: &Stream, rhs: &Stream) -> Ordering {
