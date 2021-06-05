@@ -235,7 +235,7 @@ impl VideoFetcher {
             (js, player_response),
             mut video_info
         ) = tokio::try_join!(
-            self.get_js(is_age_restricted, &watch_html),
+            self.get_js(is_age_restricted, watch_html),
             self.get_video_info(is_age_restricted)
         )?;
 

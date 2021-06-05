@@ -47,7 +47,7 @@ impl Cipher {
         let signature = unsafe { signature.as_mut_vec() };
 
         for js_fun_name in self.transform_plan.iter() {
-            let (name, argument) = self.parse_function(&js_fun_name)?;
+            let (name, argument) = self.parse_function(js_fun_name)?;
             let js_fun = self.transform_map
                 .get(name)
                 .ok_or_else(|| Error::UnexpectedResponse(format!(

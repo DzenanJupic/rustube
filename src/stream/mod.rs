@@ -278,7 +278,7 @@ impl Stream {
 
         for i in 1..segment_count {
             Self::set_url_seq_query(&mut url, &base_query, i);
-            count = self.download_full(&url, file, &channel, count).await?;
+            count = self.download_full(&url, file, channel, count).await?;
         }
 
         Ok(())
@@ -293,7 +293,7 @@ impl Stream {
         count: usize,
     ) -> Result<usize> {
         let res = self.get(url).await?;
-        self.write_stream_to_file(res.bytes_stream(), file, &channel, count).await
+        self.write_stream_to_file(res.bytes_stream(), file, channel, count).await
     }
 
     #[inline]
@@ -339,7 +339,7 @@ impl Stream {
 
     #[inline]
     fn set_url_seq_query(url: &mut url::Url, base_query: &str, sq: u64) {
-        url.set_query(Some(&base_query));
+        url.set_query(Some(base_query));
         url
             .query_pairs_mut()
             .append_pair("sq", &sq.to_string());

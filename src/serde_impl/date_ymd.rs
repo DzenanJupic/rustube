@@ -9,10 +9,10 @@ where
     D: Deserializer<'de>
 {
     let date = <&str>::deserialize(deserializer)?;
-    NaiveDate::parse_from_str(&date, FORMAT)
+    NaiveDate::parse_from_str(date, FORMAT)
         .ok()
         .ok_or_else(|| D::Error::invalid_value(
-            Unexpected::Str(&date),
+            Unexpected::Str(date),
             &"a yyyy-mm-dd date string",
         ))
 }
