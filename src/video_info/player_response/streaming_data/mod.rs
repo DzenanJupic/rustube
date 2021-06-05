@@ -95,7 +95,9 @@ pub enum ColorInfoPrimary {
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum TransferCharacteristics {
     #[serde(rename = "COLOR_TRANSFER_CHARACTERISTICS_BT709")]
-    BT709
+    BT709,
+    #[serde(rename = "COLOR_TRANSFER_CHARACTERISTICS_SMPTEST2084")]
+    SMPTEST2084,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
