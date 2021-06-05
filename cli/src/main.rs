@@ -92,10 +92,10 @@ async fn get_stream(
     Ok((video_info, stream))
 }
 
-async fn get_streams<'a>(
+async fn get_streams(
     id: IdBuf,
-    stream_filter: &'a StreamFilter,
-) -> Result<(VideoInfo, impl Iterator<Item=Stream> + 'a)> {
+    stream_filter: &'_ StreamFilter,
+) -> Result<(VideoInfo, impl Iterator<Item=Stream> + '_)> {
     let (video_info, streams) = get_video(id)
         .await?
         .into_parts();
