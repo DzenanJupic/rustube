@@ -5,9 +5,11 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::Clap;
 
+use args::DownloadArgs;
+use args::StreamFilter;
 use rustube::{Error, Id, IdBuf, Stream, Video, VideoFetcher};
 
-use crate::args::{Command, DownloadArgs, QualityFilter, StreamFilter};
+use crate::args::Command;
 
 mod args;
 
@@ -27,7 +29,7 @@ async fn download(args: DownloadArgs) -> Result<()> {
 
     let id = args.identifier.id()?;
     let download_path = download_path(args.filename, args.dir, id.as_borrowed());
-    let stream = get_stream(id, args.stream_filter, args.quality_filter).await?;
+    let stream = get_stream(id, args.stream_filter).await?;
 
     stream.download_to(download_path).await?;
 
@@ -37,9 +39,8 @@ async fn download(args: DownloadArgs) -> Result<()> {
 async fn get_stream(
     id: IdBuf,
     stream_filter: StreamFilter,
-    quality_filter: QualityFilter
 ) -> Result<Stream> {
-    get_streams(id, &stream_filter, &quality_filter)
+    get_streams(id, &stream_filter)
         .await?
         .max_by(|lhs, rhs| stream_filter.max_stream(lhs, rhs))
         .ok_or(Error::NoStreams)
@@ -49,14 +50,12 @@ async fn get_stream(
 async fn get_streams<'a>(
     id: IdBuf,
     stream_filter: &'a StreamFilter,
-    quality_filter: &'a QualityFilter,
 ) -> Result<impl Iterator<Item=Stream> + 'a> {
     let streams = get_video(id)
         .await?
         .into_streams()
         .into_iter()
-        .filter(move |stream| stream_filter.stream_matches(stream))
-        .filter(move |stream| quality_filter.stream_matches(stream));
+        .filter(move |stream| stream_filter.stream_matches(stream));
     Ok(streams)
 }
 
