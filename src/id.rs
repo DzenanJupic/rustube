@@ -174,30 +174,6 @@ impl<'a> Id<'a> {
             .into_owned()
     }
 
-    /// Creates an `&IdBuf` from an arbitrary `Id`.
-    /// 
-    /// By just returning a reference, `&IdBuf` cannot outlive `Id`, even if the original 
-    /// string might still live:
-    /// ```compile_fail
-    ///# use rustube::Id;
-    /// let string = String::from("12345678910");
-    /// // create a borrowed Id bound to the live time of string 
-    /// let id: Id = Id::from_raw(&string).unwrap();
-    /// // create a reference to an IdBuf bound to the lifetime of id
-    /// let id_static: &Id<'static> = id.as_static();
-    /// // give ownership of id away | this **must** also invalidate id_static
-    /// let id_buf = id.into_owned();
-    /// // trying to access id_static now, throws a compile time error
-    /// let str_static = id_static.as_str();
-    /// ```
-    #[inline]
-    pub fn as_static(&'a self) -> &'a IdBuf {
-        // SAFETY:
-        // This method returns a reference with the lifetime of 'a.
-        // Therefore the returned IdBuf cannot outlive self (also have a look at the doc-test).
-        unsafe { &*(&self as *const &Id<'a> as *const IdBuf) }
-    }
-
     #[inline]
     pub fn as_borrowed(&'a self) -> Self {
         Self(Cow::Borrowed(&self.0))
