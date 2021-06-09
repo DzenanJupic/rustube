@@ -19,7 +19,7 @@ pub struct PlayerMicroformatRenderer {
     // TODO: maybe also an enum
     pub category: String,
     pub description: SimpleText,
-    pub embed: Embed,
+    pub embed: Option<Embed>,
     pub external_channel_id: String,
     #[serde(default)]
     pub has_ypc_metadate: bool,
