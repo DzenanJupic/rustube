@@ -7,7 +7,7 @@ use rustube::video_info::player_response::playability_status::PlayabilityStatus;
 #[macro_use]
 mod common;
 
-#[tokio::test]
+#[test_env_log::test(tokio::test)]
 #[ignore]
 async fn video_has_signature_cipher() {
     let id = random_id(SIGNATURE_CIPHER);
@@ -16,7 +16,7 @@ async fn video_has_signature_cipher() {
     assert!(random_entry(video.streams()).signature_cipher.s.is_some());
 }
 
-#[tokio::test]
+#[test_env_log::test(tokio::test)]
 #[ignore]
 async fn video_is_pre_signed() {
     let id = random_id(PRE_SIGNED);
@@ -25,7 +25,7 @@ async fn video_is_pre_signed() {
     assert!(random_entry(video.streams()).signature_cipher.s.is_none());
 }
 
-#[tokio::test]
+#[test_env_log::test(tokio::test)]
 #[ignore]
 async fn video_is_age_restricted() {
     let id = random_id(AGE_RESTRICTED);
@@ -34,7 +34,7 @@ async fn video_is_age_restricted() {
     assert!(video.is_age_restricted());
 }
 
-#[tokio::test]
+#[test_env_log::test(tokio::test)]
 #[ignore]
 async fn video_is_private_video() {
     let id = random_id(PRIVATE);
@@ -57,7 +57,7 @@ async fn video_is_private_video() {
     }
 }
 
-#[tokio::test]
+#[test_env_log::test(tokio::test)]
 #[ignore]
 async fn video_is_region_blocked() {
     let id = random_id(REGION_BLOCKED);
@@ -80,7 +80,7 @@ async fn video_is_region_blocked() {
     }
 }
 
-#[tokio::test]
+#[test_env_log::test(tokio::test)]
 #[ignore]
 async fn video_has_missing_recording() {
     let id = random_id(MISSING_RECORDING);
@@ -103,7 +103,7 @@ async fn video_has_missing_recording() {
     }
 }
 
-#[tokio::test]
+#[test_env_log::test(tokio::test)]
 #[ignore]
 async fn video_is_live_stream() {
     let id = random_id(LIVE_STREAM);

@@ -17,6 +17,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: full
+  RUST_LOG: debug
 
 jobs:
   build_and_test:
@@ -38,4 +40,4 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
           default: true
       - name: Run tests
-        run: cargo test --workspace --all-features
+        run: cargo test --workspace --all-features -- --nocapture

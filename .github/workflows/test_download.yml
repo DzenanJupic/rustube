@@ -8,6 +8,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: full
+  RUST_LOG: debug
 
 jobs:
   build_and_test:
@@ -29,6 +30,6 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
           default: true
       - name: Run test `download_to`
-        run: cargo test -p rustube --all-features --test download download_to -- --exact --ignored
+        run: cargo test -p rustube --all-features --test download download_to -- --exact --ignored --nocapture
       - name: Run test `download_age_restricted_to_dir`
-        run: cargo test -p rustube --all-features --test download download_age_restricted_to_dir -- --exact --ignored
+        run: cargo test -p rustube --all-features --test download download_age_restricted_to_dir -- --exact --ignored --nocapture
