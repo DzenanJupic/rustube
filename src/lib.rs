@@ -128,6 +128,12 @@ unreachable_pub
 //!# }
 //!``` 
 //! 
+//! Note, that often the video-audio streams have slightly worse quality than the video-only or 
+//! audio-only streams. This is not a limitation of rustube, but rather a weird design choice of 
+//! YouTube. So if you want the absolute best quality possible, you will sometimes have to download
+//! the best video-only and the best audio-only stream separate. This, however, doesn't affect all 
+//! videos.
+//! 
 //! ## Different ways of downloading
 //! As you may already have noticed, all the above examples just call [`Stream::download`], and then
 //! get back a path to a video. This path will always point to `<VIDEO_ID>.mp4` in the current 
