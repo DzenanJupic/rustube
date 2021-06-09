@@ -16,7 +16,7 @@ mod stream_filter;
 
 #[derive(Clap)]
 #[clap(
-version = "0.3.1",
+version = "0.3.2",
 about = "\n\
 A simple CLI for the rustube YouTube-downloader library.\n\
 For documentation and more information about rustube or the rustube-cli checkout \

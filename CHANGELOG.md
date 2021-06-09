@@ -1,3 +1,9 @@
+## 0.3.2
+
+### Changed
+
+- made the `embed` field of `PlayerMicroformatRenderer` `Option<_>`
+
 ## 0.2.3
 
 ### Added
