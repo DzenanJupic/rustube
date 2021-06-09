@@ -44,7 +44,7 @@ A complete (WIP), and easy to use YouTube downloader.
 intermediate steps and any video information, this is all you need:
 
 ```rust
-#[rustube::tokio::main]
+#[tokio::main]
 async fn main() {
     let url = "https://www.youtube.com/watch?v=Edx9D2yaOGs&ab_channel=CollegeHumor";
     println!("downloaded video to {:?}", rustube::download_best_quality(&url).await.unwrap());
