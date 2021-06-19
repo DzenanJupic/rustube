@@ -22,7 +22,7 @@ pub enum PlayabilityStatus {
         #[serde(default)]
         messages: Vec<String>,
         reason: String,
-        error_screen: ErrorScreen,
+        error_screen: Option<ErrorScreen>,
         playable_in_embed: Option<bool>,
         miniplayer: Option<MiniPlayer>,
         context_params: String,
@@ -31,7 +31,7 @@ pub enum PlayabilityStatus {
     LoginRequired {
         #[serde(default)]
         messages: Vec<String>,
-        error_screen: ErrorScreen,
+        error_screen: Option<ErrorScreen>,
         desktop_legacy_age_gate_reason: Option<i64>,
         context_params: String,
     },
@@ -46,7 +46,7 @@ pub enum PlayabilityStatus {
     #[serde(rename_all = "camelCase")]
     Error {
         reason: String,
-        error_screen: ErrorScreen,
+        error_screen: Option<ErrorScreen>,
         context_params: String,
     },
 }
