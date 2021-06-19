@@ -200,4 +200,6 @@ pub enum QualityLabel {
     P4320,
     #[serde(rename = "4320p60")]
     P4320Hz60,
+    #[serde(rename = "4320p60 HDR")]
+    P4320Hz60HDR,
 }
