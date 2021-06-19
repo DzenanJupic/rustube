@@ -12,7 +12,7 @@ pub enum PlayabilityStatus {
     #[serde(rename_all = "camelCase")]
     Ok {
         playable_in_embed: bool,
-        miniplayer: MiniPlayer,
+        miniplayer: Option<MiniPlayer>,
         #[serde(default)]
         messages: Vec<String>,
         context_params: String,
@@ -40,7 +40,7 @@ pub enum PlayabilityStatus {
         reason: String,
         playable_in_embed: bool,
         live_streamability: LiveStreamAbility,
-        miniplayer: MiniPlayer,
+        miniplayer: Option<MiniPlayer>,
         context_params: String,
     },
     #[serde(rename_all = "camelCase")]

@@ -350,6 +350,8 @@ fn video_info_url(video_id: Id<'_>, watch_url: &Url) -> Url {
         ("eurl", watch_url.as_str()),
         ("hl", "en_US"),
         ("html5", "1"),
+        ("c", "TVHTML5"),
+        ("cver", "7.20211231"),
     ];
     _video_info_url(params)
 }
@@ -370,6 +372,8 @@ fn video_info_url_age_restricted(video_id: Id<'_>, watch_url: &Url) -> Url {
         ("eurl", eurl.as_str()),
         ("sts", sts),
         ("html5", "1"),
+        ("c", "TVHTML5"),
+        ("cver", "7.20211231"),
     ];
     _video_info_url(params)
 }
