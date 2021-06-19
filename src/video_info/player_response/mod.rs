@@ -29,7 +29,7 @@ pub struct PlayerResponse {
     // messages: _,
     #[cfg(feature = "microformat")]
     #[doc(cfg(feature = "microformat"))]
-    pub microformat: Microformat,
+    pub microformat: Option<Microformat>,
     pub playability_status: PlayabilityStatus,
     // playbackTracking: _,
     // playerConfig: _,
