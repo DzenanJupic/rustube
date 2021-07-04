@@ -1,3 +1,13 @@
+## 0.3.4
+
+### Changed
+
+- upgraded to newest dependencies
+
+### Fixed
+
+- `clippy::nonstandard-macro-braces` warning
+
 ## 0.3.3
 
 ### Added
