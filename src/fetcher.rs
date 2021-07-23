@@ -248,7 +248,7 @@ impl VideoFetcher {
     ) -> crate::Result<(VideoInfo, String)> {
         let (js, player_response) = self.get_js(is_age_restricted, watch_html).await?;
 
-        let player_response = player_response.ok_or(Error::UnexpectedResponse(
+        let player_response = player_response.ok_or_else(|| Error::UnexpectedResponse(
             "Could not acquire the player response from the watch html!\n\
             Note, that this is usually no problem and just happens due to a temporary fix to adapt \
             to the new YouTube API.\n\
