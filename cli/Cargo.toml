@@ -1,6 +1,6 @@
 [package]
 name = "rustube-cli"
-version = "0.3.4"
+version = "0.3.5"
 authors = ["Dzenan Jupic <56133904+DzenanJupic@users.noreply.github.com>"]
 edition = "2018"
 description = "A CLI for rustube"

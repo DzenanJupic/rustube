@@ -1,3 +1,10 @@
+## 0.3.5
+
+### Changed
+
+- (internal) `VideoFetcher::get_video_info_and_js` now acquires the `VideoInfo` from the watch_html instead
+  of `/get_video_info`
+
 ## 0.3.4
 
 ### Changed
