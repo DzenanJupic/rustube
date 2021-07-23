@@ -14,6 +14,9 @@
 ---
 
 A complete (WIP), and easy to use YouTube downloader.
+> **Note**: 0.3.5 is a temporary fix to adapt to changes in the YouTube api (#38). Unfortunately this fix does not
+> work for age restricted videos. We are working on a fix for that in #39.
+
 > **Note**: `rustube` is still in development and may see breaking changes! It currently still requires a nightly
 > compiler. This will change over time.
 
