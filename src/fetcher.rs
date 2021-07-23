@@ -246,21 +246,20 @@ impl VideoFetcher {
         watch_html: &str,
         is_age_restricted: bool,
     ) -> crate::Result<(VideoInfo, String)> {
-        let (
-            (js, player_response),
-            mut video_info
-        ) = tokio::try_join!(
-            self.get_js(is_age_restricted, watch_html),
-            self.get_video_info(is_age_restricted)
-        )?;
+        let (js, player_response) = self.get_js(is_age_restricted, watch_html).await?;
 
-        match (&video_info.player_response.streaming_data, player_response) {
-            (None, Some(player_response)) => video_info.player_response = player_response,
-            (None, None) => return Err(Error::UnexpectedResponse(
-                "StreamingData is none and the watch html did not contain a valid PlayerResponse".into()
-            )),
-            _ => {}
-        }
+        let player_response = player_response.ok_or(Error::UnexpectedResponse(
+            "Could not acquire the player response from the watch html!\n\
+            Note, that this is usually no problem and just happens due to a temporary fix to adapt \
+            to the new YouTube API.\n\
+            For more information checkout rustube#39 (https://github.com/DzenanJupic/rustube/issues/39).".into()
+        ))?;
+
+        let video_info = VideoInfo {
+            player_response,
+            adaptive_fmts_raw: None,
+            is_age_restricted,
+        };
 
         Ok((video_info, js))
     }
@@ -289,7 +288,9 @@ impl VideoFetcher {
 
     /// Requests the [`VideoInfo`] of a video 
     #[inline]
+    #[allow(unused)]
     async fn get_video_info(&self, is_age_restricted: bool) -> crate::Result<VideoInfo> {
+        // FIXME: Currently no in use + broken due to #38
         let video_info_url = self.get_video_info_url(is_age_restricted);
         let video_info_raw = self.get_html(&video_info_url).await?;
 
