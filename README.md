@@ -30,7 +30,7 @@ A complete (WIP), and easy to use YouTube downloader.
 ## Roadmap
 
 - [x] download normal videos
-- [x] download age restricted videos
+- [ ] download age restricted videos *(no longer works since 0.3.5 due to a change in the YouTube API)*
 - [x] asynchronous API
 - [x] blocking API
 - [ ] full video info deserialization
