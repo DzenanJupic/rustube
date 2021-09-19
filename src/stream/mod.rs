@@ -37,14 +37,14 @@ use crate::{
 #[doc(cfg(feature = "callback"))]
 pub mod callback;
 
-// todo: 
+// todo:
 //  there are different types of streams: video, audio, and video + audio
 //  make Stream and RawFormat an enum, so there are less options in it
 
 #[cfg(all(not(feature = "callback"), feature = "download"))]
 type InternalSender = ();
 
-/// A downloadable video Stream, that contains all the important information. 
+/// A downloadable video Stream, that contains all the important information.
 #[serde_as]
 #[derive(Clone, derivative::Derivative, serde::Deserialize, serde::Serialize)]
 #[derivative(Debug, PartialEq)]
@@ -80,6 +80,7 @@ pub struct Stream {
     pub signature_cipher: SignatureCipher,
     pub width: Option<u64>,
     pub video_details: Arc<VideoDetails>,
+    #[allow(dead_code)]
     #[serde(skip)]
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
     client: Client,
@@ -381,7 +382,7 @@ impl Stream {
         crate::block!(self.download_with_callback(callback))
     }
 
-    /// A synchronous wrapper around [`Stream::download_to_dir`](crate::Stream::download_to_dir). 
+    /// A synchronous wrapper around [`Stream::download_to_dir`](crate::Stream::download_to_dir).
     #[inline]
     pub fn blocking_download_to_dir<P: AsRef<Path>>(&self, dir: P) -> Result<PathBuf> {
         crate::block!(self.download_to_dir(dir))

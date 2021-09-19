@@ -10,57 +10,57 @@ use crate::video_info::player_response::playability_status::PlayabilityStatus;
 
 /// A fetcher used to download all necessary data from YouTube, which then could be used
 /// to extract video-URLs.
-///   
+///
 /// You will probably rarely use this type directly, and use [`Video`] instead.
-///  
+///
 /// # Example
 ///```no_run
 ///# use rustube::{Id, VideoFetcher};
 ///# use url::Url;
 /// const URL: &str = "https://youtube.com/watch?iv=5jlI4uzZGjU";
 /// let url = Url::parse(URL).unwrap();
-///  
+///
 /// let fetcher: VideoFetcher =  VideoFetcher::from_url(&url).unwrap();
 /// ```
-/// # How it works 
+/// # How it works
 /// So you want to download a YouTube video? You probably already noticed, that YouTube makes
 /// this quite hard, and does not just provide static URLs for their videos. In fact, there's
 /// not the one URL for each video. When currently nobody is watching a video, there's actually
 /// no URL for this video at all!
-/// 
+///
 /// So we need to somehow show YouTube that we want to watch the video, so the YouTube server
 /// generates a URL for us. To do this, we do what every 'normal' human being would do: we
-/// request the webpage of the video. To do so, we need nothing more, then the video's id (If you 
-/// want to learn more about the id, you can have a look at [`Id`]. But you don't need to know 
+/// request the webpage of the video. To do so, we need nothing more, then the video's id (If you
+/// want to learn more about the id, you can have a look at [`Id`]. But you don't need to know
 /// anything about it for now). Let's, for example, take the id '5jlI4uzZGjU'. With this id, we
 /// can then visit <https://youtube.com/watch?v=5jlI4uzZGjU>, the site, you as a human would visit
 /// when just watching the video.
-/// 
+///
 /// The next step is to extract as much information from <https://youtube.com/watch?v=5jlI4uzZGjU>
 /// as possible. This is, i.e., information like "is the video age-restricted?", or "can we watch
 /// the video without being a member of that channel?".
-/// 
-/// But there's information, which is a lot more important then knowing if we are old enough to watch the video: The [`VideoInfo`], the [`PlayerResponse`] and the JavaScript of the 
-/// page. [`VideoInfo`] and [`PlayerResponse`] are JSON objects, which contain the most 
+///
+/// But there's information, which is a lot more important then knowing if we are old enough to watch the video: The [`VideoInfo`], the [`PlayerResponse`] and the JavaScript of the
+/// page. [`VideoInfo`] and [`PlayerResponse`] are JSON objects, which contain the most
 /// important information about the video. If you are feeling brave, feel free to have a look
 /// at the definitions of those two types, their subtypes, and all the information they contain
-/// (It's huge!). The JavaScript is not processed by `fetch`, but is used later by 
-/// [`VideoDescrambler::descramble`] to generate the `transform_plan` and the `transform_map` 
+/// (It's huge!). The JavaScript is not processed by `fetch`, but is used later by
+/// [`VideoDescrambler::descramble`] to generate the `transform_plan` and the `transform_map`
 /// (you will learn about both when it comes to descrambling).
-/// 
-/// To get the videos [`VideoInfo`], we actually need to request one more page. One you probably 
+///
+/// To get the videos [`VideoInfo`], we actually need to request one more page. One you probably
 /// don't frequently visit as a 'normal' human being. Because we, programmers, are really
-/// creative when it comes to naming stuff, a video's [`VideoInfo`] can be requested at 
-/// <https://youtube.com/get_video_info>. Btw.: If you want to see how the computer feels, when 
+/// creative when it comes to naming stuff, a video's [`VideoInfo`] can be requested at
+/// <https://youtube.com/get_video_info>. Btw.: If you want to see how the computer feels, when
 /// we ask him to deserialize the response into the [`VideoInfo`] struct, you can have a look
 /// at <https://www.youtube.com/get_video_info?video_id=5jlI4uzZGjU&eurl=https%3A%2F%2Fyoutube.com%2Fwatch%3Fiv%3D5jlI4uzZGjU&sts=>
 /// (most browsers, will download a text file!). This is the actual [`VideoInfo`] for the
-/// video with the id '5jlI4uzZGjU'. 
-/// 
-/// That's it! Of course, we cannot download the video yet. But that's not the task of `fetch`. 
-/// `fetch` is just responsible for requesting all the essential information. To learn how the 
-/// journey continues, have a look at [`VideoDescrambler`].  
-/// 
+/// video with the id '5jlI4uzZGjU'.
+///
+/// That's it! Of course, we cannot download the video yet. But that's not the task of `fetch`.
+/// `fetch` is just responsible for requesting all the essential information. To learn how the
+/// journey continues, have a look at [`VideoDescrambler`].
+///
 /// [`Video`]: crate::video::Video
 #[derive(Clone, derive_more::Display, derivative::Derivative)]
 #[display(fmt = "VideoFetcher({})", video_id)]
@@ -106,8 +106,8 @@ impl VideoFetcher {
 
     /// Constructs a [`VideoFetcher`] from an [`Id`] and an existing [`Client`].
     /// There are no special constrains, what the [`Client`] has to look like.
-    /// It's recommended to use the cookie jar returned from [`recommended_cookies`]. 
-    /// It's recommended to use the headers returned from [`recommended_headers`]. 
+    /// It's recommended to use the cookie jar returned from [`recommended_cookies`].
+    /// It's recommended to use the headers returned from [`recommended_headers`].
     #[inline]
     pub fn from_id_with_client(video_id: IdBuf, client: Client) -> Self {
         Self {
@@ -118,32 +118,32 @@ impl VideoFetcher {
     }
 
     /// Fetches all available video data and deserializes it into [`VideoInfo`].
-    /// 
+    ///
     /// ### Errors
     /// - When the video is private, only for members, or otherwise not accessible.
     /// - When requests to some video resources fail.
     /// - When deserializing the raw response fails.
-    /// 
+    ///
     /// When having a good internet connection, only errors due to inaccessible videos should occur.
-    /// Other errors usually mean, that YouTube changed their API, and `rustube` did not adapt to 
+    /// Other errors usually mean, that YouTube changed their API, and `rustube` did not adapt to
     /// this change yet. Please feel free to open a GitHub issue if this is the case.
     #[doc(cfg(feature = "fetch"))]
     #[cfg(feature = "fetch")]
     #[log_derive::logfn(ok = "Trace", err = "Error")]
     #[log_derive::logfn_inputs(Trace)]
     pub async fn fetch(self) -> crate::Result<VideoDescrambler> {
-        // fixme: 
+        // fixme:
         //  It seems like watch_html also contains a PlayerResponse in all cases. VideoInfo
-        //  only contains the  extra field `adaptive_fmts_raw`. It may be possible to just use the 
-        //  watch_html PlayerResponse. This would eliminate one request and therefore improve 
+        //  only contains the  extra field `adaptive_fmts_raw`. It may be possible to just use the
+        //  watch_html PlayerResponse. This would eliminate one request and therefore improve
         //  performance.
         //  To do so, two things must happen:
         //       1. I need a video, which has `adaptive_fmts_raw` set, so I can examine
-        //          both the watch_html as well as the video_info. (adaptive_fmts_raw even may be 
+        //          both the watch_html as well as the video_info. (adaptive_fmts_raw even may be
         //          a legacy thing, which isn't used by YouTube anymore).
-        //       2. I need to have some kind of evidence, that watch_html comes with the 
+        //       2. I need to have some kind of evidence, that watch_html comes with the
         //          PlayerResponse in most cases. (It would also be possible to just check, whether
-        //          or not watch_html contains PlayerResponse, and otherwise request video_info). 
+        //          or not watch_html contains PlayerResponse, and otherwise request video_info).
 
         let watch_html = self.get_html(&self.watch_url).await?;
         let is_age_restricted = is_age_restricted(&watch_html);
@@ -159,18 +159,18 @@ impl VideoFetcher {
     }
 
     /// Fetches all available video data, and deserializes it into [`VideoInfo`].
-    /// 
+    ///
     /// This method will only return the [`VideoInfo`]. You won't have the ability to download
     /// the video afterwards. If you want to download videos, have a look at [`VideoFetcher::fetch`].
     ///
     /// This method is useful if you want to find out something about a video that is not available
     /// for download, like live streams that are offline.
-    /// 
+    ///
     /// ### Errors
     /// - When requests to some video resources fail.
     /// - When deserializing the raw response fails.
-    /// 
-    /// When having a good internet connection, this method should not fail. Errors usually mean, 
+    ///
+    /// When having a good internet connection, this method should not fail. Errors usually mean,
     /// that YouTube changed their API, and `rustube` did not adapt to this change yet. Please feel
     /// free to open a GitHub issue if this is the case.
     #[doc(cfg(feature = "fetch"))]
@@ -196,12 +196,12 @@ impl VideoFetcher {
         &self.watch_url
     }
 
-    fn check_downloadability(watch_html: &str, is_age_restricted: bool) -> crate::Result<()> {
+    fn check_downloadability(watch_html: &str, is_age_restricted: bool) -> crate::Result<PlayabilityStatus> {
         let playability_status = Self::extract_playability_status(watch_html)?;
 
         match playability_status {
-            PlayabilityStatus::Ok { .. } => Ok(()),
-            PlayabilityStatus::LoginRequired { .. } if is_age_restricted => Ok(()),
+            PlayabilityStatus::Ok { .. } => Ok(playability_status),
+            PlayabilityStatus::LoginRequired { .. } if is_age_restricted => Ok(playability_status),
             ps => Err(Error::VideoUnavailable(box ps))
         }
     }
@@ -218,7 +218,7 @@ impl VideoFetcher {
         }
     }
 
-    /// Checks, whether or not the video is accessible for normal users. 
+    /// Checks, whether or not the video is accessible for normal users.
     fn extract_playability_status(watch_html: &str) -> crate::Result<PlayabilityStatus> {
         static PLAYABILITY_STATUS: SyncLazy<Regex> = SyncLazy::new(||
             Regex::new(r#"["']?playabilityStatus["']?\s*[:=]\s*"#).unwrap()
@@ -286,7 +286,7 @@ impl VideoFetcher {
             .map(|html| (html, player_response))
     }
 
-    /// Requests the [`VideoInfo`] of a video 
+    /// Requests the [`VideoInfo`] of a video
     #[inline]
     #[allow(unused)]
     async fn get_video_info(&self, is_age_restricted: bool) -> crate::Result<VideoInfo> {
@@ -333,16 +333,51 @@ impl VideoFetcher {
                 .await?
         )
     }
+
+    /*#[inline]
+    #[log_derive::logfn_inputs(Debug)]
+    #[log_derive::logfn(ok = "Trace", err = "Error", fmt = "call_api() => `{:?}`")]
+    async fn call_api<T: serde::de::DeserializeOwned + std::fmt::Debug>(
+        &self,
+        endpoint: &str,
+        video_id: Id<'_>,
+    ) -> crate::Result<T> {
+        // FIXME: get rid of all the allocations here
+        let url = Url::parse(&format!(
+            "https://www.youtube.com/youtubei/v1/{}?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
+            endpoint
+        )).unwrap();
+        let body = serde_json::json!({
+            "context": {
+                "client": {
+                    "clientName": "WEB",
+                    "clientVersion": "2.20201021.03.00",
+                },
+            },
+            "videoId": video_id,
+        });
+
+        Ok(
+            self.client
+                .get(url)
+                .json(&body)
+                .send()
+                .await?
+                .error_for_status()?
+                .json::<T>()
+                .await?
+        )
+    }*/
 }
 
-/// Extracts whether or not a particular video is age restricted. 
+/// Extracts whether or not a particular video is age restricted.
 #[inline]
 fn is_age_restricted(watch_html: &str) -> bool {
     static PATTERN: SyncLazy<Regex> = SyncLazy::new(|| Regex::new("og:restrictions:age").unwrap());
     PATTERN.is_match(watch_html)
 }
 
-/// Generates the url under which the [`VideoInfo`] of a video can be requested. 
+/// Generates the url under which the [`VideoInfo`] of a video can be requested.
 #[inline]
 fn video_info_url(video_id: Id<'_>, watch_url: &Url) -> Url {
     let params: &[(&str, &str)] = &[
@@ -407,13 +442,13 @@ fn get_ytplayer_config(html: &str) -> crate::Result<PlayerResponse> {
         Regex::new(r"ytplayer\.config\s*=\s*").unwrap(),
         Regex::new(r"ytInitialPlayerResponse\s*=\s*").unwrap(),
         // fixme
-        // pytube handles `setConfig` little bit differently. It parses the entire argument 
+        // pytube handles `setConfig` little bit differently. It parses the entire argument
         // to `setConfig()` and then uses load json to find `PlayerResponse` inside of it.
         // We currently handle both the same way, and just deserialize into the `PlayerConfig` enum.
         // This *should* have the same effect.
         //
         // In the future, it may be a good idea, to also handle both cases differently, so we don't
-        // loose performance on deserializing into an enum, but deserialize `CONFIG_PATTERNS` directly 
+        // loose performance on deserializing into an enum, but deserialize `CONFIG_PATTERNS` directly
         // into `PlayerResponse`, and `SET_CONFIG_PATTERNS` into `Args`. The problem currently is, that
         // I don't know, if CONFIG_PATTERNS can also contain `Args`.
         Regex::new(r#"yt\.setConfig\(.*['"]PLAYER_CONFIG['"]:\s*"#).unwrap()
@@ -479,7 +514,7 @@ fn get_ytplayer_js(html: &str) -> crate::Result<&str> {
     }
 }
 
-/// Extracts a complete json object from a string. 
+/// Extracts a complete json object from a string.
 #[inline]
 fn json_object(mut html: &str) -> crate::Result<&str> {
     html = html.trim_start_matches(|c| c != '{');
