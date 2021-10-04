@@ -18,7 +18,7 @@ pub type IdBuf = Id<'static>;
 
 // todo: check patterns with regex debugger
 /// A list of possible YouTube video identifier patterns.
-/// 
+///
 /// ## Guarantees:
 /// - each pattern contains an `id` group that will always capture when the pattern matches
 /// - The captured id will always match following regex (defined in [ID_PATTERN]): `^[a-zA-Z0-9_-]{11}$`
@@ -68,27 +68,27 @@ pub static ID_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
 
 /// A wrapper around a Cow<'a, str> that makes sure the video id, which is contained, always
 /// has the correct format.
-/// 
-/// 
+///
+///
 /// ## Guaranties:
-/// Since YouTube does not guarantee a consistent video-id format, these guarantees can change in 
-/// major version updates. If your application depends on them, make sure to check this section on 
+/// Since YouTube does not guarantee a consistent video-id format, these guarantees can change in
+/// major version updates. If your application depends on them, make sure to check this section on
 /// regular bases!
-/// 
+///
 /// - The id will always match following regex (defined in [ID_PATTERN]): `^[a-zA-Z0-9_-]{11}$`
 /// - The id can always be used as a valid url segment
 /// - The id can always be used as a valid url parameter
-/// 
+///
 /// ## Ownership
 /// All available constructors except for [`Id::deserialize`] and [`Id::from_string`] will
 /// create the borrowed version with the lifetime of the input. Therefore no allocation is required.
-/// 
+///
 /// If you don't need 'static deserialization, you can use [`Id::deserialize_borrowed`], which will
 /// create an `Id<'de>`.
-/// 
-/// If you require [`Id`] to be owned (`Id<'static`>), you can use [`Id::as_owned`] or 
+///
+/// If you require [`Id`] to be owned (`Id<'static`>), you can use [`Id::as_owned`] or
 /// [`Id::into_owned`], which both can easily be chained. You can also use [`IdBuf`], which is
-/// an alias for `Id<'static>`, to make functions and types less verbose. 
+/// an alias for `Id<'static>`, to make functions and types less verbose.
 #[derive(Clone, Debug, Serialize, Hash)]
 pub struct Id<'a>(Cow<'a, str>);
 
@@ -110,7 +110,7 @@ impl<'a> Id<'a> {
                     )
                     .ok_or(Error::BadIdFormat)
             }
-            
+
             #[inline]
             pub fn from_str(id: &'a str) -> Result<Self> {
                 match ID_PATTERN.is_match(id) {
@@ -126,17 +126,17 @@ impl<'a> Id<'a> {
                     Err(_) => None
                 }
             }
-            
+
             #[inline]
             fn check_str(id: &'_ str) -> Result<(), ()> {
                 if id.len() != 11 {
                     return Err(());
                 }
-        
+
                 let only_allowed_chars = id
                     .chars()
                     .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
-        
+
                 if only_allowed_chars {
                     Ok(())
                 } else {
@@ -197,6 +197,17 @@ impl<'a> Id<'a> {
             "https://www.youtube.com/watch?",
             &[("v", self.as_str())],
         ).unwrap()
+    }
+
+    #[inline]
+    pub fn shorts_url(&self) -> Url {
+        let mut url = Url::parse("https://www.youtube.com/shorts")
+            .unwrap();
+        url
+            .path_segments_mut()
+            .unwrap()
+            .push(self.as_str());
+        url
     }
 
     #[inline]
