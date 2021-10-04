@@ -24,8 +24,9 @@ pub type IdBuf = Id<'static>;
 /// - The captured id will always match following regex (defined in [ID_PATTERN]): `^[a-zA-Z0-9_-]{11}$`
 #[cfg(feature = "regex")]
 #[doc(cfg(feature = "regex"))]
-pub static ID_PATTERNS: [&std::lazy::SyncLazy<Regex>; 4] = [
+pub static ID_PATTERNS: [&std::lazy::SyncLazy<Regex>; 5] = [
     &WATCH_URL_PATTERN,
+    &SHORTS_URL_PATTERN,
     &EMBED_URL_PATTERN,
     &SHARE_URL_PATTERN,
     &ID_PATTERN
@@ -36,6 +37,12 @@ pub static ID_PATTERNS: [&std::lazy::SyncLazy<Regex>; 4] = [
 pub static WATCH_URL_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
     // watch url    (i.e. https://youtube.com/watch?v=video_id)
     Regex::new(r"^(https?://)?(www\.)?youtube.\w\w\w?/watch\?v=(?P<id>[a-zA-Z0-9_-]{11})(&.*)?$").unwrap()
+);
+/// A pattern matching the shorts url of a video (i.e. `https://youtube.com/shorts/<ID>`).
+#[cfg(feature = "regex")]
+#[doc(cfg(feature = "regex"))]
+pub static SHORTS_URL_PATTERN: std::lazy::SyncLazy<Regex> = std::lazy::SyncLazy::new(||
+    Regex::new(r"^(https?://)?(www\.)?youtube.\w\w\w?/shorts/(?P<id>[a-zA-Z0-9_-]{11})(\?.*)?$").unwrap()
 );
 /// A pattern matching the embedded url of a video (i.e. `youtube.com/embed/<ID>`).
 #[cfg(feature = "regex")]
