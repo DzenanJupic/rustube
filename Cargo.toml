@@ -51,7 +51,7 @@ tokio-test = "0.4.2"
 
 [features]
 # By default, the minimal features for downloading a video are enabled. If you compile with default-features = false,
-# you get only the Id type as well as the Error type. 
+# you get only the Id type as well as the Error type.
 default = ["download", "std", "default-tls"]
 std = ["regex", "thiserror"]
 callback = ["tokio/sync", "futures", "download"]
@@ -61,7 +61,7 @@ download = [
 ]
 # could be usefull if you don't want to download videos, but just want to get information like title, view-count, ...
 fetch = [
-    "tokio/macros", "reqwest",
+    "tokio/macros", "reqwest/json",
     "serde/default", "serde/rc", "serde_with/json", "serde_json", "serde_qs", "bytes", "chrono", "mime",
     "std", "descramble", "url/serde", "reqwest/cookies", "reqwest/stream", "reqwest/gzip"
 ]
