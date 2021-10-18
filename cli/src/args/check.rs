@@ -1,7 +1,7 @@
 use crate::args::{Identifier, LoggingArgs, StreamFilter};
 use crate::args::output::OutputArgs;
 
-#[derive(clap::Clap)]
+#[derive(clap::Parser)]
 pub struct CheckArgs {
     #[clap(flatten)]
     pub identifier: Identifier,

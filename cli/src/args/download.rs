@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 
-use clap::Clap;
+use clap::Parser;
 
 use crate::args::Identifier;
 use crate::args::logging::LoggingArgs;
 use crate::args::output::OutputArgs;
 use crate::args::stream_filter::StreamFilter;
 
-#[derive(Clap)]
+#[derive(Parser)]
 pub struct DownloadArgs {
     #[clap(flatten)]
     pub identifier: Identifier,

@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use clap::Clap;
+use clap::Parser;
 
 use args::DownloadArgs;
 use args::StreamFilter;

@@ -1,7 +1,7 @@
 use crate::output_format::OutputFormat;
 use crate::output_level::OutputLevel;
 
-#[derive(clap::Clap)]
+#[derive(clap::Parser)]
 pub struct OutputArgs {
     #[clap(
     short, long = "output",

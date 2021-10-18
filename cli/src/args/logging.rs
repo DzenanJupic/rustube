@@ -1,12 +1,12 @@
 use std::fmt::Arguments;
 
-use clap::Clap;
+use clap::Parser;
 use fern::colors::{Color, ColoredLevelConfig};
 use fern::FormatCallback;
 use log::{LevelFilter, Record};
 use strum::EnumString;
 
-#[derive(Clap)]
+#[derive(Parser)]
 pub struct LoggingArgs {
     #[clap(
     long, short,
@@ -95,7 +95,7 @@ impl LoggingArgs {
     }
 }
 
-#[derive(Clap, EnumString)]
+#[derive(Parser, EnumString)]
 #[strum(serialize_all = "kebab-case")]
 enum ColorUsage {
     Always,

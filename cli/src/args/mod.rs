@@ -1,4 +1,4 @@
-use clap::Clap;
+use clap::Parser;
 
 pub use check::CheckArgs;
 pub use download::DownloadArgs;
@@ -14,7 +14,7 @@ mod logging;
 mod output;
 mod stream_filter;
 
-#[derive(Clap)]
+#[derive(Parser)]
 #[clap(
 version = "0.3.5",
 about = "\n\
@@ -54,7 +54,7 @@ pub enum Command {
     Fetch(FetchArgs),
 }
 
-#[derive(Clap)]
+#[derive(Parser)]
 pub struct Identifier {
     #[clap(about = "An arbitrary video identifier, like the videos URL or the video id")]
     identifier: String,

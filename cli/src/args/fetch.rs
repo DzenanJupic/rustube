@@ -1,7 +1,7 @@
 use crate::args::{Identifier, LoggingArgs};
 use crate::args::output::OutputArgs;
 
-#[derive(clap::Clap)]
+#[derive(clap::Parser)]
 pub struct FetchArgs {
     #[clap(flatten)]
     pub identifier: Identifier,

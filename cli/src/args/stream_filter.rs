@@ -1,11 +1,11 @@
 use std::cmp::Ordering;
 
-use clap::Clap;
+use clap::Parser;
 
 use rustube::Stream;
 use rustube::video_info::player_response::streaming_data::{AudioQuality, Quality, QualityLabel};
 
-#[derive(Clap)]
+#[derive(Parser)]
 pub struct StreamFilter {
     #[clap(
     short, long,
