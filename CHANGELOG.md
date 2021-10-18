@@ -1,3 +1,9 @@
+## 0.3.6
+
+### Added
+
+- support for `shorts` url (`youtube.com/shorts/<ID>`)
+
 ## 0.3.5
 
 ### Changed
