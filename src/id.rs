@@ -1,6 +1,5 @@
 use alloc::borrow::{Cow, ToOwned};
 use alloc::string::String;
-use core::cmp::Ordering;
 
 #[cfg(feature = "regex")]
 use regex::Regex;
@@ -9,6 +8,8 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 use url::Url;
+
+use core::cmp::Ordering;
 
 #[cfg(feature = "std")]
 use crate::{Error, Result};
@@ -167,6 +168,7 @@ impl<'a> Id<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn into_owned(self) -> IdBuf {
         match self.0 {
             Cow::Owned(id) => Id(Cow::Owned(id)),
@@ -175,6 +177,7 @@ impl<'a> Id<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn as_owned(&self) -> IdBuf {
         self
             .clone()
@@ -182,16 +185,19 @@ impl<'a> Id<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn as_borrowed(&'a self) -> Self {
         Self(Cow::Borrowed(&self.0))
     }
 
     #[inline]
+    #[must_use]
     pub fn as_str(&self) -> &str {
         self.0.as_ref()
     }
 
     #[inline]
+    #[must_use]
     pub fn watch_url(&self) -> Url {
         Url::parse_with_params(
             "https://www.youtube.com/watch?",
@@ -200,6 +206,7 @@ impl<'a> Id<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn shorts_url(&self) -> Url {
         let mut url = Url::parse("https://www.youtube.com/shorts")
             .unwrap();
@@ -211,6 +218,7 @@ impl<'a> Id<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn embed_url(&self) -> Url {
         let mut url = Url::parse("https://www.youtube.com/embed")
             .unwrap();
@@ -222,6 +230,7 @@ impl<'a> Id<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn share_url(&self) -> Url {
         let mut url = Url::parse("https://youtu.be")
             .unwrap();

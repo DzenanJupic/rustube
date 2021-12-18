@@ -28,8 +28,7 @@ pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<MimeType, <D as Des
         // skip group 0, which is the whole match
         .skip(1)
         .try_collect()
-        .map(|(m, c)| m.map(|m| c.map(|c| (m.as_str(), c.as_str()))))
-        .flatten()
+        .and_then(|(m, c)| m.map(|m| c.map(|c| (m.as_str(), c.as_str()))))
         .flatten()
         .ok_or_else(|| D::Error::invalid_value(
             Unexpected::Str(&s),

@@ -138,6 +138,7 @@ impl Callback {
     /// [Callback::connect_on_progress_closure_slow](crate::stream::callback::Callback::connect_on_progress_closure_slow)
     #[doc(cfg(feature = "callback"))]
     #[inline]
+    #[must_use]
     pub fn connect_on_progress_closure(mut self, closure: impl Fn(CallbackArguments) + 'static) -> Self {
         self.on_progress = OnProgressType::Closure(Box::new(closure));
         self
@@ -147,6 +148,7 @@ impl Callback {
     /// more seldom, around once for every MB downloaded.
     #[doc(cfg(feature = "callback"))]
     #[inline]
+    #[must_use]
     pub fn connect_on_progress_closure_slow(mut self, closure: impl Fn(CallbackArguments) + 'static) -> Self {
         self.on_progress = OnProgressType::SlowClosure(Box::new(closure));
         self
@@ -161,6 +163,7 @@ impl Callback {
     /// [Callback::connect_on_progress_closure_async_slow](crate::stream::callback::Callback::connect_on_progress_closure_async_slow)
     #[doc(cfg(feature = "callback"))]
     #[inline]
+    #[must_use]
     pub fn connect_on_progress_closure_async<Fut: Future<Output=()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static>(mut self, closure: F) -> Self {
         self.on_progress = OnProgressType::AsyncClosure(box move |arg| closure(arg).boxed());
         self
@@ -170,6 +173,7 @@ impl Callback {
     /// more seldom, around once for every MB downloaded.
     #[doc(cfg(feature = "callback"))]
     #[inline]
+    #[must_use]
     pub fn connect_on_progress_closure_async_slow<Fut: Future<Output=()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static + Sync + Send>(mut self, closure: F) -> Self {
         self.on_progress = OnProgressType::SlowAsyncClosure(box move |arg| closure(arg).boxed());
         self
@@ -183,6 +187,7 @@ impl Callback {
     /// If it's too slow, some on_progress events will be dropped.
     #[doc(cfg(feature = "callback"))]
     #[inline]
+    #[must_use]
     pub fn connect_on_progress_sender(
         mut self,
         sender: Sender<CallbackArguments>,
@@ -198,6 +203,7 @@ impl Callback {
     /// This closure will be executed more seldom, around once for every MB downloaded.
     #[doc(cfg(feature = "callback"))]
     #[inline]
+    #[must_use]
     pub fn connect_on_progress_sender_slow(
         mut self,
         sender: Sender<CallbackArguments>,
@@ -210,6 +216,7 @@ impl Callback {
     /// Attach a closure to be executed on complete
     #[doc(cfg(feature = "callback"))]
     #[inline]
+    #[must_use]
     pub fn connect_on_complete_closure(mut self, closure: impl Fn(Option<PathBuf>) + 'static) -> Self {
         self.on_complete = OnCompleteType::Closure(Box::new(closure));
         self
@@ -218,6 +225,7 @@ impl Callback {
     /// Attach a async closure to be executed on complete
     #[doc(cfg(feature = "callback"))]
     #[inline]
+    #[must_use]
     pub fn connect_on_complete_closure_async<Fut: Future<Output=()> + Send + 'static, F: Fn(Option<PathBuf>) -> Fut + 'static>(mut self, closure: F) -> Self {
         self.on_complete = OnCompleteType::AsyncClosure(box move |arg| closure(arg).boxed());
         self
@@ -243,7 +251,7 @@ impl super::Stream {
     }
 
     /// Attempts to downloads the [`Stream`](super::Stream)s resource.
-    /// This will download the video to <video_id>.mp4 in the provided directory. 
+    /// This will download the video to <video_id>.mp4 in the provided directory.
     /// Takes an [`Callback`](crate::stream::callback::Callback)
     #[doc(cfg(feature = "callback"))]
     #[inline]
