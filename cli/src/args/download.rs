@@ -18,18 +18,11 @@ pub struct DownloadArgs {
     #[clap(flatten)]
     pub output: OutputArgs,
 
-    #[clap(
-    short,
-    long,
-    about = "Where to download the video to [default: .]"
-    )]
+    /// Where to download the video to [default: .]
+    #[clap(short, long)]
     pub dir: Option<PathBuf>,
-    #[clap(
-    short, long,
-    about = "\
-    The filename of the video file [default: <VIDEO_ID>.mp4]\n\
-    If the file already exists, it will be removed, even if the download fails!\
-    "
-    )]
+    /// The filename of the video file [default: <VIDEO_ID>.mp4]
+    /// If the file already exists, it will be removed, even if the download fails!
+    #[clap(short, long)]
     pub filename: Option<PathBuf>,
 }

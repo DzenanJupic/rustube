@@ -8,31 +8,18 @@ use strum::EnumString;
 
 #[derive(Parser)]
 pub struct LoggingArgs {
-    #[clap(
-    long, short,
-    parse(from_occurrences),
-    about = "\
-    Sets the log-level of rustube [default: Info]\n\
-    (-v = Error, ..., -vvvvv = Trace)\n\
-    (other crates have log level Warn)\n\
-    "
-    )]
+    /// Sets the log-level of rustube [default: Info]
+    /// (-v = Error, ..., -vvvvv = Trace)
+    /// (other crates have log level Warn)
+    #[clap(long, short, parse(from_occurrences))]
     verbose: u8,
 
-    #[clap(
-    long,
-    default_value = "always",
-    possible_values = & ["always", "never"],
-    value_name = "WHEN",
-    about = "When to log coloredd"
-    )]
+    /// When to log coloredd
+    #[clap(long, default_value = "always", possible_values = & ["always", "never"], value_name = "WHEN")]
     color: ColorUsage,
 
-    #[clap(
-    long, short,
-    conflicts_with = "verbose",
-    about = "Turn off logging for all crates",
-    )]
+    /// Turn off logging for all crates
+    #[clap(long, short, conflicts_with = "verbose")]
     quiet: bool,
 }
 

@@ -7,57 +7,39 @@ use rustube::video_info::player_response::streaming_data::{AudioQuality, Quality
 
 #[derive(Parser)]
 pub struct StreamFilter {
-    #[clap(
-    short, long,
-    about = "Download the best quality available [default]",
-    conflicts_with_all(& ["worst-quality", "video-quality"]),
-    )]
+    /// Download the best quality available [default]
     #[allow(unused)]
+    #[clap(short, long, conflicts_with_all(& ["worst-quality", "video-quality"]))]
     best_quality: bool,
-    #[clap(
-    short, long,
-    about = "Download the worst quality available",
-    conflicts_with_all(& ["best-quality", "video-quality"])
-    )]
+    /// Download the worst quality available
+    #[clap(short, long, conflicts_with_all(& ["best-quality", "video-quality"]))]
     worst_quality: bool,
 
-    #[clap(
-    long,
-    conflicts_with_all(& ["no-audio", "ignore-missing-audio", "ignore-missing-video"]),
-    about = "Pick a Stream, that contains no video track"
-    )]
+    /// Pick a Stream, that contains no video track
+    #[clap(long, conflicts_with_all(& ["no-audio", "ignore-missing-audio", "ignore-missing-video"]))]
     no_video: bool,
-    #[clap(
-    long,
-    conflicts_with_all(& ["no-video", "ignore-missing-audio", "ignore-missing-video"]),
-    about = "Pick a Stream, that contains no audio track"
-    )]
+    /// Pick a Stream, that contains no audio track
+    #[clap(long, conflicts_with_all(& ["no-video", "ignore-missing-audio", "ignore-missing-video"]))]
     no_audio: bool,
 
-    #[clap(
-    long,
-    conflicts_with_all(& ["no-audio", "no-video"]),
-    about = "Pick a Stream, even if it has no video track"
-    )]
+    /// Pick a Stream, even if it has no video track
+    #[clap(long, conflicts_with_all(& ["no-audio", "no-video"]))]
     ignore_missing_video: bool,
-    #[clap(
-    long,
-    conflicts_with_all(& ["no-audio", "no-video"]),
-    about = "Pick a Stream, even if it has no audio track"
-    )]
+    /// Pick a Stream, even if it has no audio track
+    #[clap(long, conflicts_with_all(& ["no-audio", "no-video"]))]
     ignore_missing_audio: bool,
 
+    /// Download the stream with this quality
     #[clap(
     long,
-    about = "Download the stream with this quality",
     possible_values = & ["tiny", "small", "medium", "large", "highres", "hd720", "hd1080", "hd1440", "hd2160"],
     conflicts_with_all(& ["best-quality", "worst-quality"]),
     parse(try_from_str = parse_json)
     )]
     quality: Option<Quality>,
+    /// Download the stream with this quality label
     #[clap(
     long,
-    about = "Download the stream with this quality label",
     possible_values = & ["144p", "144p60 HDR", "240p", "240p60 HDR", "360p", "360p60", "360p60 HDR",
     "480p", "480p60", "480p60 HDR", "720p", "720p50", "720p60", "720p60 HDR", "1080p", "1080p50",
     "1080p60", "1080p60 HDR", "1440p", "1440p60", "1440p60 HDR", "2160p", "2160p60", "2160p60 HDR",
@@ -67,12 +49,10 @@ pub struct StreamFilter {
     parse(try_from_str = parse_json)
     )]
     video_quality: Option<QualityLabel>,
+    /// Download the stream with this audio quality label (the lowercase values are aliases for the
+    /// more verbose values)
     #[clap(
     long,
-    about = "\
-    Download the stream with this audio quality label (the lowercase values are aliases for the \
-    more verbose values)\
-    ",
     possible_values = & [
     "AUDIO_QUALITY_LOW", "AUDIO_QUALITY_MEDIUM", "AUDIO_QUALITY_HIGH",
     "low", "medium", "high"

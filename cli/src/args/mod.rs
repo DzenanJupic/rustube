@@ -16,7 +16,7 @@ mod stream_filter;
 
 #[derive(Parser)]
 #[clap(
-version = "0.3.6",
+version,
 about = "\n\
 A simple CLI for the rustube YouTube-downloader library.\n\
 For documentation and more information about rustube or the rustube-cli checkout \
@@ -56,7 +56,7 @@ pub enum Command {
 
 #[derive(Parser)]
 pub struct Identifier {
-    #[clap(about = "An arbitrary video identifier, like the videos URL or the video id")]
+    /// An arbitrary video identifier, like the videos URL or the video id
     identifier: String,
 }
 
