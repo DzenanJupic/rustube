@@ -482,6 +482,8 @@ fn parse_for_object<'a>(html: &'a str, regex: &Regex) -> crate::Result<&'a str> 
 
 /// Deserializes the [`PalyerResponse`] which can be found in the watch html.
 #[inline]
+#[log_derive::logfn(Debug, fmt = "player response: {:?}")]
+#[log_derive::logfn_inputs(Trace, fmt = "player response json: {:?}")]
 fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
     #[derive(Deserialize)]
     struct Args {
