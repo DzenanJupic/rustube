@@ -1,0 +1,21 @@
+name: Blank Issue
+description: Create a blank issue.
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for filing an issue!
+  - type: textarea
+    id: problem
+    attributes:
+      label: Description
+      description: >
+        Please provide a description of the issue, along with any information
+        you feel relevant to replicate it.
+    validations:
+      required: true
+  - type: textarea
+    id: version
+    attributes:
+      label: Version
+      description: rustube or rustube-cli (`rustube -V`) version
+      render: text
