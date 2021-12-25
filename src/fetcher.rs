@@ -489,16 +489,35 @@ fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
     struct Args {
         player_response: PlayerResponse,
     }
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum PlayerConfig { Args { args: Args }, Response(PlayerResponse) }
 
-    Ok(
-        match serde_json::from_str::<PlayerConfig>(json)? {
-            PlayerConfig::Args { args } => args.player_response,
-            PlayerConfig::Response(pr) => pr
-        }
-    )
+    // There are multiple possible formats the PlayerResponse could be in. So we basically
+    // have an untagged enum here.
+    // ```rust
+    // #[derive(Deserialize)]
+    // #[serde(untagged)]
+    // enum PlayerConfig {
+    //     Args { args: Args },
+    //     Response(PlayerResponse)
+    // }
+    // ```
+    // The only problem with deserializing this enum is, that we don't get any information about
+    // the cause in case of a failed deserialization. That's why we do this manually here, so that
+    // the log contains information about the error cause.
+
+    let args_err = match serde_json::from_str::<PlayerResponse>(json) {
+        Ok(pr) => return Ok(pr),
+        Err(err) => err,
+    };
+
+    let pr_err = match serde_json::from_str::<Args>(json) {
+        Ok(args) => return Ok(args.player_response),
+        Err(err) => err,
+    };
+
+    Err(crate::Error::JsonDeserialization(serde::de::Error::custom(format_args!(
+        "data did not match any variant of untagged enum PlayerConfig:\n\tArgs:{}\n\tPlayerResponse:{}",
+        args_err, pr_err,
+    ))))
 }
 
 /// Extracts the JavaScript used for descrambling from the watch html.
