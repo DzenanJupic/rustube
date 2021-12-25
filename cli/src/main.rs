@@ -30,7 +30,14 @@ async fn main() -> Result<()> {
 
     if let Err(ref err) = res {
         log::error!("{}\n", err);
-        eprintln!("If the error is caused by \n");
+        eprintln!("\
+            If the error is caused by a change to the YouTube API, it would be great if you could \
+            report this. Common indicators of an API change are:\n\
+            1. repeated HTTP 403 status\n\
+            2. unexpected response errors\n\
+            3. deserialization errors\n\
+            There's a predefined issue template in our repo: https://github.com/DzenanJupic/rustube/issues/new?assignees=&labels=youtube-api-changed&template=youtube_api_changed.yml\
+        ");
     }
 
     res
