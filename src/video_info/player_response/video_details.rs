@@ -9,7 +9,6 @@ use crate::IdBuf;
 pub struct VideoDetails {
     pub allow_ratings: bool,
     pub author: String,
-    pub average_rating: f64,
     // todo: add Type ChannelId
     pub channel_id: String,
     pub is_crawlable: bool,
