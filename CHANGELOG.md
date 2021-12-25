@@ -1,3 +1,9 @@
+## 0.3.7
+
+### Removed
+
+- `VideoDetails.average_rating` due to API change
+
 ## 0.3.6
 
 ### Added
@@ -8,8 +14,7 @@
 
 ### Changed
 
-- (internal) `VideoFetcher::get_video_info_and_js` now acquires the `VideoInfo` from the watch_html instead
-  of `/get_video_info`
+- (internal) `VideoFetcher::get_video_info_and_js` now acquires the `VideoInfo` from the watch_html instead of `/get_video_info`
 
 ## 0.3.4
 
