@@ -22,13 +22,17 @@ mod video_serializer;
 async fn main() -> Result<()> {
     let command: Command = Command::parse();
 
-    match command {
-        Command::Check(args) => check(args).await?,
-        Command::Download(args) => download(args).await?,
-        Command::Fetch(args) => fetch(args).await?,
+    let res = match command {
+        Command::Check(args) => check(args).await,
+        Command::Download(args) => download(args).await,
+        Command::Fetch(args) => fetch(args).await,
+    };
+
+    if let Err(ref err) = res {
+        log::error!("{}\n", err);
     }
 
-    Ok(())
+    res
 }
 
 async fn check(args: CheckArgs) -> Result<()> {
