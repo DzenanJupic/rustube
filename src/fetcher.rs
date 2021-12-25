@@ -250,9 +250,9 @@ impl VideoFetcher {
 
         let player_response = player_response.ok_or_else(|| Error::UnexpectedResponse(
             "Could not acquire the player response from the watch html!\n\
-            Note, that this is usually no problem and just happens due to a temporary fix to adapt \
-            to the new YouTube API.\n\
-            For more information checkout rustube#39 (https://github.com/DzenanJupic/rustube/issues/39).".into()
+            It looks like YouTube changed it's API again :-/\n\
+            If this not yet reported, it would be great if you could file an issue:
+            (https://github.com/DzenanJupic/rustube/issues/new?assignees=&labels=youtube-api-changed&template=youtube_api_changed.yml).".into()
         ))?;
 
         let video_info = VideoInfo {
