@@ -208,6 +208,7 @@ impl Stream {
     #[allow(unused_mut)]
     async fn internal_download_to<P: AsRef<Path>>(&self, path: P, channel: Option<InternalSender>) -> Result<PathBuf> {
         log::trace!("download_to: {:?}", path.as_ref());
+        log::debug!("start downloading {}", self.video_details.video_id);
         let mut file = File::create(&path).await?;
 
         let result = match self.download_full(&self.signature_cipher.url, &mut file, &channel, 0).await {
@@ -321,6 +322,8 @@ impl Stream {
         // Counter will be 0 if callback is not enabled
         while let Some(chunk) = stream.next().await {
             let chunk = chunk?;
+            log::trace!("received {} byte chunk ", chunk.len());
+
             file
                 .write_all(&chunk)
                 .await?;
