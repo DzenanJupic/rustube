@@ -30,6 +30,7 @@ async fn main() -> Result<()> {
 
     if let Err(ref err) = res {
         log::error!("{}\n", err);
+        eprintln!("If the error is caused by \n");
     }
 
     res

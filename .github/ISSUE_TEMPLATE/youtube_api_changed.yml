@@ -1,0 +1,51 @@
+name: YouTube API changed
+description: Inform us about an API change.
+labels: [ "youtube-api-changed" ]
+body:
+  - type: markdown
+    attributes:
+      value: Hey there 🖐! Thank you for informing us of a API change.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Summary
+      description: Feel free to describe the error.
+  - type: textarea
+    id: video-ids
+    attributes:
+      label: Video IDs
+      description: >
+        Please provide one or more IDs of videos where the error occurs. Feel free to supply video URLs if you're
+        not sure what an ID is.
+      placeholder: |
+        - <ID>
+    validations:
+      required: true
+  - type: textarea
+    id: version
+    attributes:
+      label: Version
+      description: rustube or rustube-cli (`rustube -V`) version
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log output or error
+      description: >
+        The log output when you're using the CLI or the returned error when you're using the library.
+        (`rustube check -vvvvv --color never <ID or URL>`)
+      value: |
+        <details>
+          <summary>log</summary>
+        
+          ```
+            // log output
+          ```
+        </details>
+  - type: textarea
+    id: notest
+    attributes:
+      label: Additional notes or ideas
+      description: If there's anything else you'd like to share, this is the place for it.
