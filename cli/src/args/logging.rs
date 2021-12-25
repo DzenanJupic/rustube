@@ -39,14 +39,17 @@ impl LoggingArgs {
     }
 
     fn log_msg_formatter(&self) -> fn(FormatCallback, &Arguments, &Record) {
-        macro_rules! msg_formatter {
-            ($out:ident, $message:ident, $log_level:expr) => {
-                $out.finish(format_args!(
-                    "{:<5}: {}",
-                    $log_level,
-                    $message
-                ))
-            };
+        #[inline(always)]
+        fn format_msg(
+            out: FormatCallback,
+            level: impl std::fmt::Display,
+            record: &Record,
+            msg: &Arguments,
+        ) {
+            out.finish(format_args!(
+                "{:<5} [{}:{}]: {}",
+                level, record.target(), record.line().unwrap_or_default(), msg,
+            ))
         }
 
         match self.color {
@@ -60,12 +63,22 @@ impl LoggingArgs {
                         trace: Color::White,
                     };
 
-                    msg_formatter!(out, message, COLORS.color(record.level()));
+                    format_msg(
+                        out,
+                        COLORS.color(record.level()),
+                        record,
+                        message,
+                    );
                 }
             }
             ColorUsage::Never => {
                 |out: FormatCallback, message: &Arguments, record: &Record| {
-                    msg_formatter!(out, message, record.level());
+                    format_msg(
+                        out,
+                        record.level(),
+                        record,
+                        message,
+                    );
                 }
             }
         }
