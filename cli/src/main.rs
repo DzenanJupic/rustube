@@ -60,8 +60,13 @@ async fn download(args: DownloadArgs) -> Result<()> {
     args.logging.init_logger();
 
     let id = args.identifier.id()?;
-    let download_path = download_path(args.filename, args.dir, id.as_borrowed());
-    let (video_info, stream) = get_stream(id, args.stream_filter).await?;
+    let (video_info, stream) = get_stream(id.as_owned(), args.stream_filter).await?;
+    let download_path = download_path(
+        args.filename,
+        stream.mime.subtype().as_str(),
+        args.dir,
+        id,
+    );
 
     stream.download_to(download_path).await?;
 
@@ -128,9 +133,9 @@ async fn get_video(id: IdBuf) -> Result<Video> {
         .context("Could not descramble the video information")
 }
 
-pub fn download_path(filename: Option<PathBuf>, dir: Option<PathBuf>, video_id: Id<'_>) -> PathBuf {
+pub fn download_path(filename: Option<PathBuf>, extension: &str, dir: Option<PathBuf>, video_id: Id<'_>) -> PathBuf {
     let filename = filename
-        .unwrap_or_else(|| format!("{}.mp4", video_id.as_str()).into());
+        .unwrap_or_else(|| format!("{}.{}", video_id.as_str(), extension).into());
 
     let mut path = dir.unwrap_or_else(PathBuf::new);
 
