@@ -18,7 +18,7 @@ all-features = true
 
 [workspace]
 members = [".", "cli"]
-default-members = [".", "cli"]
+#default-members = [".", "cli"]
 
 # todo: add features to opt in/out of deserialization of some data (title, view_count, ...)
 
