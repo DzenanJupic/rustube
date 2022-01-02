@@ -1,3 +1,9 @@
+## 0.3.8
+
+### Fixed
+
+- file extension when downloading streams is no longer hardcoded to `mp4`, but depends on the stream mime instead
+
 ## 0.3.7
 
 ### Removed
