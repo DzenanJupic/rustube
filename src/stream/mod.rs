@@ -171,7 +171,7 @@ impl Stream {
     #[inline]
     async fn internal_download(&self, channel: Option<InternalSender>) -> Result<PathBuf> {
         let path = Path::new(self.video_details.video_id.as_str())
-            .with_extension("mp4");
+            .with_extension(self.mime.subtype().as_str());
         self.internal_download_to(&path, channel)
             .await
     }
@@ -192,7 +192,7 @@ impl Stream {
         let mut path = dir
             .as_ref()
             .join(self.video_details.video_id.as_str());
-        path.set_extension("mp4");
+        path.set_extension(self.mime.subtype().as_str());
         self.internal_download_to(&path, channel)
             .await
     }
