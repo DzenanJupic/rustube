@@ -196,6 +196,7 @@ fn get_transform_map(js: &str, var: &str) -> Result<HashMap<String, TransformerF
     Ok(mapper)
 }
 
+#[allow(clippy::ptr_arg)]
 fn map_functions(js_func: &str) -> Result<TransformerFn> {
     static MAPPER: SyncLazy<[(Regex, TransformerFn); 4]> = SyncLazy::new(|| [
         // function(a){a.reverse()}
