@@ -217,7 +217,7 @@ fn map_functions(js_func: &str) -> Result<TransformerFn> {
             None => vec.clear(),
             Some(p) if p.is_positive() && p as usize >= vec.len() => vec.clear(),
             Some(p) if p.is_negative() && -p as usize >= vec.len() => {}
-            Some(p) if p.is_negative() => { vec.drain(..vec.len() - p.abs() as usize); }
+            Some(p) if p.is_negative() => { vec.drain(..vec.len() - p.unsigned_abs()); }
             Some(p) => { vec.drain(..p as usize); }
         }
     }
@@ -228,18 +228,18 @@ fn map_functions(js_func: &str) -> Result<TransformerFn> {
             Some(0) => {}
             Some(p) if p.is_positive() && p as usize >= vec.len() => {
                 let v0 = vec[0];
-                let r = p.abs() as usize % vec.len();
+                let r = p.unsigned_abs() % vec.len();
                 vec.resize(p as usize, 0);
                 vec[0] = vec[r];
                 vec.push(v0);
             }
-            Some(p) if p.is_negative() && p.abs() as usize % vec.len() == 0 => {}
+            Some(p) if p.is_negative() && p.unsigned_abs() % vec.len() == 0 => {}
             Some(p) if p.is_negative() && vec.is_empty() => vec.push(0),
             Some(p) if p.is_negative() => vec[0] = 0,
             Some(p) => {
                 let v0 = vec[0];
-                vec[0] = vec[p.abs() as usize % vec.len()];
-                vec[p.abs() as usize] = v0;
+                vec[0] = vec[p.unsigned_abs() % vec.len()];
+                vec[p.unsigned_abs()] = v0;
             }
         }
     }
