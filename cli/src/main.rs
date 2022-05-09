@@ -1,4 +1,4 @@
-#![feature(option_result_contains, bool_to_option)]
+#![feature(option_result_contains)]
 
 use std::path::PathBuf;
 
