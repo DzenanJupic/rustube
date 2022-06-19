@@ -205,7 +205,7 @@ impl Stream {
         Ok(())
     }
 
-    #[allow(unused_mut)]
+    #[allow(unused_mut, clippy::let_and_return)]
     async fn internal_download_to<P: AsRef<Path>>(&self, path: P, channel: Option<InternalSender>) -> Result<PathBuf> {
         log::trace!("download_to: {:?}", path.as_ref());
         log::debug!("start downloading {}", self.video_details.video_id);
