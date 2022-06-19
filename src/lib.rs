@@ -2,7 +2,7 @@
 doc_cfg, async_closure, cow_is_borrowed, once_cell,
 box_syntax, str_split_as_str, option_result_contains,
 )]
-#![allow(clippy::nonstandard_macro_braces)]
+#![allow(clippy::nonstandard_macro_braces, clippy::derive_partial_eq_without_eq)]
 #![warn(
 missing_debug_implementations,
 // missing_docs,
