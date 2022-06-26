@@ -23,7 +23,6 @@ pub(crate) enum InternalSignal {
 pub(crate) type InternalSender = Sender<InternalSignal>;
 
 /// Arguments given either to a on_progress callback or on_progress receiver
-#[doc(cfg(feature = "callback"))]
 #[derive(Clone, derivative::Derivative)]
 #[derivative(Debug)]
 pub struct CallbackArguments {
@@ -34,7 +33,6 @@ pub struct CallbackArguments {
 }
 
 /// Type to process on_progress
-#[doc(cfg(feature = "callback"))]
 pub enum OnProgressType {
     /// Box containing a closure to execute on progress
     Closure(OnProgressClosure),
@@ -71,7 +69,6 @@ impl fmt::Debug for OnProgressType {
     }
 }
 
-#[doc(cfg(feature = "callback"))]
 impl Default for OnProgressType {
     fn default() -> Self {
         OnProgressType::None
@@ -79,7 +76,6 @@ impl Default for OnProgressType {
 }
 
 /// Type to process on_progress
-#[doc(cfg(feature = "callback"))]
 pub enum OnCompleteType {
     /// Box containing a closure to execute on complete
     Closure(OnCompleteClosure),
@@ -99,7 +95,6 @@ impl fmt::Debug for OnCompleteType {
     }
 }
 
-#[doc(cfg(feature = "callback"))]
 impl Default for OnCompleteType {
     fn default() -> Self {
         OnCompleteType::None
@@ -107,7 +102,6 @@ impl Default for OnCompleteType {
 }
 
 /// Methods and streams to process either on_progress or on_complete
-#[doc(cfg(feature = "callback"))]
 #[derive(Debug)]
 pub struct Callback {
     pub on_progress: OnProgressType,
@@ -116,7 +110,6 @@ pub struct Callback {
     pub(crate) internal_receiver: Option<Receiver<InternalSignal>>,
 }
 
-#[doc(cfg(feature = "callback"))]
 impl Callback {
     /// Create a new callback struct without actual callbacks
     pub fn new() -> Self {
@@ -136,7 +129,6 @@ impl Callback {
     /// If it's too slow, some on_progress events will be dropped.
     /// If you are looking fore something that will be executed more seldom, look for
     /// [Callback::connect_on_progress_closure_slow](crate::stream::callback::Callback::connect_on_progress_closure_slow)
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     #[must_use]
     pub fn connect_on_progress_closure(mut self, closure: impl Fn(CallbackArguments) + 'static) -> Self {
@@ -146,7 +138,6 @@ impl Callback {
 
     /// Attach a closure to be executed on progress. This closure will be executed
     /// more seldom, around once for every MB downloaded.
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     #[must_use]
     pub fn connect_on_progress_closure_slow(mut self, closure: impl Fn(CallbackArguments) + 'static) -> Self {
@@ -161,7 +152,6 @@ impl Callback {
     /// If it's too slow, some on_progress events will be dropped.
     /// If you are looking fore something that will be executed more seldom, look for
     /// [Callback::connect_on_progress_closure_async_slow](crate::stream::callback::Callback::connect_on_progress_closure_async_slow)
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     #[must_use]
     pub fn connect_on_progress_closure_async<Fut: Future<Output=()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static>(mut self, closure: F) -> Self {
@@ -171,7 +161,6 @@ impl Callback {
 
     /// Attach a async closure to be executed on progress. This closure will be executed
     /// more seldom, around once for every MB downloaded.
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     #[must_use]
     pub fn connect_on_progress_closure_async_slow<Fut: Future<Output=()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static + Sync + Send>(mut self, closure: F) -> Self {
@@ -185,7 +174,6 @@ impl Callback {
     /// ### Warning:
     /// This sender gets messages quite often, once every ~10kB progress.
     /// If it's too slow, some on_progress events will be dropped.
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     #[must_use]
     pub fn connect_on_progress_sender(
@@ -201,7 +189,6 @@ impl Callback {
     /// cancel_or_close indicates whether or not to cancel the download, if the receiver is closed
     ///
     /// This closure will be executed more seldom, around once for every MB downloaded.
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     #[must_use]
     pub fn connect_on_progress_sender_slow(
@@ -214,7 +201,6 @@ impl Callback {
     }
 
     /// Attach a closure to be executed on complete
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     #[must_use]
     pub fn connect_on_complete_closure(mut self, closure: impl Fn(Option<PathBuf>) + 'static) -> Self {
@@ -223,7 +209,6 @@ impl Callback {
     }
 
     /// Attach a async closure to be executed on complete
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     #[must_use]
     pub fn connect_on_complete_closure_async<Fut: Future<Output=()> + Send + 'static, F: Fn(Option<PathBuf>) -> Fut + 'static>(mut self, closure: F) -> Self {
@@ -242,7 +227,6 @@ impl super::Stream {
     /// Attempts to downloads the [`Stream`](super::Stream)s resource.
     /// This will download the video to <video_id>.mp4 in the current working directory.
     /// Takes an [`Callback`](crate::stream::callback::Callback)
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub async fn download_with_callback(&self, callback: Callback) -> Result<PathBuf> {
         self.wrap_callback(|channel| {
@@ -253,7 +237,6 @@ impl super::Stream {
     /// Attempts to downloads the [`Stream`](super::Stream)s resource.
     /// This will download the video to <video_id>.mp4 in the provided directory.
     /// Takes an [`Callback`](crate::stream::callback::Callback)
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub async fn download_to_dir_with_callback<P: AsRef<Path>>(
         &self,
@@ -268,7 +251,6 @@ impl super::Stream {
     /// Attempts to downloads the [`Stream`](super::Stream)s resource.
     /// This will download the video to the provided file path.
     /// Takes an [`Callback`](crate::stream::callback::Callback)
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub async fn download_to_with_callback<P: AsRef<Path>>(&self, path: P, callback: Callback) -> Result<()> {
         let _ = self.wrap_callback(|channel| {

@@ -34,7 +34,6 @@ use crate::{
 };
 
 #[cfg(feature = "callback")]
-#[doc(cfg(feature = "callback"))]
 pub mod callback;
 
 // todo:
@@ -129,7 +128,6 @@ impl Stream {
 // todo: blocking download
 
 #[cfg(feature = "download")]
-#[doc(cfg(feature = "download"))]
 impl Stream {
     /// The content length of the video.
     /// If the content length was not included in the [`RawFormat`], this method will make a `HEAD`
@@ -369,7 +367,6 @@ impl Stream {
 }
 
 #[cfg(all(feature = "download", feature = "blocking"))]
-#[doc(cfg(all(feature = "download", feature = "blocking")))]
 impl Stream {
     /// A synchronous wrapper around [`Stream::download`](crate::Stream::download).
     #[inline]
@@ -379,7 +376,6 @@ impl Stream {
 
     /// A synchronous wrapper around [`Stream::download_with_callback`](crate::Stream::download_with_callback).
     #[cfg(feature = "callback")]
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn blocking_download_with_callback(&self, callback: Callback) -> Result<PathBuf> {
         crate::block!(self.download_with_callback(callback))
@@ -393,7 +389,6 @@ impl Stream {
 
     /// A synchronous wrapper around [`Stream::download_to_dir_with_callback`](crate::Stream::download_to_dir_with_callback).
     #[cfg(feature = "callback")]
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn blocking_download_to_dir_with_callback<P: AsRef<Path>>(
         &self,
@@ -410,7 +405,6 @@ impl Stream {
 
     /// A synchronous wrapper around [`Stream::download_to_with_callback`](crate::Stream::download_to_with_callback).
     #[cfg(feature = "callback")]
-    #[doc(cfg(feature = "callback"))]
     pub fn blocking_download_to_with_callback<P: AsRef<Path>>(&self, path: P, callback: Callback) -> Result<()> {
         crate::block!(self.download_to_with_callback(path, callback))
     }

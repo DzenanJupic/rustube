@@ -12,7 +12,6 @@ pub mod video_details;
 pub mod streaming_data;
 pub mod playability_status;
 #[cfg(feature = "microformat")]
-#[doc(cfg(feature = "microformat"))]
 pub mod microformat;
 
 
@@ -28,7 +27,6 @@ pub struct PlayerResponse {
     // endscreen: _,
     // messages: _,
     #[cfg(feature = "microformat")]
-    #[doc(cfg(feature = "microformat"))]
     pub microformat: Option<Microformat>,
     pub playability_status: PlayabilityStatus,
     // playbackTracking: _,

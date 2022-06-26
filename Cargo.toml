@@ -51,6 +51,9 @@ env_logger = "0.9.0"
 tokio = { version = "1.12.0", features = ["full"] }
 tokio-test = "0.4.2"
 
+[build-dependencies]
+rustc_version = "0.4.0"
+
 [features]
 # By default, the minimal features for downloading a video are enabled. If you compile with default-features = false,
 # you get only the Id type as well as the Error type.

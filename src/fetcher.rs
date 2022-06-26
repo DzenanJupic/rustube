@@ -78,7 +78,6 @@ impl VideoFetcher {
     /// - When [`Id::from_raw`] fails to extracted the videos id from the url.
     /// - When [`reqwest`] fails to initialize an new [`Client`].
     #[inline]
-    #[doc(cfg(feature = "regex"))]
     #[cfg(feature = "regex")]
     pub fn from_url(url: &Url) -> crate::Result<Self> {
         let id = Id::from_raw(url.as_str())?
@@ -127,7 +126,6 @@ impl VideoFetcher {
     /// When having a good internet connection, only errors due to inaccessible videos should occur.
     /// Other errors usually mean, that YouTube changed their API, and `rustube` did not adapt to
     /// this change yet. Please feel free to open a GitHub issue if this is the case.
-    #[doc(cfg(feature = "fetch"))]
     #[cfg(feature = "fetch")]
     #[log_derive::logfn(ok = "Trace", err = "Error")]
     #[log_derive::logfn_inputs(Trace)]
@@ -173,7 +171,6 @@ impl VideoFetcher {
     /// When having a good internet connection, this method should not fail. Errors usually mean,
     /// that YouTube changed their API, and `rustube` did not adapt to this change yet. Please feel
     /// free to open a GitHub issue if this is the case.
-    #[doc(cfg(feature = "fetch"))]
     #[cfg(feature = "fetch")]
     pub async fn fetch_info(self) -> crate::Result<VideoInfo> {
         let watch_html = self.get_html(&self.watch_url).await?;
