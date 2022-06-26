@@ -1,4 +1,4 @@
-use std::lazy::SyncLazy;
+use once_cell::sync::Lazy;
 
 use regex::Regex;
 use reqwest::Client;
@@ -202,7 +202,7 @@ impl VideoFetcher {
         match playability_status {
             PlayabilityStatus::Ok { .. } => Ok(playability_status),
             PlayabilityStatus::LoginRequired { .. } if is_age_restricted => Ok(playability_status),
-            ps => Err(Error::VideoUnavailable(box ps))
+            ps => Err(Error::VideoUnavailable(Box::new(ps)))
         }
     }
 
@@ -214,13 +214,13 @@ impl VideoFetcher {
             PlayabilityStatus::Unplayable { .. } => Ok(()),
             PlayabilityStatus::LiveStreamOffline { .. } => Ok(()),
             PlayabilityStatus::LoginRequired { .. } if is_age_restricted => Ok(()),
-            ps => Err(Error::VideoUnavailable(box ps))
+            ps => Err(Error::VideoUnavailable(Box::new(ps)))
         }
     }
 
     /// Checks, whether or not the video is accessible for normal users.
     fn extract_playability_status(watch_html: &str) -> crate::Result<PlayabilityStatus> {
-        static PLAYABILITY_STATUS: SyncLazy<Regex> = SyncLazy::new(||
+        static PLAYABILITY_STATUS: Lazy<Regex> = Lazy::new(||
             Regex::new(r#"["']?playabilityStatus["']?\s*[:=]\s*"#).unwrap()
         );
 
@@ -373,7 +373,7 @@ impl VideoFetcher {
 /// Extracts whether or not a particular video is age restricted.
 #[inline]
 fn is_age_restricted(watch_html: &str) -> bool {
-    static PATTERN: SyncLazy<Regex> = SyncLazy::new(|| Regex::new("og:restrictions:age").unwrap());
+    static PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new("og:restrictions:age").unwrap());
     PATTERN.is_match(watch_html)
 }
 
@@ -395,7 +395,7 @@ fn video_info_url(video_id: Id<'_>, watch_url: &Url) -> Url {
 /// Generates the url under which the [`VideoInfo`] of an age restricted video can be requested.
 #[inline]
 fn video_info_url_age_restricted(video_id: Id<'_>, watch_url: &Url) -> Url {
-    static PATTERN: SyncLazy<Regex> = SyncLazy::new(|| Regex::new(r#""sts"\s*:\s*(\d+)"#).unwrap());
+    static PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r#""sts"\s*:\s*(\d+)"#).unwrap());
 
     let sts = match PATTERN.captures(watch_url.as_str()) {
         Some(c) => c.get(1).unwrap().as_str(),
@@ -438,7 +438,7 @@ fn js_url(html: &str) -> crate::Result<(Url, Option<PlayerResponse>)> {
 /// Extracts the [`PlayerResponse`] from the watch html.
 #[inline]
 fn get_ytplayer_config(html: &str) -> crate::Result<PlayerResponse> {
-    static CONFIG_PATTERNS: SyncLazy<[Regex; 3]> = SyncLazy::new(|| [
+    static CONFIG_PATTERNS: Lazy<[Regex; 3]> = Lazy::new(|| [
         Regex::new(r"ytplayer\.config\s*=\s*").unwrap(),
         Regex::new(r"ytInitialPlayerResponse\s*=\s*").unwrap(),
         // fixme
@@ -523,7 +523,7 @@ fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
 /// Extracts the JavaScript used for descrambling from the watch html.
 #[inline]
 fn get_ytplayer_js(html: &str) -> crate::Result<&str> {
-    static JS_URL_PATTERNS: SyncLazy<Regex> = SyncLazy::new(||
+    static JS_URL_PATTERNS: Lazy<Regex> = Lazy::new(||
         Regex::new(r"(/s/player/[\w\d]+/[\w\d_/.]+/base\.js)").unwrap()
     );
 

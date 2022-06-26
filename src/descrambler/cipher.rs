@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::lazy::SyncLazy;
+use once_cell::sync::Lazy;
 
 use regex::Regex;
 
@@ -7,7 +7,7 @@ use crate::{Error, Result, TryCollect};
 
 pub(crate) type TransformerFn = (fn(&mut Vec<u8>, Option<isize>), &'static str);
 
-static JS_FUNCTION_REGEX: SyncLazy<Regex> = SyncLazy::new(||
+static JS_FUNCTION_REGEX: Lazy<Regex> = Lazy::new(||
     Regex::new(r"\w+\.(\w+)\(\w,(\d+)\)").unwrap()
 );
 
@@ -152,7 +152,7 @@ fn get_transform_plan(js: &str) -> Result<Vec<String>> {
 }
 
 fn get_initial_function_name(js: &str) -> Result<&str> {
-    static FUNCTION_PATTERNS: SyncLazy<[Regex; 12]> = SyncLazy::new(|| [
+    static FUNCTION_PATTERNS: Lazy<[Regex; 12]> = Lazy::new(|| [
         Regex::new(r"\b[cs]\s*&&\s*[adf]\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(").unwrap(),
         Regex::new(r"\b[a-zA-Z0-9]+\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(").unwrap(),
         Regex::new(r#"(?:\b|[^a-zA-Z0-9$])(?P<sig>[a-zA-Z0-9$]{2})\s*=\s*function\(\s*a\s*\)\s*\{\s*a\s*=\s*a\.split\(\s*""\s*\)"#).unwrap(),
@@ -198,7 +198,7 @@ fn get_transform_map(js: &str, var: &str) -> Result<HashMap<String, TransformerF
 
 #[allow(clippy::ptr_arg)]
 fn map_functions(js_func: &str) -> Result<TransformerFn> {
-    static MAPPER: SyncLazy<[(Regex, TransformerFn); 4]> = SyncLazy::new(|| [
+    static MAPPER: Lazy<[(Regex, TransformerFn); 4]> = Lazy::new(|| [
         // function(a){a.reverse()}
         (Regex::new(r"\{\w\.reverse\(\)}").unwrap(), (reverse, "reverse")),
         // function(a,b){a.splice(0,b)}

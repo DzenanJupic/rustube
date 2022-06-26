@@ -39,7 +39,7 @@
 //! and block on the provided future (You can also use it for other asynchronous stuff, not related 
 //! to `rustube`).
 
-use std::lazy::SyncLazy;
+use once_cell::sync::Lazy;
 
 use tokio::runtime::Runtime;
 
@@ -57,7 +57,7 @@ pub use fetcher::VideoFetcher;
 pub use video::Video;
 
 /// A [`Runtime`](tokio::runtime::Runtime) for executing asynchronous code. 
-pub static RT: SyncLazy<Runtime> = SyncLazy::new(||
+pub static RT: Lazy<Runtime> = Lazy::new(||
     Runtime::new().expect("Unable to start the tokio Runtime")
 );
 

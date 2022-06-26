@@ -71,10 +71,10 @@ impl StreamFilter {
             .map(|q| stream.quality == q)
             .unwrap_or(true);
         let video_quality_ok = self.video_quality
-            .map(|ref q| stream.quality_label.contains(q))
+            .map(|ref q| stream.quality_label.as_ref() == Some(q))
             .unwrap_or(true);
         let audio_quality_ok = self.audio_quality
-            .map(|ref q| stream.audio_quality.contains(q))
+            .map(|ref q| stream.audio_quality.as_ref() == Some(q))
             .unwrap_or(true);
 
         let quality_ok = quality_ok && video_quality_ok && audio_quality_ok;

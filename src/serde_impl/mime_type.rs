@@ -1,4 +1,4 @@
-use std::lazy::SyncLazy;
+use once_cell::sync::Lazy;
 use std::str::FromStr;
 
 use mime::Mime;
@@ -11,7 +11,7 @@ use crate::video_info::player_response::streaming_data::MimeType;
 
 pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<MimeType, <D as Deserializer<'de>>::Error> where
     D: Deserializer<'de> {
-    static PATTERN: SyncLazy<Regex> = SyncLazy::new(||
+    static PATTERN: Lazy<Regex> = Lazy::new(||
         Regex::new(r#"(\w+/\w+);\scodecs="([a-zA-Z-0-9.,\s]*)""#).unwrap()
     );
 

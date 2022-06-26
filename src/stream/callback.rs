@@ -165,7 +165,7 @@ impl Callback {
     #[inline]
     #[must_use]
     pub fn connect_on_progress_closure_async<Fut: Future<Output=()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static>(mut self, closure: F) -> Self {
-        self.on_progress = OnProgressType::AsyncClosure(box move |arg| closure(arg).boxed());
+        self.on_progress = OnProgressType::AsyncClosure(Box::new(move |arg| closure(arg).boxed()));
         self
     }
 
@@ -175,7 +175,7 @@ impl Callback {
     #[inline]
     #[must_use]
     pub fn connect_on_progress_closure_async_slow<Fut: Future<Output=()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static + Sync + Send>(mut self, closure: F) -> Self {
-        self.on_progress = OnProgressType::SlowAsyncClosure(box move |arg| closure(arg).boxed());
+        self.on_progress = OnProgressType::SlowAsyncClosure(Box::new(move |arg| closure(arg).boxed()));
         self
     }
 
@@ -227,7 +227,7 @@ impl Callback {
     #[inline]
     #[must_use]
     pub fn connect_on_complete_closure_async<Fut: Future<Output=()> + Send + 'static, F: Fn(Option<PathBuf>) -> Fut + 'static>(mut self, closure: F) -> Self {
-        self.on_complete = OnCompleteType::AsyncClosure(box move |arg| closure(arg).boxed());
+        self.on_complete = OnCompleteType::AsyncClosure(Box::new(move |arg| closure(arg).boxed()));
         self
     }
 }

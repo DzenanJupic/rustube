@@ -110,7 +110,7 @@ impl Stream {
             high_replication: raw_format.high_replication,
             index_range: raw_format.index_range,
             init_range: raw_format.init_range,
-            is_otf: raw_format.format_type.contains(&FormatType::Otf),
+            is_otf: matches!(raw_format.format_type, Some(FormatType::Otf)),
             itag: raw_format.itag,
             last_modified: raw_format.last_modified,
             loudness_db: raw_format.loudness_db,
@@ -220,7 +220,7 @@ impl Stream {
                 log::debug!("downloaded stream {:?}", &self);
                 Ok(())
             }
-            Err(Error::Request(e)) if e.status().contains(&reqwest::StatusCode::NOT_FOUND) => {
+            Err(Error::Request(e)) if matches!(e.status(), Some(reqwest::StatusCode::NOT_FOUND)) => {
                 log::error!("failed to download {}: {:?}", self.video_details.video_id, e);
                 log::info!("try to download {} using sequenced download", self.video_details.video_id);
                 // Some adaptive streams need to be requested with sequence numbers

@@ -1,5 +1,3 @@
-#![feature(option_result_contains)]
-
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
