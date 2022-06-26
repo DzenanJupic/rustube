@@ -9,7 +9,7 @@ missing_debug_implementations,
 rust_2018_idioms,
 unreachable_pub
 )]
-#![deny(broken_intra_doc_links)]
+#![deny(rustdoc::broken_intra_doc_links)]
 #![doc(test(no_crate_inject))]
 
 #![cfg_attr(not(any(feature = "std", feature = "regex")), no_std)]
