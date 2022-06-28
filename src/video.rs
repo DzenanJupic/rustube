@@ -98,7 +98,7 @@ impl Video {
     /// - When [`VideoDescrambler::descramble`](crate::VideoDescrambler::descramble) fails.
     #[inline]
     #[cfg(all(feature = "download", feature = "regex"))]
-        pub async fn from_url(url: &url::Url) -> crate::Result<Self> {
+    pub async fn from_url(url: &url::Url) -> crate::Result<Self> {
         crate::VideoFetcher::from_url(url)?
             .fetch()
             .await?
@@ -111,7 +111,7 @@ impl Video {
     /// - When [`VideoDescrambler::descramble`](crate::VideoDescrambler::descramble) fails.
     #[inline]
     #[cfg(feature = "download")]
-        pub async fn from_id(id: crate::IdBuf) -> crate::Result<Self> {
+    pub async fn from_id(id: crate::IdBuf) -> crate::Result<Self> {
         crate::VideoFetcher::from_id(id)?
             .fetch()
             .await?
