@@ -1,3 +1,15 @@
+## 0.4.0
+
+### Changed
+
+- type of `ID_PATTERNS`, `WATCH_URL_PATTERN`, `SHORTS_URL_PATTERN`, `EMBED_URL_PATTERN`, `SHARE_URL_PATTERN`,
+  `ID_PATTERN` in `crate::id`, and `RT` in `crate::blocking` to use `once_cell::sync::Lazy` instead of
+  `std::lazy::Sync::Lazy`
+
+### Removed
+
+- the need for a nightly compiler
+
 ## 0.3.8
 
 ### Fixed
