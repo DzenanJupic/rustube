@@ -1,4 +1,4 @@
-use std::lazy::SyncLazy;
+use once_cell::sync::Lazy;
 
 use regex::Regex;
 use reqwest::Client;
@@ -78,7 +78,6 @@ impl VideoFetcher {
     /// - When [`Id::from_raw`] fails to extracted the videos id from the url.
     /// - When [`reqwest`] fails to initialize an new [`Client`].
     #[inline]
-    #[doc(cfg(feature = "regex"))]
     #[cfg(feature = "regex")]
     pub fn from_url(url: &Url) -> crate::Result<Self> {
         let id = Id::from_raw(url.as_str())?
@@ -127,7 +126,6 @@ impl VideoFetcher {
     /// When having a good internet connection, only errors due to inaccessible videos should occur.
     /// Other errors usually mean, that YouTube changed their API, and `rustube` did not adapt to
     /// this change yet. Please feel free to open a GitHub issue if this is the case.
-    #[doc(cfg(feature = "fetch"))]
     #[cfg(feature = "fetch")]
     #[log_derive::logfn(ok = "Trace", err = "Error")]
     #[log_derive::logfn_inputs(Trace)]
@@ -173,7 +171,6 @@ impl VideoFetcher {
     /// When having a good internet connection, this method should not fail. Errors usually mean,
     /// that YouTube changed their API, and `rustube` did not adapt to this change yet. Please feel
     /// free to open a GitHub issue if this is the case.
-    #[doc(cfg(feature = "fetch"))]
     #[cfg(feature = "fetch")]
     pub async fn fetch_info(self) -> crate::Result<VideoInfo> {
         let watch_html = self.get_html(&self.watch_url).await?;
@@ -202,7 +199,7 @@ impl VideoFetcher {
         match playability_status {
             PlayabilityStatus::Ok { .. } => Ok(playability_status),
             PlayabilityStatus::LoginRequired { .. } if is_age_restricted => Ok(playability_status),
-            ps => Err(Error::VideoUnavailable(box ps))
+            ps => Err(Error::VideoUnavailable(Box::new(ps)))
         }
     }
 
@@ -214,13 +211,13 @@ impl VideoFetcher {
             PlayabilityStatus::Unplayable { .. } => Ok(()),
             PlayabilityStatus::LiveStreamOffline { .. } => Ok(()),
             PlayabilityStatus::LoginRequired { .. } if is_age_restricted => Ok(()),
-            ps => Err(Error::VideoUnavailable(box ps))
+            ps => Err(Error::VideoUnavailable(Box::new(ps)))
         }
     }
 
     /// Checks, whether or not the video is accessible for normal users.
     fn extract_playability_status(watch_html: &str) -> crate::Result<PlayabilityStatus> {
-        static PLAYABILITY_STATUS: SyncLazy<Regex> = SyncLazy::new(||
+        static PLAYABILITY_STATUS: Lazy<Regex> = Lazy::new(||
             Regex::new(r#"["']?playabilityStatus["']?\s*[:=]\s*"#).unwrap()
         );
 
@@ -373,7 +370,7 @@ impl VideoFetcher {
 /// Extracts whether or not a particular video is age restricted.
 #[inline]
 fn is_age_restricted(watch_html: &str) -> bool {
-    static PATTERN: SyncLazy<Regex> = SyncLazy::new(|| Regex::new("og:restrictions:age").unwrap());
+    static PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new("og:restrictions:age").unwrap());
     PATTERN.is_match(watch_html)
 }
 
@@ -395,7 +392,7 @@ fn video_info_url(video_id: Id<'_>, watch_url: &Url) -> Url {
 /// Generates the url under which the [`VideoInfo`] of an age restricted video can be requested.
 #[inline]
 fn video_info_url_age_restricted(video_id: Id<'_>, watch_url: &Url) -> Url {
-    static PATTERN: SyncLazy<Regex> = SyncLazy::new(|| Regex::new(r#""sts"\s*:\s*(\d+)"#).unwrap());
+    static PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r#""sts"\s*:\s*(\d+)"#).unwrap());
 
     let sts = match PATTERN.captures(watch_url.as_str()) {
         Some(c) => c.get(1).unwrap().as_str(),
@@ -438,7 +435,7 @@ fn js_url(html: &str) -> crate::Result<(Url, Option<PlayerResponse>)> {
 /// Extracts the [`PlayerResponse`] from the watch html.
 #[inline]
 fn get_ytplayer_config(html: &str) -> crate::Result<PlayerResponse> {
-    static CONFIG_PATTERNS: SyncLazy<[Regex; 3]> = SyncLazy::new(|| [
+    static CONFIG_PATTERNS: Lazy<[Regex; 3]> = Lazy::new(|| [
         Regex::new(r"ytplayer\.config\s*=\s*").unwrap(),
         Regex::new(r"ytInitialPlayerResponse\s*=\s*").unwrap(),
         // fixme
@@ -523,7 +520,7 @@ fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
 /// Extracts the JavaScript used for descrambling from the watch html.
 #[inline]
 fn get_ytplayer_js(html: &str) -> crate::Result<&str> {
-    static JS_URL_PATTERNS: SyncLazy<Regex> = SyncLazy::new(||
+    static JS_URL_PATTERNS: Lazy<Regex> = Lazy::new(||
         Regex::new(r"(/s/player/[\w\d]+/[\w\d_/.]+/base\.js)").unwrap()
     );
 

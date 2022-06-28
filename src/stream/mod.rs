@@ -34,7 +34,6 @@ use crate::{
 };
 
 #[cfg(feature = "callback")]
-#[doc(cfg(feature = "callback"))]
 pub mod callback;
 
 // todo:
@@ -110,7 +109,7 @@ impl Stream {
             high_replication: raw_format.high_replication,
             index_range: raw_format.index_range,
             init_range: raw_format.init_range,
-            is_otf: raw_format.format_type.contains(&FormatType::Otf),
+            is_otf: matches!(raw_format.format_type, Some(FormatType::Otf)),
             itag: raw_format.itag,
             last_modified: raw_format.last_modified,
             loudness_db: raw_format.loudness_db,
@@ -129,7 +128,6 @@ impl Stream {
 // todo: blocking download
 
 #[cfg(feature = "download")]
-#[doc(cfg(feature = "download"))]
 impl Stream {
     /// The content length of the video.
     /// If the content length was not included in the [`RawFormat`], this method will make a `HEAD`
@@ -220,7 +218,7 @@ impl Stream {
                 log::debug!("downloaded stream {:?}", &self);
                 Ok(())
             }
-            Err(Error::Request(e)) if e.status().contains(&reqwest::StatusCode::NOT_FOUND) => {
+            Err(Error::Request(e)) if matches!(e.status(), Some(reqwest::StatusCode::NOT_FOUND)) => {
                 log::error!("failed to download {}: {:?}", self.video_details.video_id, e);
                 log::info!("try to download {} using sequenced download", self.video_details.video_id);
                 // Some adaptive streams need to be requested with sequence numbers
@@ -369,7 +367,6 @@ impl Stream {
 }
 
 #[cfg(all(feature = "download", feature = "blocking"))]
-#[doc(cfg(all(feature = "download", feature = "blocking")))]
 impl Stream {
     /// A synchronous wrapper around [`Stream::download`](crate::Stream::download).
     #[inline]
@@ -379,7 +376,6 @@ impl Stream {
 
     /// A synchronous wrapper around [`Stream::download_with_callback`](crate::Stream::download_with_callback).
     #[cfg(feature = "callback")]
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn blocking_download_with_callback(&self, callback: Callback) -> Result<PathBuf> {
         crate::block!(self.download_with_callback(callback))
@@ -393,7 +389,6 @@ impl Stream {
 
     /// A synchronous wrapper around [`Stream::download_to_dir_with_callback`](crate::Stream::download_to_dir_with_callback).
     #[cfg(feature = "callback")]
-    #[doc(cfg(feature = "callback"))]
     #[inline]
     pub fn blocking_download_to_dir_with_callback<P: AsRef<Path>>(
         &self,
@@ -410,7 +405,6 @@ impl Stream {
 
     /// A synchronous wrapper around [`Stream::download_to_with_callback`](crate::Stream::download_to_with_callback).
     #[cfg(feature = "callback")]
-    #[doc(cfg(feature = "callback"))]
     pub fn blocking_download_to_with_callback<P: AsRef<Path>>(&self, path: P, callback: Callback) -> Result<()> {
         crate::block!(self.download_to_with_callback(path, callback))
     }
