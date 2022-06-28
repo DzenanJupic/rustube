@@ -17,9 +17,6 @@ A complete (WIP), and easy to use YouTube downloader.
 > **Note**: 0.3.5 is a temporary fix to adapt to changes in the YouTube api (#38). Unfortunately this fix does not
 > work for age restricted videos. We are working on a fix for that in #39.
 
-> **Note**: `rustube` is still in development and may see breaking changes! It currently still requires a nightly
-> compiler. This will change over time.
-
 ## Overview
 
 - [Roadmap](#roadmap)
@@ -77,16 +74,13 @@ For more examples, an overview of the blocking API have a look at the [API docum
 
 ## CLI
 
-> **Note**: Currently, `rustube-cli` still requires a nightly compiler. This, as well as the commands, the flags, and
-> the output, will likely change over time.
-
 `rustube` comes with a CLI, `rustube-cli`, so you can download your favorite YouTube videos without having to write a
 single line of code.
 
 To install it, simply run
 
 ```
-cargo +nightly install rustube-cli
+cargo install rustube-cli
 ```
 
 After you successfully installed `rustube-cli`, you have access to the command `rustube`
