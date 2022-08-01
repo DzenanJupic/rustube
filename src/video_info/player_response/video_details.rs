@@ -46,6 +46,8 @@ pub enum LatencyClass {
     Low,
     #[serde(rename = "MDE_STREAM_OPTIMIZATIONS_RENDERER_LATENCY_NORMAL")]
     Normal,
+    #[serde(rename = "MDE_STREAM_OPTIMIZATIONS_RENDERER_LATENCY_ULTRA_LOW")]
+    UltraLow,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
