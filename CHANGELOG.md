@@ -1,3 +1,14 @@
+## 0.5.0
+
+### Changed
+
+- The type of `Stream.last_modified` and `RawFormat.last_modified` changed from `DateTime<Utc>`
+  to `Option<DateTime<Utc>>`
+
+### Added
+
+- New `LatencyClass` variant `UltraLow` (`MDE_STREAM_OPTIMIZATIONS_RENDERER_LATENCY_ULTRA_LOW`)
+
 ## 0.4.0
 
 ### Changed
