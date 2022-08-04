@@ -51,8 +51,8 @@ pub struct RawFormat {
     #[serde_as(as = "Option<crate::serde_impl::range::Range>")]
     pub init_range: Option<Range<u64>>,
     pub itag: u64,
-    #[serde(with = "crate::serde_impl::unix_timestamp_micro_secs")]
-    pub last_modified: DateTime<Utc>,
+    #[serde(default, with = "crate::serde_impl::unix_timestamp_micro_secs::option")]
+    pub last_modified: Option<DateTime<Utc>>,
     pub loudness_db: Option<f64>,
     #[serde(with = "crate::serde_impl::mime_type")]
     pub mime_type: MimeType,
@@ -111,7 +111,7 @@ pub enum MatrixCoefficients {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MimeType {
     pub mime: Mime,
-    // todo: make codec an enum 
+    // todo: make codec an enum
     pub codecs: Vec<String>,
 }
 

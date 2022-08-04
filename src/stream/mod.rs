@@ -71,7 +71,7 @@ pub struct Stream {
     pub init_range: Option<Range<u64>>,
     pub is_otf: bool,
     pub itag: u64,
-    pub last_modified: DateTime<Utc>,
+    pub last_modified: Option<DateTime<Utc>>,
     pub loudness_db: Option<f64>,
     pub projection_type: ProjectionType,
     pub quality: Quality,

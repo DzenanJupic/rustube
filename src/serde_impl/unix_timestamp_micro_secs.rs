@@ -22,3 +22,21 @@ pub(crate) fn serialize<S>(time: &DateTime<Utc>, serializer: S) -> Result<S::Ok,
     let micro_seconds: i64 = time.timestamp_millis() * 1000;
     JsonString::serialize_as(&micro_seconds, serializer)
 }
+
+pub(crate) mod option {
+    use super::*;
+
+    pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, <D as Deserializer<'de>>::Error> where
+        D: Deserializer<'de> {
+        super::deserialize(deserializer).map(Some)
+    }
+
+    pub(crate) fn serialize<S>(time: &Option<DateTime<Utc>>, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer {
+        match time {
+            Some(dt) => super::serialize(dt, serializer),
+            None => serializer.serialize_none(),
+        }
+    }
+}
