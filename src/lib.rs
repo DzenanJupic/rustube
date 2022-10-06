@@ -2,12 +2,16 @@
 // Credits: https://blog.wnut.pw/2020/03/24/documentation-and-unstable-rustdoc-features/
 #![cfg_attr(all(doc, CHANNEL_NIGHTLY), feature(doc_auto_cfg))]
 
-#![allow(clippy::nonstandard_macro_braces, clippy::derive_partial_eq_without_eq)]
+#![allow(
+    clippy::nonstandard_macro_braces,
+    clippy::derive_partial_eq_without_eq,
+    unreachable_pub,
+)]
 #![warn(
-missing_debug_implementations,
-// missing_docs,
-rust_2018_idioms,
-unreachable_pub
+    missing_debug_implementations,
+    // missing_docs,
+    rust_2018_idioms,
+    unreachable_pub
 )]
 #![deny(rustdoc::broken_intra_doc_links)]
 #![doc(test(no_crate_inject))]
