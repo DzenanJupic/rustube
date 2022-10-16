@@ -9,10 +9,10 @@ use tokio::sync::mpsc;
 
 use crate::Result;
 
-pub type OnProgressClosure = Box<dyn Fn(CallbackArguments)>;
-pub type OnProgressAsyncClosure = Box<dyn Fn(CallbackArguments) -> Pin<Box<dyn Future<Output=()>>>>;
-pub type OnCompleteClosure = Box<dyn Fn(Option<PathBuf>)>;
-pub type OnCompleteAsyncClosure = Box<dyn Fn(Option<PathBuf>) -> Pin<Box<dyn Future<Output=()>>>>;
+pub type OnProgressClosure = Box<dyn Fn(CallbackArguments) + Send>;
+pub type OnProgressAsyncClosure = Box<dyn Fn(CallbackArguments) -> Pin<Box<dyn Future<Output=()> + Send>> + Send + Sync>;
+pub type OnCompleteClosure = Box<dyn Fn(Option<PathBuf>) + Send>;
+pub type OnCompleteAsyncClosure = Box<dyn Fn(Option<PathBuf>) -> Pin<Box<dyn Future<Output=()> + Send>> + Send + Sync>;
 
 #[derive(Debug)]
 pub(crate) enum InternalSignal {
@@ -131,7 +131,7 @@ impl Callback {
     /// [Callback::connect_on_progress_closure_slow](crate::stream::callback::Callback::connect_on_progress_closure_slow)
     #[inline]
     #[must_use]
-    pub fn connect_on_progress_closure(mut self, closure: impl Fn(CallbackArguments) + 'static) -> Self {
+    pub fn connect_on_progress_closure(mut self, closure: impl Fn(CallbackArguments) + Send + 'static) -> Self {
         self.on_progress = OnProgressType::Closure(Box::new(closure));
         self
     }
@@ -140,7 +140,7 @@ impl Callback {
     /// more seldom, around once for every MB downloaded.
     #[inline]
     #[must_use]
-    pub fn connect_on_progress_closure_slow(mut self, closure: impl Fn(CallbackArguments) + 'static) -> Self {
+    pub fn connect_on_progress_closure_slow(mut self, closure: impl Fn(CallbackArguments) + Send + 'static) -> Self {
         self.on_progress = OnProgressType::SlowClosure(Box::new(closure));
         self
     }
@@ -154,7 +154,7 @@ impl Callback {
     /// [Callback::connect_on_progress_closure_async_slow](crate::stream::callback::Callback::connect_on_progress_closure_async_slow)
     #[inline]
     #[must_use]
-    pub fn connect_on_progress_closure_async<Fut: Future<Output=()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static>(mut self, closure: F) -> Self {
+    pub fn connect_on_progress_closure_async<Fut: Future<Output=()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + Send + Sync + 'static>(mut self, closure: F) -> Self {
         self.on_progress = OnProgressType::AsyncClosure(Box::new(move |arg| closure(arg).boxed()));
         self
     }
@@ -163,7 +163,7 @@ impl Callback {
     /// more seldom, around once for every MB downloaded.
     #[inline]
     #[must_use]
-    pub fn connect_on_progress_closure_async_slow<Fut: Future<Output=()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + 'static + Sync + Send>(mut self, closure: F) -> Self {
+    pub fn connect_on_progress_closure_async_slow<Fut: Future<Output=()> + Send + 'static, F: Fn(CallbackArguments) -> Fut + Send + Sync + 'static>(mut self, closure: F) -> Self {
         self.on_progress = OnProgressType::SlowAsyncClosure(Box::new(move |arg| closure(arg).boxed()));
         self
     }
@@ -203,7 +203,7 @@ impl Callback {
     /// Attach a closure to be executed on complete
     #[inline]
     #[must_use]
-    pub fn connect_on_complete_closure(mut self, closure: impl Fn(Option<PathBuf>) + 'static) -> Self {
+    pub fn connect_on_complete_closure(mut self, closure: impl Fn(Option<PathBuf>) + Send + 'static) -> Self {
         self.on_complete = OnCompleteType::Closure(Box::new(closure));
         self
     }
@@ -211,7 +211,7 @@ impl Callback {
     /// Attach a async closure to be executed on complete
     #[inline]
     #[must_use]
-    pub fn connect_on_complete_closure_async<Fut: Future<Output=()> + Send + 'static, F: Fn(Option<PathBuf>) -> Fut + 'static>(mut self, closure: F) -> Self {
+    pub fn connect_on_complete_closure_async<Fut: Future<Output=()> + Send + 'static, F: Fn(Option<PathBuf>) -> Fut + Send + Sync + 'static>(mut self, closure: F) -> Self {
         self.on_complete = OnCompleteType::AsyncClosure(Box::new(move |arg| closure(arg).boxed()));
         self
     }
@@ -259,10 +259,10 @@ impl super::Stream {
         Ok(())
     }
 
-    async fn wrap_callback<F: Future<Output = Result<PathBuf>>>(
+    async fn wrap_callback<F: Future<Output=Result<PathBuf>>>(
         &self,
-        to_wrap: impl FnOnce(Option<InternalSender>)-> F,
-        mut callback: Callback
+        to_wrap: impl FnOnce(Option<InternalSender>) -> F,
+        mut callback: Callback,
     ) -> Result<PathBuf> {
         let wrap_fut = to_wrap(Some(callback.internal_sender.clone()));
         let aid_fut = self.on_progress(
