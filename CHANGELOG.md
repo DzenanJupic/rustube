@@ -1,3 +1,9 @@
+## 0.6.0
+
+## Changed
+
+- `Callback` is not `Send` and also requires the callback closures it stores to by `Send + Sync`
+
 ## 0.5.0
 
 ### Changed
