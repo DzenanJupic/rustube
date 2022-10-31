@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 
 use crate::Result;
 
-pub type OnProgressClosure = Box<dyn Fn(CallbackArguments) + Send>;
+pub type OnProgressClosure = Box<dyn FnMut(CallbackArguments) + Send>;
 pub type OnProgressAsyncClosure = Box<dyn Fn(CallbackArguments) -> Pin<Box<dyn Future<Output=()> + Send>> + Send + Sync>;
 pub type OnCompleteClosure = Box<dyn Fn(Option<PathBuf>) + Send>;
 pub type OnCompleteAsyncClosure = Box<dyn Fn(Option<PathBuf>) -> Pin<Box<dyn Future<Output=()> + Send>> + Send + Sync>;
@@ -131,7 +131,7 @@ impl Callback {
     /// [Callback::connect_on_progress_closure_slow](crate::stream::callback::Callback::connect_on_progress_closure_slow)
     #[inline]
     #[must_use]
-    pub fn connect_on_progress_closure(mut self, closure: impl Fn(CallbackArguments) + Send + 'static) -> Self {
+    pub fn connect_on_progress_closure(mut self, closure: impl FnMut(CallbackArguments) + Send + 'static) -> Self {
         self.on_progress = OnProgressType::Closure(Box::new(closure));
         self
     }
@@ -284,7 +284,7 @@ impl super::Stream {
         let content_length = self.content_length().await.ok();
         match on_progress {
             OnProgressType::None => {}
-            OnProgressType::Closure(closure) => {
+            OnProgressType::Closure(mut closure) => {
                 while let Some(data) = receiver.recv().await {
                     match data {
                         InternalSignal::Value(data) => {
@@ -329,7 +329,7 @@ impl super::Stream {
                     }
                 }
             }
-            OnProgressType::SlowClosure(closure) => {
+            OnProgressType::SlowClosure(mut closure) => {
                 while let Some(data) = receiver.recv().await {
                     match data {
                         InternalSignal::Value(data) => {

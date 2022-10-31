@@ -320,18 +320,22 @@ impl Stream {
         // Counter will be 0 if callback is not enabled
         while let Some(chunk) = stream.next().await {
             let chunk = chunk?;
-            log::trace!("received {} byte chunk ", chunk.len());
+            let len = chunk.len();
+            log::trace!("received {} byte chunk ", len);
 
-            file
-                .write_all(&chunk)
-                .await?;
+            file.write_all(&chunk).await?;
             #[cfg(feature = "callback")]
             if let Some(channel) = &channel {
                 // network chunks of ~10kb size
-                counter += chunk.len();
+                counter += len;
                 // Will abort if the receiver is closed
                 // Will ignore if the channel is full and thus not slow down the download
-                if let Err(TrySendError::Closed(_)) = channel.try_send(InternalSignal::Value(counter)) {
+                if let Err(TrySendError::Closed(_)) =
+                    //channel.try_send(InternalSignal::Value(counter))
+
+                    // send current chunk length to subs
+                    channel.try_send(InternalSignal::Value(len))
+                {
                     return Err(Error::ChannelClosed);
                 }
             }

@@ -5,6 +5,7 @@ use clap::Parser;
 
 use args::DownloadArgs;
 use args::StreamFilter;
+use rustube::Callback;
 use rustube::{Error, Id, IdBuf, Stream, Video, VideoFetcher, VideoInfo};
 
 use crate::args::{CheckArgs, Command, FetchArgs};
@@ -48,7 +49,10 @@ async fn check(args: CheckArgs) -> Result<()> {
     let (video_info, streams) = get_streams(id, &args.stream_filter).await?;
     let video_serializer = VideoSerializer::new(video_info, streams, args.output.output_level);
 
-    let output = args.output.output_format.serialize_output(&video_serializer)?;
+    let output = args
+        .output
+        .output_format
+        .serialize_output(&video_serializer)?;
     println!("{}", output);
 
     Ok(())
@@ -59,22 +63,36 @@ async fn download(args: DownloadArgs) -> Result<()> {
 
     let id = args.identifier.id()?;
     let (video_info, stream) = get_stream(id.as_owned(), args.stream_filter).await?;
-    let download_path = download_path(
-        args.filename,
-        stream.mime.subtype().as_str(),
-        args.dir,
-        id,
-    );
+    let download_path = download_path(args.filename, stream.mime.subtype().as_str(), args.dir, id);
 
-    stream.download_to(download_path).await?;
+    // init CLI progress bar
+    let mut pb = pbr::ProgressBar::new(stream.content_length().await?);
+    pb.format("╢▌▌░╟");
 
-    let video_serializer = VideoSerializer::new(
-        video_info,
-        std::iter::once(stream),
-        args.output.output_level,
-    );
-    let output = args.output.output_format.serialize_output(&video_serializer)?;
-    println!("{}", output);
+    // handle download progress updates
+    let mut callback = Callback::new();
+    callback = callback.connect_on_progress_closure( move |cargs| {
+        // update progress bar
+        pb.add(cargs.current_chunk as u64);
+    });
+
+    let output_level = args.output.output_level;
+    let output = args.output;
+    let handle = std::thread::spawn(move || {
+        // TODO handle result
+        let _ = stream.blocking_download_to_with_callback(download_path, callback);
+
+        let video_serializer = VideoSerializer::new(
+            video_info,
+            std::iter::once(stream),
+            output_level,
+        );
+        let output = output.output_format.serialize_output(&video_serializer).unwrap();
+        println!("{}", output);
+    });
+
+    // wait for download to finish
+    let _ = handle.join();
 
     Ok(())
 }
@@ -83,9 +101,7 @@ async fn fetch(args: FetchArgs) -> Result<()> {
     args.logging.init_logger();
 
     let id = args.identifier.id()?;
-    let video_info = rustube::VideoFetcher::from_id(id)?
-        .fetch_info()
-        .await?;
+    let video_info = rustube::VideoFetcher::from_id(id)?.fetch_info().await?;
 
     let output = args.output.output_format.serialize_output(&video_info)?;
     println!("{}", output);
@@ -93,10 +109,7 @@ async fn fetch(args: FetchArgs) -> Result<()> {
     Ok(())
 }
 
-async fn get_stream(
-    id: IdBuf,
-    stream_filter: StreamFilter,
-) -> Result<(VideoInfo, Stream)> {
+async fn get_stream(id: IdBuf, stream_filter: StreamFilter) -> Result<(VideoInfo, Stream)> {
     let (video_info, streams) = get_streams(id, &stream_filter).await?;
 
     let stream = streams
@@ -110,10 +123,8 @@ async fn get_stream(
 async fn get_streams(
     id: IdBuf,
     stream_filter: &'_ StreamFilter,
-) -> Result<(VideoInfo, impl Iterator<Item=Stream> + '_)> {
-    let (video_info, streams) = get_video(id)
-        .await?
-        .into_parts();
+) -> Result<(VideoInfo, impl Iterator<Item = Stream> + '_)> {
+    let (video_info, streams) = get_video(id).await?.into_parts();
 
     let streams = streams
         .into_iter()
@@ -131,9 +142,14 @@ async fn get_video(id: IdBuf) -> Result<Video> {
         .context("Could not descramble the video information")
 }
 
-pub fn download_path(filename: Option<PathBuf>, extension: &str, dir: Option<PathBuf>, video_id: Id<'_>) -> PathBuf {
-    let filename = filename
-        .unwrap_or_else(|| format!("{}.{}", video_id.as_str(), extension).into());
+pub fn download_path(
+    filename: Option<PathBuf>,
+    extension: &str,
+    dir: Option<PathBuf>,
+    video_id: Id<'_>,
+) -> PathBuf {
+    let filename =
+        filename.unwrap_or_else(|| format!("{}.{}", video_id.as_str(), extension).into());
 
     let mut path = dir.unwrap_or_else(PathBuf::new);
 
