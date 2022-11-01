@@ -67,6 +67,7 @@ async fn download(args: DownloadArgs) -> Result<()> {
 
     // init CLI progress bar
     let mut pb = pbr::ProgressBar::new(stream.content_length().await?);
+    pb.set_units(pbr::Units::Bytes);
     pb.format("╢▌▌░╟");
 
     // handle download progress updates
