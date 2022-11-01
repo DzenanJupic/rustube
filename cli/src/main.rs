@@ -71,9 +71,11 @@ async fn download(args: DownloadArgs) -> Result<()> {
 
     // handle download progress updates
     let mut callback = Callback::new();
+    let mut counter = 0;
     callback = callback.connect_on_progress_closure( move |cargs| {
         // update progress bar
-        pb.add(cargs.current_chunk as u64);
+        pb.add(cargs.current_chunk.saturating_sub(counter) as u64);
+        counter = cargs.current_chunk;
     });
 
     let output_level = args.output.output_level;

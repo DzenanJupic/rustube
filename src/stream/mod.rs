@@ -331,10 +331,7 @@ impl Stream {
                 // Will abort if the receiver is closed
                 // Will ignore if the channel is full and thus not slow down the download
                 if let Err(TrySendError::Closed(_)) =
-                    //channel.try_send(InternalSignal::Value(counter))
-
-                    // send current chunk length to subs
-                    channel.try_send(InternalSignal::Value(len))
+                    channel.try_send(InternalSignal::Value(counter))
                 {
                     return Err(Error::ChannelClosed);
                 }
