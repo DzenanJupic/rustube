@@ -5,8 +5,8 @@ use reqwest::Client;
 use serde::Deserialize;
 use url::Url;
 
-use crate::{Error, Id, IdBuf, PlayerResponse, VideoDescrambler, VideoInfo};
 use crate::video_info::player_response::playability_status::PlayabilityStatus;
+use crate::{Error, Id, IdBuf, PlayerResponse, VideoDescrambler, VideoInfo};
 
 /// A fetcher used to download all necessary data from YouTube, which then could be used
 /// to extract video-URLs.
@@ -80,8 +80,7 @@ impl VideoFetcher {
     #[inline]
     #[cfg(feature = "regex")]
     pub fn from_url(url: &Url) -> crate::Result<Self> {
-        let id = Id::from_raw(url.as_str())?
-            .into_owned();
+        let id = Id::from_raw(url.as_str())?.into_owned();
         Self::from_id(id)
     }
 
@@ -147,7 +146,9 @@ impl VideoFetcher {
         let is_age_restricted = is_age_restricted(&watch_html);
         Self::check_downloadability(&watch_html, is_age_restricted)?;
 
-        let (video_info, js) = self.get_video_info_and_js(&watch_html, is_age_restricted).await?;
+        let (video_info, js) = self
+            .get_video_info_and_js(&watch_html, is_age_restricted)
+            .await?;
 
         Ok(VideoDescrambler {
             video_info,
@@ -176,7 +177,9 @@ impl VideoFetcher {
         let watch_html = self.get_html(&self.watch_url).await?;
         let is_age_restricted = is_age_restricted(&watch_html);
         Self::check_fetchability(&watch_html, is_age_restricted)?;
-        let (video_info, _js) = self.get_video_info_and_js(&watch_html, is_age_restricted).await?;
+        let (video_info, _js) = self
+            .get_video_info_and_js(&watch_html, is_age_restricted)
+            .await?;
 
         Ok(video_info)
     }
@@ -193,13 +196,16 @@ impl VideoFetcher {
         &self.watch_url
     }
 
-    fn check_downloadability(watch_html: &str, is_age_restricted: bool) -> crate::Result<PlayabilityStatus> {
+    fn check_downloadability(
+        watch_html: &str,
+        is_age_restricted: bool,
+    ) -> crate::Result<PlayabilityStatus> {
         let playability_status = Self::extract_playability_status(watch_html)?;
 
         match playability_status {
             PlayabilityStatus::Ok { .. } => Ok(playability_status),
             PlayabilityStatus::LoginRequired { .. } if is_age_restricted => Ok(playability_status),
-            ps => Err(Error::VideoUnavailable(Box::new(ps)))
+            ps => Err(Error::VideoUnavailable(Box::new(ps))),
         }
     }
 
@@ -211,30 +217,31 @@ impl VideoFetcher {
             PlayabilityStatus::Unplayable { .. } => Ok(()),
             PlayabilityStatus::LiveStreamOffline { .. } => Ok(()),
             PlayabilityStatus::LoginRequired { .. } if is_age_restricted => Ok(()),
-            ps => Err(Error::VideoUnavailable(Box::new(ps)))
+            ps => Err(Error::VideoUnavailable(Box::new(ps))),
         }
     }
 
     /// Checks, whether or not the video is accessible for normal users.
     fn extract_playability_status(watch_html: &str) -> crate::Result<PlayabilityStatus> {
-        static PLAYABILITY_STATUS: Lazy<Regex> = Lazy::new(||
-            Regex::new(r#"["']?playabilityStatus["']?\s*[:=]\s*"#).unwrap()
-        );
+        static PLAYABILITY_STATUS: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r#"["']?playabilityStatus["']?\s*[:=]\s*"#).unwrap());
 
         PLAYABILITY_STATUS
             .find_iter(watch_html)
-            .map(|m| json_object(
-                watch_html
-                    .get(m.end()..)
-                    .ok_or(Error::Internal("The regex does not match meaningful"))?
-            ))
+            .map(|m| {
+                json_object(
+                    watch_html
+                        .get(m.end()..)
+                        .ok_or(Error::Internal("The regex does not match meaningful"))?,
+                )
+            })
             .filter_map(Result::ok)
             .map(serde_json::from_str::<PlayabilityStatus>)
             .filter_map(Result::ok)
             .next()
-            .ok_or_else(|| Error::UnexpectedResponse(
-                "watch html did not contain a PlayabilityStatus".into()
-            ))
+            .ok_or_else(|| {
+                Error::UnexpectedResponse("watch html did not contain a PlayabilityStatus".into())
+            })
     }
 
     #[inline]
@@ -243,7 +250,10 @@ impl VideoFetcher {
         watch_html: &str,
         is_age_restricted: bool,
     ) -> crate::Result<(VideoInfo, String)> {
-        let (js, player_response) = self.get_js(is_age_restricted, watch_html).await?;
+        let api_response = self.get_api_for(&self.video_id).await?;
+        let (js, player_response) = self
+            .get_js(is_age_restricted, watch_html, &api_response)
+            .await?;
 
         let player_response = player_response.ok_or_else(|| Error::UnexpectedResponse(
             "Could not acquire the player response from the watch html!\n\
@@ -267,18 +277,18 @@ impl VideoFetcher {
         &self,
         is_age_restricted: bool,
         watch_html: &str,
+        api_response: &str,
     ) -> crate::Result<(String, Option<PlayerResponse>)> {
         let (js_url, player_response) = match is_age_restricted {
             true => {
                 let embed_url = self.video_id.embed_url();
                 let embed_html = self.get_html(&embed_url).await?;
-                js_url(&embed_html)?
+                js_url(&embed_html, api_response)?
             }
-            false => js_url(watch_html)?
+            false => js_url(watch_html, api_response)?,
         };
 
-        self
-            .get_html(&js_url)
+        self.get_html(&js_url)
             .await
             .map(|html| (html, player_response))
     }
@@ -303,15 +313,9 @@ impl VideoFetcher {
     #[log_derive::logfn(Trace, fmt = "get_video_info_url() => {}")]
     fn get_video_info_url(&self, is_age_restricted: bool) -> Url {
         if is_age_restricted {
-            video_info_url_age_restricted(
-                self.video_id.as_borrowed(),
-                &self.watch_url,
-            )
+            video_info_url_age_restricted(self.video_id.as_borrowed(), &self.watch_url)
         } else {
-            video_info_url(
-                self.video_id.as_borrowed(),
-                &self.watch_url,
-            )
+            video_info_url(self.video_id.as_borrowed(), &self.watch_url)
         }
     }
 
@@ -320,15 +324,22 @@ impl VideoFetcher {
     #[log_derive::logfn_inputs(Debug)]
     #[log_derive::logfn(ok = "Trace", err = "Error", fmt = "get_html() => `{}`")]
     async fn get_html(&self, url: &Url) -> crate::Result<String> {
-        Ok(
-            self.client
-                .get(url.as_str())
-                .send()
-                .await?
-                .error_for_status()?
-                .text()
-                .await?
-        )
+        Ok(self
+            .client
+            .get(url.as_str())
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await?)
+    }
+
+    async fn get_api_for(&self, id: &str) -> crate::Result<String> {
+        // From pytube
+        self.client.post(format!("https://www.youtube.com/youtubei/v1/player?videoId={id}&key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&contentCheckOk=true&racyCheckOk=true"))
+        .header("content-type", "application/json")
+        .body(r#"{"context":{"client":{"clientName":"ANDROID","clientVersion":"16.20"}}}"#)
+        .send().await?.text().await.map_err(Error::from)
     }
 
     /*#[inline]
@@ -396,7 +407,7 @@ fn video_info_url_age_restricted(video_id: Id<'_>, watch_url: &Url) -> Url {
 
     let sts = match PATTERN.captures(watch_url.as_str()) {
         Some(c) => c.get(1).unwrap().as_str(),
-        None => ""
+        None => "",
     };
 
     let eurl = format!("https://youtube.googleapis.com/v/{}", video_id.as_str());
@@ -414,42 +425,54 @@ fn video_info_url_age_restricted(video_id: Id<'_>, watch_url: &Url) -> Url {
 /// Helper for assembling th video info url.
 #[inline]
 fn _video_info_url(params: &[(&str, &str)]) -> Url {
-    Url::parse_with_params(
-        "https://www.youtube.com/get_video_info?",
-        params,
-    ).unwrap()
+    Url::parse_with_params("https://www.youtube.com/get_video_info?", params).unwrap()
 }
 
 /// Generates the url under which the JavaScript used for descrambling can be requested.
 #[inline]
-fn js_url(html: &str) -> crate::Result<(Url, Option<PlayerResponse>)> {
-    let player_response = get_ytplayer_config(html);
+fn js_url(html: &str, api_json: &str) -> crate::Result<(Url, Option<PlayerResponse>)> {
+    let player_response = get_ytplayer_config(html, api_json);
     let base_js = match player_response {
-        Ok(PlayerResponse { assets: Some(ref assets), .. }) => assets.js.as_str(),
-        _ => get_ytplayer_js(html)?
+        Ok(PlayerResponse {
+            assets: Some(ref assets),
+            ..
+        }) => assets.js.as_str(),
+        _ => get_ytplayer_js(html)?,
     };
 
-    Ok((Url::parse(&format!("https://youtube.com{}", base_js))?, player_response.ok()))
+    Ok((
+        Url::parse(&format!("https://youtube.com{}", base_js))?,
+        player_response.ok(),
+    ))
 }
 
 /// Extracts the [`PlayerResponse`] from the watch html.
 #[inline]
-fn get_ytplayer_config(html: &str) -> crate::Result<PlayerResponse> {
-    static CONFIG_PATTERNS: Lazy<[Regex; 3]> = Lazy::new(|| [
-        Regex::new(r"ytplayer\.config\s*=\s*").unwrap(),
-        Regex::new(r"ytInitialPlayerResponse\s*=\s*").unwrap(),
-        // fixme
-        // pytube handles `setConfig` little bit differently. It parses the entire argument
-        // to `setConfig()` and then uses load json to find `PlayerResponse` inside of it.
-        // We currently handle both the same way, and just deserialize into the `PlayerConfig` enum.
-        // This *should* have the same effect.
-        //
-        // In the future, it may be a good idea, to also handle both cases differently, so we don't
-        // loose performance on deserializing into an enum, but deserialize `CONFIG_PATTERNS` directly
-        // into `PlayerResponse`, and `SET_CONFIG_PATTERNS` into `Args`. The problem currently is, that
-        // I don't know, if CONFIG_PATTERNS can also contain `Args`.
-        Regex::new(r#"yt\.setConfig\(.*['"]PLAYER_CONFIG['"]:\s*"#).unwrap()
-    ]);
+fn get_ytplayer_config(html: &str, api_json: &str) -> crate::Result<PlayerResponse> {
+    match deserialize_ytplayer_config(api_json) {
+        Ok(e) => return Ok(e),
+        Err(_) => {
+            //TODO: improve error handling
+        }
+    }
+
+    static CONFIG_PATTERNS: Lazy<[Regex; 3]> = Lazy::new(|| {
+        [
+            Regex::new(r"ytplayer\.config\s*=\s*").unwrap(),
+            Regex::new(r"ytInitialPlayerResponse\s*=\s*").unwrap(),
+            // fixme
+            // pytube handles `setConfig` little bit differently. It parses the entire argument
+            // to `setConfig()` and then uses load json to find `PlayerResponse` inside of it.
+            // We currently handle both the same way, and just deserialize into the `PlayerConfig` enum.
+            // This *should* have the same effect.
+            //
+            // In the future, it may be a good idea, to also handle both cases differently, so we don't
+            // loose performance on deserializing into an enum, but deserialize `CONFIG_PATTERNS` directly
+            // into `PlayerResponse`, and `SET_CONFIG_PATTERNS` into `Args`. The problem currently is, that
+            // I don't know, if CONFIG_PATTERNS can also contain `Args`.
+            Regex::new(r#"yt\.setConfig\(.*['"]PLAYER_CONFIG['"]:\s*"#).unwrap(),
+        ]
+    });
 
     CONFIG_PATTERNS
         .iter()
@@ -457,9 +480,9 @@ fn get_ytplayer_config(html: &str) -> crate::Result<PlayerResponse> {
             let json = parse_for_object(html, pattern).ok()?;
             deserialize_ytplayer_config(json).ok()
         })
-        .ok_or_else(|| Error::UnexpectedResponse(
-            "Could not find ytplayer_config in the watch html.".into()
-        ))
+        .ok_or_else(|| {
+            Error::UnexpectedResponse("Could not find ytplayer_config in the watch html.".into())
+        })
 }
 
 /// Extracts a json object from a string starting after a pattern.
@@ -471,9 +494,8 @@ fn parse_for_object<'a>(html: &'a str, regex: &Regex) -> crate::Result<&'a str> 
         .end();
 
     json_object(
-        html
-            .get(json_obj_start..)
-            .ok_or(Error::Internal("The regex does not match meaningful"))?
+        html.get(json_obj_start..)
+            .ok_or(Error::Internal("The regex does not match meaningful"))?,
     )
 }
 
@@ -520,15 +542,14 @@ fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
 /// Extracts the JavaScript used for descrambling from the watch html.
 #[inline]
 fn get_ytplayer_js(html: &str) -> crate::Result<&str> {
-    static JS_URL_PATTERNS: Lazy<Regex> = Lazy::new(||
-        Regex::new(r"(/s/player/[\w\d]+/[\w\d_/.]+/base\.js)").unwrap()
-    );
+    static JS_URL_PATTERNS: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"(/s/player/[\w\d]+/[\w\d_/.]+/base\.js)").unwrap());
 
     match JS_URL_PATTERNS.captures(html) {
         Some(function_match) => Ok(function_match.get(1).unwrap().as_str()),
         None => Err(Error::UnexpectedResponse(
-            "could not extract the ytplayer-javascript url from the watch html".into()
-        ))
+            "could not extract the ytplayer-javascript url from the watch html".into(),
+        )),
     }
 }
 
@@ -537,7 +558,9 @@ fn get_ytplayer_js(html: &str) -> crate::Result<&str> {
 fn json_object(mut html: &str) -> crate::Result<&str> {
     html = html.trim_start_matches(|c| c != '{');
     if html.is_empty() {
-        return Err(Error::Internal("cannot parse a json object from an empty string"));
+        return Err(Error::Internal(
+            "cannot parse a json object from an empty string",
+        ));
     }
 
     let mut stack = vec![b'{'];
@@ -548,9 +571,7 @@ fn json_object(mut html: &str) -> crate::Result<&str> {
         .iter()
         .enumerate()
         .skip(1)
-        .find(
-            |(_i, &curr_char)| is_json_object_end(curr_char, &mut skip, &mut stack)
-        )
+        .find(|(_i, &curr_char)| is_json_object_end(curr_char, &mut skip, &mut stack))
         .ok_or(Error::Internal("could not find a closing delimiter"))?;
 
     let full_obj = html
@@ -573,11 +594,19 @@ fn is_json_object_end(curr_char: u8, skip: &mut bool, stack: &mut Vec<u8>) -> bo
         .expect("stack must start with len == 1, and search must end, when len == 0");
 
     match curr_char {
-        b'}' if context == b'{' => { stack.pop(); }
-        b']' if context == b'[' => { stack.pop(); }
-        b'"' if context == b'"' => { stack.pop(); }
+        b'}' if context == b'{' => {
+            stack.pop();
+        }
+        b']' if context == b'[' => {
+            stack.pop();
+        }
+        b'"' if context == b'"' => {
+            stack.pop();
+        }
 
-        b'\\' if context == b'"' => { *skip = true; }
+        b'\\' if context == b'"' => {
+            *skip = true;
+        }
 
         b'{' if context != b'"' => stack.push(b'{'),
         b'[' if context != b'"' => stack.push(b'['),
@@ -590,7 +619,8 @@ fn is_json_object_end(curr_char: u8, skip: &mut bool, stack: &mut Vec<u8>) -> bo
 }
 
 pub fn recommended_cookies() -> reqwest::cookie::Jar {
-    let cookie = "CONSENT=YES+; Path=/; Domain=youtube.com; Secure; Expires=Fri, 01 Jan 2038 00:00:00 GMT;";
+    let cookie =
+        "CONSENT=YES+; Path=/; Domain=youtube.com; Secure; Expires=Fri, 01 Jan 2038 00:00:00 GMT;";
     let url = "https://youtube.com".parse().unwrap();
 
     let jar = reqwest::cookie::Jar::default();
@@ -601,7 +631,10 @@ pub fn recommended_cookies() -> reqwest::cookie::Jar {
 pub fn recommended_headers() -> reqwest::header::HeaderMap {
     let mut headers = reqwest::header::HeaderMap::new();
 
-    headers.insert(reqwest::header::ACCEPT_LANGUAGE, "en-US,en".parse().unwrap());
+    headers.insert(
+        reqwest::header::ACCEPT_LANGUAGE,
+        "en-US,en".parse().unwrap(),
+    );
     headers.insert(reqwest::header::USER_AGENT, "Mozilla/5.0".parse().unwrap());
 
     headers
