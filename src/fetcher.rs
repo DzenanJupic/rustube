@@ -1,5 +1,4 @@
 use once_cell::sync::Lazy;
-
 use regex::Regex;
 use reqwest::Client;
 use serde::Deserialize;
@@ -63,7 +62,7 @@ use crate::video_info::player_response::playability_status::PlayabilityStatus;
 ///
 /// [`Video`]: crate::video::Video
 #[derive(Clone, derive_more::Display, derivative::Derivative)]
-#[display(fmt = "VideoFetcher({})", video_id)]
+#[display(fmt = "VideoFetcher({video_id})")]
 #[derivative(Debug, PartialEq, Eq)]
 pub struct VideoFetcher {
     video_id: IdBuf,
@@ -429,7 +428,7 @@ fn js_url(html: &str) -> crate::Result<(Url, Option<PlayerResponse>)> {
         _ => get_ytplayer_js(html)?
     };
 
-    Ok((Url::parse(&format!("https://youtube.com{}", base_js))?, player_response.ok()))
+    Ok((Url::parse(&format!("https://youtube.com{base_js}"))?, player_response.ok()))
 }
 
 /// Extracts the [`PlayerResponse`] from the watch html.
@@ -511,9 +510,10 @@ fn deserialize_ytplayer_config(json: &str) -> crate::Result<PlayerResponse> {
         Err(err) => err,
     };
 
-    Err(crate::Error::JsonDeserialization(serde::de::Error::custom(format_args!(
-        "data did not match any variant of untagged enum PlayerConfig:\n\tArgs:{}\n\tPlayerResponse:{}",
-        args_err, pr_err,
+    Err(Error::JsonDeserialization(serde::de::Error::custom(format_args!(
+        "data did not match any variant of untagged enum PlayerConfig:\n\
+        \tArgs:{args_err}\n\
+        \tPlayerResponse:{pr_err}",
     ))))
 }
 

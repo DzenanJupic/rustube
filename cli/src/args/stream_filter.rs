@@ -121,6 +121,6 @@ impl StreamFilter {
 }
 
 fn parse_json<T: for<'de> serde::Deserialize<'de>>(s: &str) -> anyhow::Result<T> {
-    let args = format!("\"{}\"", s);
+    let args = format!("\"{s}\"");
     Ok(serde_json::from_str(&args)?)
 }

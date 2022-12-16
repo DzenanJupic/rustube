@@ -53,7 +53,7 @@ async fn check(args: CheckArgs) -> Result<()> {
         .output
         .output_format
         .serialize_output(&video_serializer)?;
-    println!("{}", output);
+    println!("{output}");
 
     Ok(())
 }
@@ -83,7 +83,7 @@ async fn download(args: DownloadArgs) -> Result<()> {
         args.output.output_level,
     );
     let output = args.output.output_format.serialize_output(&video_serializer).unwrap();
-    println!("{}", output);
+    println!("{output}");
 
     Ok(())
 }
@@ -95,7 +95,7 @@ async fn fetch(args: FetchArgs) -> Result<()> {
     let video_info = rustube::VideoFetcher::from_id(id)?.fetch_info().await?;
 
     let output = args.output.output_format.serialize_output(&video_info)?;
-    println!("{}", output);
+    println!("{output}");
 
     Ok(())
 }
