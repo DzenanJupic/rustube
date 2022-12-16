@@ -450,8 +450,9 @@ fn js_url(html: &str, api_json: &str) -> crate::Result<(Url, Option<PlayerRespon
 fn get_ytplayer_config(html: &str, api_json: &str) -> crate::Result<PlayerResponse> {
     match deserialize_ytplayer_config(api_json) {
         Ok(e) => return Ok(e),
-        Err(_) => {
+        Err(err) => {
             //TODO: improve error handling
+            log::error!("failed to deserialized player config: {err}");
         }
     }
 
