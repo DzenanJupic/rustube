@@ -378,7 +378,7 @@ impl Stream {
     /// A synchronous wrapper around [`Stream::download_with_callback`](crate::Stream::download_with_callback).
     #[cfg(feature = "callback")]
     #[inline]
-    pub fn blocking_download_with_callback(&self, callback: Callback) -> Result<PathBuf> {
+    pub fn blocking_download_with_callback<'a>(&'a self, callback: Callback<'a>) -> Result<PathBuf> {
         crate::block!(self.download_with_callback(callback))
     }
 
@@ -391,10 +391,10 @@ impl Stream {
     /// A synchronous wrapper around [`Stream::download_to_dir_with_callback`](crate::Stream::download_to_dir_with_callback).
     #[cfg(feature = "callback")]
     #[inline]
-    pub fn blocking_download_to_dir_with_callback<P: AsRef<Path>>(
-        &self,
+    pub fn blocking_download_to_dir_with_callback<'a, P: AsRef<Path>>(
+        &'a self,
         dir: P,
-        callback: Callback,
+        callback: Callback<'a>,
     ) -> Result<PathBuf> {
         crate::block!(self.download_to_dir_with_callback(dir, callback))
     }
@@ -406,7 +406,7 @@ impl Stream {
 
     /// A synchronous wrapper around [`Stream::download_to_with_callback`](crate::Stream::download_to_with_callback).
     #[cfg(feature = "callback")]
-    pub fn blocking_download_to_with_callback<P: AsRef<Path>>(&self, path: P, callback: Callback) -> Result<()> {
+    pub fn blocking_download_to_with_callback<'a, P: AsRef<Path>>(&'a self, path: P, callback: Callback<'a>) -> Result<()> {
         crate::block!(self.download_to_with_callback(path, callback))
     }
 
