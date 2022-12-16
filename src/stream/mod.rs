@@ -363,13 +363,14 @@ impl Stream {
         // Counter will be 0 if callback is not enabled
         while let Some(chunk) = stream.next().await {
             let chunk = chunk?;
-            log::trace!("received {} byte chunk ", chunk.len());
+            let len = chunk.len();
+            log::trace!("received {} byte chunk ", len);
 
             file.write_all(&chunk).await?;
             #[cfg(feature = "callback")]
             if let Some(channel) = &channel {
                 // network chunks of ~10kb size
-                counter += chunk.len();
+                counter += len;
                 // Will abort if the receiver is closed
                 // Will ignore if the channel is full and thus not slow down the download
                 if let Err(TrySendError::Closed(_)) =
@@ -419,7 +420,7 @@ impl Stream {
     /// A synchronous wrapper around [`Stream::download_with_callback`](crate::Stream::download_with_callback).
     #[cfg(feature = "callback")]
     #[inline]
-    pub fn blocking_download_with_callback(&self, callback: Callback) -> Result<PathBuf> {
+    pub fn blocking_download_with_callback<'a>(&'a self, callback: Callback<'a>) -> Result<PathBuf> {
         crate::block!(self.download_with_callback(callback))
     }
 
@@ -432,10 +433,10 @@ impl Stream {
     /// A synchronous wrapper around [`Stream::download_to_dir_with_callback`](crate::Stream::download_to_dir_with_callback).
     #[cfg(feature = "callback")]
     #[inline]
-    pub fn blocking_download_to_dir_with_callback<P: AsRef<Path>>(
-        &self,
+    pub fn blocking_download_to_dir_with_callback<'a, P: AsRef<Path>>(
+        &'a self,
         dir: P,
-        callback: Callback,
+        callback: Callback<'a>,
     ) -> Result<PathBuf> {
         crate::block!(self.download_to_dir_with_callback(dir, callback))
     }

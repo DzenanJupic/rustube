@@ -14,6 +14,10 @@ pub struct LoggingArgs {
     #[clap(long, short, parse(from_occurrences))]
     verbose: u8,
 
+    /// Show a progress bar
+    #[clap(long, short, conflicts_with = "verbose")]
+    progress: bool,
+
     /// When to log coloredd
     #[clap(long, default_value = "always", possible_values = & ["always", "never"], value_name = "WHEN")]
     color: ColorUsage,
@@ -25,7 +29,7 @@ pub struct LoggingArgs {
 
 impl LoggingArgs {
     pub fn init_logger(&self) {
-        if self.quiet { return; }
+        if self.quiet || self.progress { return; }
 
         let formatter = self.log_msg_formatter();
 
@@ -36,6 +40,19 @@ impl LoggingArgs {
             .chain(std::io::stdout())
             .apply()
             .expect("The global logger was already initialized");
+    }
+
+    pub fn init_progress_bar(&self, total: u64) -> pbr::ProgressBar<Box<dyn std::io::Write + Send + Sync>> {
+        let writer = match self.progress {
+            true => Box::new(std::io::stderr()) as _,
+            false => Box::new(std::io::sink()) as _,
+        };
+        let mut pb = pbr::ProgressBar::on(writer, total);
+        pb.set_units(pbr::Units::Bytes);
+        pb.format("[=> ]");
+        pb.add(0);
+
+        pb
     }
 
     fn log_msg_formatter(&self) -> fn(FormatCallback, &Arguments, &Record) {

@@ -25,9 +25,10 @@ clap = { version = "3.0.0-rc.7", features = ["derive", "wrap_help"] }
 fern = { version = "0.6.0", features = ["colored"] }
 log = "0.4.14"
 mime = "0.3.16"
-rustube = { path = "..", version = "0.6", features = ["download", "std"] }
+rustube = { path = "..", version = "0.6", features = ["download", "std", "callback"] }
 tokio = { version = "1.12.0", features = ["rt-multi-thread"] }
 serde = "1.0.130"
 strum = { version = "0.22.0", features = ["derive"] }
 serde_json = "1.0.68"
 serde_yaml = "0.8.21"
+pbr = "1.0.4"

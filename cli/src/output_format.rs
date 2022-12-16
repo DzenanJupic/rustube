@@ -16,8 +16,8 @@ impl OutputFormat {
         use OutputFormat::*;
 
         match self {
-            Debug => Ok(format!("{:?}", output)),
-            PrettyDebug => Ok(format!("{:#?}", output)),
+            Debug => Ok(format!("{output:?}")),
+            PrettyDebug => Ok(format!("{output:#?}")),
             Json => Ok(serde_json::to_string(output)?),
             PrettyJson => Ok(serde_json::to_string_pretty(output)?),
             Yaml => Ok(serde_yaml::to_string(output)?)

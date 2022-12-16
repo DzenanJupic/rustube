@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use once_cell::sync::Lazy;
 
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{Error, Result, TryCollect};
@@ -51,7 +51,7 @@ impl Cipher {
             let js_fun = self.transform_map
                 .get(name)
                 .ok_or_else(|| Error::UnexpectedResponse(format!(
-                    "no matching transform function for `{}`", js_fun_name
+                    "no matching transform function for `{js_fun_name}`",
                 ).into()))?
                 .0;
             js_fun(signature, argument);
@@ -93,8 +93,7 @@ impl Cipher {
                 )
             )),
             (name, arg) => Err(Error::UnexpectedResponse(format!(
-                "expected a Javascript transformer function and an argument, got: `{:?}` and `{:?}`",
-                name, arg
+                "expected a Javascript transformer function and an argument, got: `{name:?}` and `{arg:?}`",
             ).into()))
         }
     }
@@ -109,8 +108,8 @@ impl Cipher {
             transform_map: {:?}",
             signature, self.transform_plan, self.transform_map_dbg()
         );
-        log::error!("{}", error);
-        eprintln!("{}", error);
+        log::error!("{error}");
+        eprintln!("{error}");
         error
     }
 
@@ -134,13 +133,12 @@ impl Cipher {
 
 fn get_transform_plan(js: &str) -> Result<Vec<String>> {
     let name = regex::escape(get_initial_function_name(js)?);
-    let pattern = Regex::new(&format!(r#"{}=function\(\w\)\{{[a-z=.(")]*;(.*);(?:.+)}}"#, name)).unwrap();
+    let pattern = Regex::new(&format!(r#"{name}=function\(\w\)\{{[a-z=.(")]*;(.*);(?:.+)}}"#)).unwrap();
     Ok(
         pattern
             .captures(js)
             .ok_or_else(|| Error::UnexpectedResponse(format!(
-                "could not extract the initial JavaScript function: {}",
-                pattern
+                "could not extract the initial JavaScript function: {pattern}",
             ).into()))?
             .get(1)
             .expect("the pattern must contain at least one capture group")
@@ -172,8 +170,7 @@ fn get_initial_function_name(js: &str) -> Result<&str> {
         .find_map(|pattern| pattern.captures(js))
         .map(|c| c.get(1).unwrap().as_str())
         .ok_or_else(|| Error::UnexpectedResponse(format!(
-            "could not find the JavaScript function name: `{}`",
-            js
+            "could not find the JavaScript function name: `{js}`",
         ).into()))
 }
 
@@ -186,8 +183,7 @@ fn get_transform_map(js: &str, var: &str) -> Result<HashMap<String, TransformerF
         let (name, function) = obj
             .split_once(':')
             .ok_or_else(|| Error::UnexpectedResponse(format!(
-                "expected the transform-object to contain at least one ':', got {}",
-                obj
+                "expected the transform-object to contain at least one ':', got {obj}",
             ).into()))?;
         let fun = map_functions(function)?;
         mapper.insert(name.to_owned(), fun);
@@ -249,8 +245,7 @@ fn map_functions(js_func: &str) -> Result<TransformerFn> {
         .find(|(pattern, _fun)| pattern.is_match(js_func))
         .map(|(_pattern, fun)| *fun)
         .ok_or_else(|| Error::UnexpectedResponse(format!(
-            "could not map the JavaScript function `{}` to any Rust equivalent",
-            js_func
+            "could not map the JavaScript function `{js_func}` to any Rust equivalent",
         ).into()))
 }
 
@@ -260,8 +255,7 @@ fn get_transform_object(js: &str, var: &str) -> Result<String> {
             .unwrap()
             .captures(js)
             .ok_or_else(|| Error::UnexpectedResponse(format!(
-                "could not extract the transform-object `{}`",
-                var
+                "could not extract the transform-object `{var}`",
             ).into()))?
             .get(1)
             .expect("the regex pattern must contain at least one capture group")
