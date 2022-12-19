@@ -38,7 +38,7 @@ fn jsonify(to_json: String) -> Vec<String> {
         let string = format!["https://youtube.com/watch?v={}", id];
          return_vals.push(string)
     }
-    return return_vals
+    return_vals
 
 }
 
@@ -118,6 +118,6 @@ fn find_object_from_startpoint(old_html: &str, starting: usize) -> String {
     }
     // define the json, and return it as a string !
     let full_obj: &[char] = &html[..i];
-    return full_obj.into_iter().collect()
+    full_obj.into_iter().collect()
 }
 
