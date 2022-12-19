@@ -7,15 +7,28 @@ use serde_json::Value;
 // inspired to have the same functionality as pytube
 // (https://github.com/pytube/pytube) (./pytube/contrib/playlist.py)
 
-
 // It should also be known that this does *not* support downloading playlists with more than 100 videos
-// it will also throw errors if there are private videos.
 
-// should be the interface used to get the linnks back
-pub fn get_playlist(link: &str) -> Vec<String> {
+
+pub struct Playlist {
+    pub links: Vec<String>,
+    pub title: String,
+    pub author: String,
+    pub length: u64
+}
+
+pub fn get_playlist(link: &str) -> Playlist {
     let html: String = get_html(link);
-    let json = parse_for_js(html);
-    jsonify(json)
+    let json: String = parse_for_js(html);
+    let extras: (String, String, u64) = get_extras(&json);
+    let video_vec: Vec<String> = json_to_vec_videos(&json);
+    let final_exp: Playlist = Playlist {
+        links: video_vec,
+        title: extras.0,
+        author: extras.1,
+        length: extras.2
+    };
+    final_exp
 }
 // gets the html from the given link
 fn get_html(link: &str) -> String {
@@ -23,22 +36,35 @@ fn get_html(link: &str) -> String {
         .unwrap().text().unwrap();
     val
 }
+// function to get the extra information from the json
+fn get_extras(json: &String) -> (String, String, u64) {
+    let obj: Value = serde_json::from_str(json.as_str()).unwrap();
+    let title: String = obj["contents"]["twoColumnWatchNextResults"]["playlist"]["playlist"]["title"].to_string();
+    let author: String = obj["contents"]["twoColumnWatchNextResults"]["playlist"]["playlist"]["ownerName"]["simpleText"]
+        .to_string();
+    let count: u64 = obj["contents"]["twoColumnWatchNextResults"]["playlist"]["playlist"]["totalVideos"].as_u64().unwrap();
+    return (title, author, count)
+}
 
 // turns the json into a vec of the videos
-fn jsonify(to_json: String) -> Vec<String> {
+fn json_to_vec_videos(to_json: &String) -> Vec<String> {
     // new vector that will contain the links
     let mut return_vals: Vec<String> = Vec::new();
     // turn the json(string) into json(serde_json::Value)
     let obj: Value = serde_json::from_str(to_json.as_str()).expect("The json was invalid");
     // this is an array of the playlist contents
     let vals = &obj["contents"]["twoColumnWatchNextResults"]["playlist"]["playlist"]["contents"];
-    let val_as_array = vals.as_array().unwrap();
-    for video in val_as_array {
+    let bruh = vals.as_array().unwrap();
+    for video in bruh {
         let id = &video["playlistPanelVideoRenderer"]["videoId"].as_str().unwrap();
         let string = format!["https://youtube.com/watch?v={}", id];
          return_vals.push(string)
     }
-    return_vals
+    return return_vals
+
+}
+
+fn parse_playlist_title(json: String) {
 
 }
 
@@ -118,6 +144,7 @@ fn find_object_from_startpoint(old_html: &str, starting: usize) -> String {
     }
     // define the json, and return it as a string !
     let full_obj: &[char] = &html[..i];
-    full_obj.into_iter().collect()
+    let ret_obj: String = full_obj.into_iter().collect();
+    return full_obj.into_iter().collect()
 }
 
