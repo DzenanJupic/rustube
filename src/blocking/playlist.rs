@@ -11,7 +11,7 @@ use serde_json::Value;
 
 // should be the interface used to get the linnks back
 pub fn get_playlist(link: &str) -> Vec<String> {
-    let html: String = get_html(choosen_link);
+    let html: String = get_html(link);
     let json = parse_for_js(html);
     jsonify(json)
 }
