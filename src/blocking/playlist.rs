@@ -32,8 +32,8 @@ fn jsonify(to_json: String) -> Vec<String> {
     let obj: Value = serde_json::from_str(to_json.as_str()).expect("The json was invalid");
     // this is an array of the playlist contents
     let vals = &obj["contents"]["twoColumnWatchNextResults"]["playlist"]["playlist"]["contents"];
-    let bruh = vals.as_array().unwrap();
-    for video in bruh {
+    let val_as_array = vals.as_array().unwrap();
+    for video in val_as_array {
         let id = &video["playlistPanelVideoRenderer"]["videoId"].as_str().unwrap();
         let string = format!["https://youtube.com/watch?v={}", id];
          return_vals.push(string)
