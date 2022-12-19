@@ -7,7 +7,9 @@ use serde_json::Value;
 // inspired to have the same functionality as pytube
 // (https://github.com/pytube/pytube) (./pytube/contrib/playlist.py)
 
+
 // It should also be known that this does *not* support downloading playlists with more than 100 videos
+// it will also throw errors if there are private videos.
 
 // should be the interface used to get the linnks back
 pub fn get_playlist(link: &str) -> Vec<String> {
