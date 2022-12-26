@@ -52,9 +52,6 @@ pub use fetcher::VideoFetcher;
 #[doc(inline)]
 #[cfg(feature = "descramble")]
 pub use video::Video;
-#[doc(inline)]
-#[cfg(feature = "playlist")]
-pub use playlist::Playlist;
 
 /// A [`Runtime`](tokio::runtime::Runtime) for executing asynchronous code. 
 pub static RT: Lazy<Runtime> = Lazy::new(||
@@ -83,8 +80,6 @@ pub mod descrambler;
 #[doc(hidden)]
 #[cfg(feature = "descramble")]
 pub mod video;
-#[doc(hidden)]
-#[cfg(feature = "playlist")]
 pub mod playlist;
 
 
