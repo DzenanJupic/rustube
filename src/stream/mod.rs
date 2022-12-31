@@ -1,37 +1,34 @@
 use std::ops::Range;
 #[cfg(feature = "download")]
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use mime::Mime;
 use reqwest::Client;
-use serde_with::{DisplayFromStr, serde_as};
-#[cfg(feature = "download")]
-use tokio::{
-    fs::File,
-    io::AsyncWriteExt,
-};
+use serde_with::{serde_as, DisplayFromStr};
 #[cfg(feature = "callback")]
 use tokio::sync::mpsc::error::TrySendError;
 #[cfg(feature = "download")]
+use tokio::{fs::File, io::AsyncWriteExt};
+#[cfg(feature = "download")]
 use tokio_stream::StreamExt;
 
-#[cfg(feature = "callback")]
-use callback::{InternalSender, InternalSignal};
 #[cfg(all(feature = "callback", feature = "stream", feature = "blocking"))]
 use callback::Callback;
+#[cfg(feature = "callback")]
+use callback::{InternalSender, InternalSignal};
 
-#[cfg(feature = "download")]
-use crate::{Error, Result};
 use crate::{
     video_info::player_response::streaming_data::{
-        AudioQuality, ColorInfo, FormatType, ProjectionType,
-        Quality, QualityLabel, RawFormat, SignatureCipher,
+        AudioQuality, ColorInfo, FormatType, ProjectionType, Quality, QualityLabel, RawFormat,
+        SignatureCipher,
     },
     VideoDetails,
 };
+#[cfg(feature = "download")]
+use crate::{Error, Result};
 
 #[cfg(feature = "callback")]
 pub mod callback;
@@ -85,14 +82,23 @@ pub struct Stream {
     client: Client,
 }
 
-
 impl Stream {
     // maybe deserialize RawFormat seeded with client and VideoDetails
-    pub(crate) fn from_raw_format(raw_format: RawFormat, client: Client, video_details: Arc<VideoDetails>) -> Self {
+    pub(crate) fn from_raw_format(
+        raw_format: RawFormat,
+        client: Client,
+        video_details: Arc<VideoDetails>,
+    ) -> Self {
         Self {
             is_progressive: is_progressive(&raw_format.mime_type.codecs),
-            includes_video_track: includes_video_track(&raw_format.mime_type.codecs, &raw_format.mime_type.mime),
-            includes_audio_track: includes_audio_track(&raw_format.mime_type.codecs, &raw_format.mime_type.mime),
+            includes_video_track: includes_video_track(
+                &raw_format.mime_type.codecs,
+                &raw_format.mime_type.mime,
+            ),
+            includes_audio_track: includes_audio_track(
+                &raw_format.mime_type.codecs,
+                &raw_format.mime_type.mime,
+            ),
             mime: raw_format.mime_type.mime,
             codecs: raw_format.mime_type.codecs,
             format_type: raw_format.format_type,
@@ -138,7 +144,9 @@ impl Stream {
     #[inline]
     pub async fn content_length(&self) -> Result<u64> {
         let cl = self.content_length.load(Ordering::SeqCst);
-        if cl != 0 { return Ok(cl); }
+        if cl != 0 {
+            return Ok(cl);
+        }
 
         self.client
             .head(self.signature_cipher.url.as_str())
@@ -154,9 +162,11 @@ impl Stream {
                 self.content_length.store(cl, Ordering::SeqCst);
                 cl
             })
-            .ok_or_else(|| Error::UnexpectedResponse(
-                "the response did not contain a valid content-length field".into()
-            ))
+            .ok_or_else(|| {
+                Error::UnexpectedResponse(
+                    "the response did not contain a valid content-length field".into(),
+                )
+            })
     }
 
     /// Attempts to downloads the [`Stream`]s resource.
@@ -170,8 +180,7 @@ impl Stream {
     async fn internal_download(&self, channel: Option<InternalSender>) -> Result<PathBuf> {
         let path = Path::new(self.video_details.video_id.as_str())
             .with_extension(self.mime.subtype().as_str());
-        self.internal_download_to(&path, channel)
-            .await
+        self.internal_download_to(&path, channel).await
     }
 
     /// Attempts to downloads the [`Stream`]s resource.
@@ -187,12 +196,9 @@ impl Stream {
         dir: P,
         channel: Option<InternalSender>,
     ) -> Result<PathBuf> {
-        let mut path = dir
-            .as_ref()
-            .join(self.video_details.video_id.as_str());
+        let mut path = dir.as_ref().join(self.video_details.video_id.as_str());
         path.set_extension(self.mime.subtype().as_str());
-        self.internal_download_to(&path, channel)
-            .await
+        self.internal_download_to(&path, channel).await
     }
 
     /// Attempts to downloads the [`Stream`]s resource.
@@ -204,41 +210,70 @@ impl Stream {
     }
 
     #[allow(unused_mut, clippy::let_and_return)]
-    async fn internal_download_to<P: AsRef<Path>>(&self, path: P, channel: Option<InternalSender>) -> Result<PathBuf> {
+    async fn internal_download_to<P: AsRef<Path>>(
+        &self,
+        path: P,
+        channel: Option<InternalSender>,
+    ) -> Result<PathBuf> {
         log::trace!("download_to: {:?}", path.as_ref());
         log::debug!("start downloading {}", self.video_details.video_id);
         let mut file = File::create(&path).await?;
 
-        let result = match self.download_full(&self.signature_cipher.url, &mut file, &channel, 0).await {
+        let result = match self
+            .download_full(
+                &self.signature_cipher.url,
+                &mut file,
+                &channel,
+                0,
+                Some(self.content_length.load(Ordering::SeqCst)),
+            )
+            .await
+        {
             Ok(_) => {
                 log::info!(
                     "downloaded {} successfully to {:?}",
-                    self.video_details.video_id, path.as_ref()
+                    self.video_details.video_id,
+                    path.as_ref()
                 );
                 log::debug!("downloaded stream {:?}", &self);
                 Ok(())
             }
-            Err(Error::Request(e)) if matches!(e.status(), Some(reqwest::StatusCode::NOT_FOUND)) => {
-                log::error!("failed to download {}: {:?}", self.video_details.video_id, e);
-                log::info!("try to download {} using sequenced download", self.video_details.video_id);
+            Err(Error::Request(e))
+                if matches!(e.status(), Some(reqwest::StatusCode::NOT_FOUND)) =>
+            {
+                log::error!(
+                    "failed to download {}: {:?}",
+                    self.video_details.video_id,
+                    e
+                );
+                log::info!(
+                    "try to download {} using sequenced download",
+                    self.video_details.video_id
+                );
                 // Some adaptive streams need to be requested with sequence numbers
                 self.download_full_seq(&mut file, &channel)
                     .await
                     .map_err(|e| {
                         log::error!(
                             "failed to download {} using sequenced download: {:?}",
-                            self.video_details.video_id, e
+                            self.video_details.video_id,
+                            e
                         );
                         e
                     })
             }
             Err(e) => {
-                log::error!("failed to download {}: {:?}", self.video_details.video_id, e);
+                log::error!(
+                    "failed to download {}: {:?}",
+                    self.video_details.video_id,
+                    e
+                );
                 drop(file);
                 tokio::fs::remove_file(path.as_ref()).await?;
                 Err(e)
             }
-        }.map(|_| path.as_ref().to_path_buf());
+        }
+        .map(|_| path.as_ref().to_path_buf());
 
         #[cfg(feature = "callback")]
         if let Some(channel) = channel {
@@ -248,7 +283,11 @@ impl Stream {
         result
     }
 
-    async fn download_full_seq(&self, file: &mut File, channel: &Option<InternalSender>) -> Result<()> {
+    async fn download_full_seq(
+        &self,
+        file: &mut File,
+        channel: &Option<InternalSender>,
+    ) -> Result<()> {
         // fixme: this implementation is **not** tested yet!
         // To test it, I would need an url of a video, which does require sequenced downloading.
         log::warn!(
@@ -262,23 +301,21 @@ impl Stream {
         );
 
         let mut url = self.signature_cipher.url.clone();
-        let base_query = url
-            .query()
-            .map(str::to_owned)
-            .unwrap_or_else(String::new);
+        let base_query = url.query().map(str::to_owned).unwrap_or_else(String::new);
 
         // The 0th sequential request provides the file headers, which tell us
         // information about how the file is segmented.
         Self::set_url_seq_query(&mut url, &base_query, 0);
-        let res = self.get(&url).await?;
+        let res = self.get(&url, None).await?;
         let segment_count = Stream::extract_segment_count(&res)?;
         // No callback action since this is not really part of the progress
-        self.write_stream_to_file(res.bytes_stream(), file, &None, 0).await?;
+        self.write_stream_to_file(res.bytes_stream(), file, &None, 0)
+            .await?;
         let mut count = 0;
 
         for i in 1..segment_count {
             Self::set_url_seq_query(&mut url, &base_query, i);
-            count = self.download_full(&url, file, channel, count).await?;
+            count = self.download_full(&url, file, channel, count, None).await?;
         }
 
         Ok(())
@@ -291,28 +328,34 @@ impl Stream {
         file: &mut File,
         channel: &Option<InternalSender>,
         count: usize,
+        content_length: Option<u64>,
     ) -> Result<usize> {
-        let res = self.get(url).await?;
-        self.write_stream_to_file(res.bytes_stream(), file, channel, count).await
+        let res = self.get(url, content_length).await?;
+        self.write_stream_to_file(res.bytes_stream(), file, channel, count)
+            .await
     }
 
     #[inline]
-    async fn get(&self, url: &url::Url) -> Result<reqwest::Response> {
+    async fn get(&self, url: &url::Url, content_length: Option<u64>) -> Result<reqwest::Response> {
         log::trace!("get: {}", url.as_str());
-        Ok(
+        let k = self.client.get(url.as_str());
+        Ok(if let Some(content_length) = content_length {
+            let k = k.header("Range", format!("bytes=0-{content_length}"));
+            k.send().await?.error_for_status()?
+        } else {
             self.client
                 .get(url.as_str())
                 .send()
                 .await?
                 .error_for_status()?
-        )
+        })
     }
 
     #[inline]
     #[allow(unused_variables, unused_mut)]
     async fn write_stream_to_file(
         &self,
-        mut stream: impl tokio_stream::Stream<Item=reqwest::Result<bytes::Bytes>> + Unpin,
+        mut stream: impl tokio_stream::Stream<Item = reqwest::Result<bytes::Bytes>> + Unpin,
         file: &mut File,
         channel: &Option<InternalSender>,
         mut counter: usize,
@@ -343,27 +386,26 @@ impl Stream {
     #[inline]
     fn set_url_seq_query(url: &mut url::Url, base_query: &str, sq: u64) {
         url.set_query(Some(base_query));
-        url
-            .query_pairs_mut()
-            .append_pair("sq", &sq.to_string());
+        url.query_pairs_mut().append_pair("sq", &sq.to_string());
     }
 
     #[inline]
     fn extract_segment_count(res: &reqwest::Response) -> Result<u64> {
-        res
-            .headers()
+        res.headers()
             .get("Segment-Count")
-            .ok_or_else(|| Error::UnexpectedResponse(
-                "sequence download request did not contain a Segment-Count".into()
-            ))?
+            .ok_or_else(|| {
+                Error::UnexpectedResponse(
+                    "sequence download request did not contain a Segment-Count".into(),
+                )
+            })?
             .to_str()
-            .map_err(|_| Error::UnexpectedResponse(
-                "Segment-Count is not valid utf-8".into()
-            ))?
+            .map_err(|_| Error::UnexpectedResponse("Segment-Count is not valid utf-8".into()))?
             .parse::<u64>()
-            .map_err(|_| Error::UnexpectedResponse(
-                "Segment-Count could not be parsed into an integer".into()
-            ))
+            .map_err(|_| {
+                Error::UnexpectedResponse(
+                    "Segment-Count could not be parsed into an integer".into(),
+                )
+            })
     }
 }
 
@@ -406,7 +448,11 @@ impl Stream {
 
     /// A synchronous wrapper around [`Stream::download_to_with_callback`](crate::Stream::download_to_with_callback).
     #[cfg(feature = "callback")]
-    pub fn blocking_download_to_with_callback<'a, P: AsRef<Path>>(&'a self, path: P, callback: Callback<'a>) -> Result<()> {
+    pub fn blocking_download_to_with_callback<P: AsRef<Path>>(
+        &self,
+        path: P,
+        callback: Callback,
+    ) -> Result<()> {
         crate::block!(self.download_to_with_callback(path, callback))
     }
 
