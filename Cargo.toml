@@ -25,7 +25,7 @@ members = [".", "cli"]
 [dependencies]
 bytes = { version = "1.1.0", optional = true }
 cfg-if = "1.0.0"
-chrono = { version = "0.4.19", optional = true }
+chrono = { version = "0.4.19", default_features = false, features = ["std"], optional = true }
 derivative = "2.2.0"
 derive_more = "0.99.16"
 futures = { version = "0.3.17", optional = true }
