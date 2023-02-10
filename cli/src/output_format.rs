@@ -8,6 +8,7 @@ pub enum OutputFormat {
     Json,
     PrettyJson,
     Yaml,
+    Stdout,
 }
 
 impl OutputFormat {
@@ -20,7 +21,8 @@ impl OutputFormat {
             PrettyDebug => Ok(format!("{output:#?}")),
             Json => Ok(serde_json::to_string(output)?),
             PrettyJson => Ok(serde_json::to_string_pretty(output)?),
-            Yaml => Ok(serde_yaml::to_string(output)?)
+            Yaml => Ok(serde_yaml::to_string(output)?),
+            Stdout => Ok(format!("{output:?}")),
         }
     }
 }

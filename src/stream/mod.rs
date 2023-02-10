@@ -1,3 +1,4 @@
+use core::pin::Pin;
 use std::ops::Range;
 #[cfg(feature = "download")]
 use std::path::{Path, PathBuf};
@@ -199,21 +200,26 @@ impl Stream {
     /// This will download the video to the provided file path.
     #[inline]
     pub async fn download_to<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        log::trace!("download_to: {:?}", path.as_ref());
         let _ = self.internal_download_to(path, None).await?;
         Ok(())
     }
 
-    #[allow(unused_mut, clippy::let_and_return)]
-    async fn internal_download_to<P: AsRef<Path>>(&self, path: P, channel: Option<InternalSender>) -> Result<PathBuf> {
-        log::trace!("download_to: {:?}", path.as_ref());
-        log::debug!("start downloading {}", self.video_details.video_id);
-        let mut file = File::create(&path).await?;
+    pub async fn download_to_writeable<W: AsyncWriteExt>(&self, writeable: Pin<&mut W>) -> Result<()> {
+        let mut w = Box::new(writeable);
+        self.internal_download_to_writeable(&mut w, None).await
+    }
 
-        let result = match self.download_full(&self.signature_cipher.url, &mut file, &channel, 0).await {
+    #[allow(unused_mut, clippy::let_and_return)]
+    async fn internal_download_to_writeable<W: AsyncWriteExt>(&self, writeable: &mut Box<Pin<&mut W>>, channel: Option<InternalSender>) -> Result<()> {
+        log::debug!("start downloading {}", self.video_details.video_id);
+
+        let result = match self.download_full(&self.signature_cipher.url, writeable, &channel, 0).await {
             Ok(_) => {
                 log::info!(
                     "downloaded {} successfully to {:?}",
-                    self.video_details.video_id, path.as_ref()
+                    // self.video_details.video_id, path.as_ref()
+                    self.video_details.video_id, "yes"
                 );
                 log::debug!("downloaded stream {:?}", &self);
                 Ok(())
@@ -222,7 +228,7 @@ impl Stream {
                 log::error!("failed to download {}: {:?}", self.video_details.video_id, e);
                 log::info!("try to download {} using sequenced download", self.video_details.video_id);
                 // Some adaptive streams need to be requested with sequence numbers
-                self.download_full_seq(&mut file, &channel)
+                self.download_full_seq(writeable, &channel)
                     .await
                     .map_err(|e| {
                         log::error!(
@@ -234,11 +240,12 @@ impl Stream {
             }
             Err(e) => {
                 log::error!("failed to download {}: {:?}", self.video_details.video_id, e);
-                drop(file);
-                tokio::fs::remove_file(path.as_ref()).await?;
+                drop(writeable);
+                // tokio::fs::remove_file(path.as_ref()).await?;
                 Err(e)
             }
-        }.map(|_| path.as_ref().to_path_buf());
+        };
+        // }.map(|_| path.as_ref().to_path_buf());
 
         #[cfg(feature = "callback")]
         if let Some(channel) = channel {
@@ -247,8 +254,16 @@ impl Stream {
 
         result
     }
+    #[allow(unused_mut, clippy::let_and_return)]
+    async fn internal_download_to<P: AsRef<Path>>(&self, path: P, channel: Option<InternalSender>) -> Result<PathBuf> {
+        let mut file = File::create(&path).await?;
+        let mut f = Box::new(Pin::new(&mut file));
 
-    async fn download_full_seq(&self, file: &mut File, channel: &Option<InternalSender>) -> Result<()> {
+        self.internal_download_to_writeable(&mut f, channel).await?;
+        Ok(path.as_ref().to_path_buf())
+    }
+
+    async fn download_full_seq<W: AsyncWriteExt>(&self, writeable: &mut Box<Pin<&mut W>>, channel: &Option<InternalSender>) -> Result<()> {
         // fixme: this implementation is **not** tested yet!
         // To test it, I would need an url of a video, which does require sequenced downloading.
         log::warn!(
@@ -273,27 +288,27 @@ impl Stream {
         let res = self.get(&url).await?;
         let segment_count = Stream::extract_segment_count(&res)?;
         // No callback action since this is not really part of the progress
-        self.write_stream_to_file(res.bytes_stream(), file, &None, 0).await?;
+        self.write_stream_to_file(res.bytes_stream(), writeable, &None, 0).await?;
         let mut count = 0;
 
         for i in 1..segment_count {
             Self::set_url_seq_query(&mut url, &base_query, i);
-            count = self.download_full(&url, file, channel, count).await?;
+            count = self.download_full(&url, writeable, channel, count).await?;
         }
 
         Ok(())
     }
 
     #[inline]
-    async fn download_full(
+    async fn download_full<W:AsyncWriteExt>(
         &self,
         url: &url::Url,
-        file: &mut File,
+        writeable: &mut Box<Pin<&mut W>>,
         channel: &Option<InternalSender>,
         count: usize,
     ) -> Result<usize> {
         let res = self.get(url).await?;
-        self.write_stream_to_file(res.bytes_stream(), file, channel, count).await
+        self.write_stream_to_file(res.bytes_stream(), writeable, channel, count).await
     }
 
     #[inline]
@@ -310,10 +325,10 @@ impl Stream {
 
     #[inline]
     #[allow(unused_variables, unused_mut)]
-    async fn write_stream_to_file(
+    async fn write_stream_to_file<W:AsyncWriteExt>(
         &self,
         mut stream: impl tokio_stream::Stream<Item=reqwest::Result<bytes::Bytes>> + Unpin,
-        file: &mut File,
+        file: &mut Box<Pin<&mut W>>,
         channel: &Option<InternalSender>,
         mut counter: usize,
     ) -> Result<usize> {
@@ -324,6 +339,7 @@ impl Stream {
             log::trace!("received {} byte chunk ", len);
 
             file.write_all(&chunk).await?;
+
             #[cfg(feature = "callback")]
             if let Some(channel) = &channel {
                 // network chunks of ~10kb size

@@ -7,7 +7,7 @@ pub struct OutputArgs {
     #[clap(
     short, long = "output",
     default_value = "yaml",
-    possible_values = & ["debug", "pretty-debug", "json", "pretty-json", "yaml"]
+    possible_values = & ["debug", "pretty-debug", "json", "pretty-json", "yaml", "stdout"]
     )]
     pub output_format: OutputFormat,
     /// The amount of information printed to the terminal
