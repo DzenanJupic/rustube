@@ -80,6 +80,7 @@ pub mod descrambler;
 #[doc(hidden)]
 #[cfg(feature = "descramble")]
 pub mod video;
+pub mod playlist;
 
 
 /// A synchronous wrapper around [`download_best_quality`](crate::download_best_quality).
