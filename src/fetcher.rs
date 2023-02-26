@@ -174,7 +174,6 @@ impl VideoFetcher {
     pub async fn fetch_info(self) -> crate::Result<VideoInfo> {
         let watch_html = self.get_html(&self.watch_url).await?;
         let is_age_restricted = is_age_restricted(&watch_html);
-        println!("is_age_restricted: {}", is_age_restricted);
         Self::check_fetchability(&watch_html, is_age_restricted)?;
         let (video_info, _js) = self.get_video_info_and_js(&watch_html, is_age_restricted).await?;
 
