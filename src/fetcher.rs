@@ -174,6 +174,7 @@ impl VideoFetcher {
     pub async fn fetch_info(self) -> crate::Result<VideoInfo> {
         let watch_html = self.get_html(&self.watch_url).await?;
         let is_age_restricted = is_age_restricted(&watch_html);
+        println!("is_age_restricted: {}", is_age_restricted);
         Self::check_fetchability(&watch_html, is_age_restricted)?;
         let (video_info, _js) = self.get_video_info_and_js(&watch_html, is_age_restricted).await?;
 
@@ -267,11 +268,13 @@ impl VideoFetcher {
         is_age_restricted: bool,
         watch_html: &str,
     ) -> crate::Result<(String, Option<PlayerResponse>)> {
+        let _ytcfg = get_ytcfg(watch_html);
         let (js_url, player_response) = match is_age_restricted {
             true => {
-                let embed_url = self.video_id.embed_url();
-                let embed_html = self.get_html(&embed_url).await?;
-                js_url(&embed_html)?
+                let embed_ytcfg = self.get_embeded_ytconfig(&watch_html).await?;
+                let embeded_player_response = deserialize_ytplayer_config(&embed_ytcfg.as_str()).ok();
+                let (js_url, _) = js_url(&watch_html)?;
+                (js_url, embeded_player_response)
             }
             false => js_url(watch_html)?
         };
@@ -364,6 +367,60 @@ impl VideoFetcher {
                 .await?
         )
     }*/
+
+    #[inline]
+    #[log_derive::logfn_inputs(Debug)]
+    async fn get_embeded_ytconfig(&self, other_html: &str) -> crate::Result<String> {
+        let ytcfg = get_ytcfg(other_html)?;
+        let ytcfg: serde_json::Value = serde_json::from_str(&ytcfg)?;
+        let sts = ytcfg["STS"].as_u64().unwrap();
+
+        let query = serde_json::json!({
+                    "context": {
+                        "client": {
+                            "clientName": "TVHTML5_SIMPLY_EMBEDDED_PLAYER",
+                            "clientVersion": "2.0",
+                            "hl": "en",
+                            "clientScreen": "EMBED",
+                        },
+                        "thirdParty": {
+                            "embedUrl": "https://google.com",
+                        },
+                    },
+                    "playbackContext": {
+                        "contentPlaybackContext": {
+                            "signatureTimestamp": sts,
+                            "html5Preference": "HTML5_PREF_WANTS",
+                        },
+                    },
+                    "videoId": self.video_id.as_borrowed(),
+                });
+
+        let rb = self.client.post("https://www.youtube.com/youtubei/v1/player")
+            .header("content-type", "application/json")
+            .header("X-Youtube-Client-Name", "85")
+            .header("X-Youtube-Client-Version", "2.0")
+            .header("Origin", "https://www.youtube.com")
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3513.0 Safari/537.36")
+            .header("Referer", "https://www.youtube.com/")
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+            .header("Accept-Language", "en-US,en;q=0.5")
+            .header("Accept-Encoding", "gzip, deflate")
+            .query(&vec![
+                ("key", "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8")
+            ])
+            .json(&query)
+            .send()
+            .await?;
+
+        let rb = rb
+            .error_for_status()?
+            .text()
+            .await?;
+
+        Ok(rb)
+
+    }
 }
 
 /// Extracts whether or not a particular video is age restricted.
@@ -429,6 +486,18 @@ fn js_url(html: &str) -> crate::Result<(Url, Option<PlayerResponse>)> {
     };
 
     Ok((Url::parse(&format!("https://youtube.com{base_js}"))?, player_response.ok()))
+}
+
+/// Extract the ytcfg from the watch html.
+#[inline]
+fn get_ytcfg(html: &str) -> crate::Result<String> {
+    static PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r#"ytcfg\.set\((\{.*\})\)"#).unwrap());
+    match PATTERN.captures(html) {
+        Some(c) => Ok(c.get(1).unwrap().as_str().to_owned()),
+        None => Err(Error::UnexpectedResponse (
+            "Could not find ytcfg in watch html".into()
+        ))
+    }
 }
 
 /// Extracts the [`PlayerResponse`] from the watch html.
