@@ -33,6 +33,7 @@ pub struct CallbackArguments {
 }
 
 /// Type to process on_progress
+#[derive(Default)]
 pub enum OnProgressType<'a> {
     /// Box containing a closure to execute on progress
     Closure(OnProgressClosure<'a>),
@@ -51,6 +52,7 @@ pub enum OnProgressType<'a> {
     /// bool indicates whether or not to cancel on a closed channel
     /// Will get executed for every MB downloaded
     SlowChannel(Sender<CallbackArguments>, bool),
+    #[default]
     None,
 }
 
@@ -66,12 +68,6 @@ impl<'a> fmt::Debug for OnProgressType<'a> {
             OnProgressType::SlowClosure(_) => "SlowClosure(Fn)",
         };
         f.write_str(name)
-    }
-}
-
-impl<'a> Default for OnProgressType<'a> {
-    fn default() -> Self {
-        OnProgressType::None
     }
 }
 

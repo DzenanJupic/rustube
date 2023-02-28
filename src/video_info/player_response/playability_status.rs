@@ -14,8 +14,8 @@ pub enum PlayabilityStatus {
         playable_in_embed: bool,
         miniplayer: Option<MiniPlayer>,
         #[serde(default)]
-        messages: Vec<String>,
-        context_params: String,
+        messages: Option<Vec<String>>,
+        context_params: Option<String>,
     },
     #[serde(rename_all = "camelCase")]
     Unplayable {
