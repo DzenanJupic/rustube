@@ -270,9 +270,9 @@ impl VideoFetcher {
         let _ytcfg = get_ytcfg(watch_html);
         let (js_url, player_response) = match is_age_restricted {
             true => {
-                let embed_ytcfg = self.get_embeded_ytconfig(&watch_html).await?;
-                let embeded_player_response = deserialize_ytplayer_config(&embed_ytcfg.as_str()).ok();
-                let (js_url, _) = js_url(&watch_html)?;
+                let embed_ytcfg = self.get_embeded_ytconfig(watch_html).await?;
+                let embeded_player_response = deserialize_ytplayer_config(embed_ytcfg.as_str()).ok();
+                let (js_url, _) = js_url(watch_html)?;
                 (js_url, embeded_player_response)
             }
             false => js_url(watch_html)?
