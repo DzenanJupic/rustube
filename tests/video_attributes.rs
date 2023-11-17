@@ -115,6 +115,7 @@ async fn video_is_live_stream() {
             .await
             .unwrap()
             .descramble()
+            .await
             .unwrap()
     );
 

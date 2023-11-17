@@ -102,7 +102,7 @@ impl Video {
         crate::VideoFetcher::from_url(url)?
             .fetch()
             .await?
-            .descramble()
+            .descramble().await
     }
 
     /// Creates a [`Video`] from an [`Id`].
@@ -115,7 +115,7 @@ impl Video {
         crate::VideoFetcher::from_id(id)?
             .fetch()
             .await?
-            .descramble()
+            .descramble().await
     }
 
     /// The [`VideoInfo`] of the video.

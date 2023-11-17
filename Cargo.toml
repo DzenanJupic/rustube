@@ -30,6 +30,7 @@ derivative = "2.2.0"
 derive_more = "0.99.16"
 futures = { version = "0.3.17", optional = true }
 log = "0.4.14"
+m3u8-rs = "5.0.4"
 log-derive = "0.4.1"
 mime = { version = "0.3.16", optional = true }
 regex = { version = "1.5.4", optional = true }

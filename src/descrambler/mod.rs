@@ -4,6 +4,8 @@ use reqwest::Client;
 use url::Url;
 
 use cipher::Cipher;
+use regex::Regex;
+use m3u8_rs::Playlist::MasterPlaylist;
 
 use crate::{IdBuf, Stream, Video, VideoDetails, VideoInfo};
 use crate::error::Error;
@@ -100,7 +102,7 @@ impl VideoDescrambler {
     /// - When descrambling the videos signatures fails.
     #[log_derive::logfn(ok = "Trace", err = "Error")]
     #[log_derive::logfn_inputs(Trace)]
-    pub fn descramble(mut self) -> crate::Result<Video> {
+    pub async fn descramble(mut self) -> crate::Result<Video> {
         let streaming_data = self.video_info.player_response.streaming_data
             .as_mut()
             .ok_or_else(|| Error::Custom(
@@ -114,26 +116,83 @@ impl VideoDescrambler {
 
         apply_signature(streaming_data, &self.js)?;
         let mut streams = Vec::new();
-        Self::initialize_streams(
-            streaming_data,
-            &mut streams,
-            &self.client,
-            &self.video_info.player_response.video_details,
-        );
-
+        if self.video_info.player_response.video_details.is_live_content {
+            Self::hls_and_dash_url(&self, &mut streams).await;
+        } else {
+            Self::initialize_streams(
+                streaming_data,
+                &mut streams,
+                &self.client,
+                &self.video_info.player_response.video_details,
+            );
+        }
         Ok(Video {
             video_info: self.video_info,
             streams,
         })
     }
 
-    pub fn hls_and_dash_url(&self) -> crate::Result<HlsAndDash> {
-        let streaming_data = self.video_info.player_response.streaming_data.as_ref()
+    async fn get_prise_hls(&self, streams: &mut Vec<Stream>, hls_manifest_url:String) {
+        let req_out = self.client.get(hls_manifest_url).send().await;
+        if req_out.is_err() {
+            return;
+        }
+        let req_bytes = req_out.unwrap().bytes().await;
+        if req_bytes.is_err() {
+            return;
+        }
+        let MasterPlaylist(n) = m3u8_rs::parse_playlist_res(&req_bytes.unwrap()).unwrap() else { return; };
+        for i  in n.variants {
+            let codex = i.codecs;
+            if codex.is_none() { continue; }
+            let codex_out = codex.unwrap();
+            let re = Regex::new(r"/itag/(\d+)/").unwrap();
+            let itag_raw = &re.captures(&i.uri).unwrap()[1];
+            let mut qlt = "hd720";
+            let (mut width, mut height) = (None, None);
+            if i.resolution.is_some() {
+                let r = i.resolution.unwrap();
+                width = Some(r.width);
+                height = Some(r.height);
+                qlt = if r.height >= 2160 {
+                    "hd2160"
+                } else if r.height >= 1440 {
+                    "hd1440"
+                } else if r.height >= 1080 {
+                    "hd1080"
+                } else if r.height >= 720 {
+                    "hd720"
+                } else if r.height >= 480 {
+                    "large"
+                } else if r.height >= 360 {
+                    "medium"
+                } else if r.height >= 240 {
+                    "small"
+                } else {
+                    "tiny"
+                };
+            }
+            let out = serde_json::json!({"fps": i.frame_rate.unwrap() as u8, "signatureCipher": format!("url={}", i.uri), "itag": itag_raw.parse::<u64>().unwrap(), "quality": qlt, "mimeType": format!("video/mp4; codecs=\"{}\"", codex_out), "projectionType": "RECTANGULAR", "width": width, "height": height, "bitrate": i.bandwidth});
+            let raw_f = serde_json::from_value::<RawFormat>(out).unwrap();
+            let stream = Stream::from_raw_format(raw_f, self.client.clone(), Arc::clone(&self.video_info.player_response.video_details));
+            streams.push(stream);
+        }
+    }
+
+    pub async fn hls_and_dash_url(&self, streams: &mut Vec<Stream>) {
+        let streaming_data = self.video_info.player_response.streaming_data
+            .as_ref()
             .ok_or_else(|| Error::Custom(
                 "VideoInfo contained no StreamingData, which is essential for downloading.".into()
-            ))?;
-        let out = HlsAndDash {dash_url: streaming_data.dash_manifest_url.clone(), hls_url: streaming_data.hls_manifest_url.clone()};
-        Ok(out)
+            )).unwrap();
+        if streaming_data.hls_manifest_url.is_some() {
+            let url_hls = streaming_data.hls_manifest_url.as_ref().unwrap();
+            Self::get_prise_hls(&self, streams, url_hls.to_string()).await
+        }
+        if streaming_data.dash_manifest_url.is_some() {
+            let _url_dash = streaming_data.dash_manifest_url.as_ref().unwrap();
+            todo!()
+        }
     }
 
     /// The [`VideoInfo`] of the video.
