@@ -12,8 +12,7 @@ use crate::video_info::player_response::streaming_data::StreamingData;
 
 mod cipher;
 
-#[derive(Clone, derive_more::Display, derivative::Derivative)]
-#[display(fmt = "HlsAndDash({:?}, {:?})", "dash_url", "hls_url")]
+#[derive(Clone, Debug, derivative::Derivative)]
 pub struct HlsAndDash {
     pub dash_url: Option<String>,
     pub hls_url: Option<String>,
