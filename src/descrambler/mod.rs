@@ -12,6 +12,11 @@ use crate::video_info::player_response::streaming_data::StreamingData;
 
 mod cipher;
 
+pub struct HlsAndDash {
+    pub dash_url: Option<String>,
+    pub hls_url: Option<String>,
+}
+
 /// A descrambler used to decrypt the data fetched by [`VideoFetcher`].
 ///
 /// You will probably rarely use this type directly, and use [`Video`] instead. 
@@ -119,6 +124,15 @@ impl VideoDescrambler {
             video_info: self.video_info,
             streams,
         })
+    }
+
+    pub fn hls_and_dash_url(mut self) -> crate::Result<HlsAndDash> {
+        let streaming_data = self.video_info.player_response.streaming_data
+            .as_mut()
+            .ok_or_else(|| Error::Custom(
+                "VideoInfo contained no StreamingData, which is essential for downloading.".into()
+            ))?;
+        Ok(HlsAndDash {dash_url: streaming_data.dash_manifest_url.clone(), hls_url: streaming_data.hls_manifest_url.clone()})
     }
 
     /// The [`VideoInfo`] of the video.
