@@ -174,8 +174,7 @@ impl VideoDescrambler {
                 };
             }
             println!("{}", i.uri);
-            let mut url_qr = serde_qs::to_string(&i.uri).unwrap();
-            url_qr = serde_qs::to_string(&url_qr.as_str()).unwrap();
+            let url_qr = url_escape::encode_component(&i.uri);
             let out = serde_json::json!({"fps": i.frame_rate.unwrap() as u8, "signatureCipher": format!("url={}", url_qr), "itag": itag_raw.parse::<u64>().unwrap(), "quality": qlt, "mimeType": format!("video/mp4; codecs=\"{}\"", codex_out), "projectionType": "RECTANGULAR", "width": width, "height": height, "bitrate": i.bandwidth});
             let raw_f = serde_json::from_value::<RawFormat>(out).unwrap();
             let stream = Stream::from_raw_format(raw_f, self.client.clone(), Arc::clone(&self.video_info.player_response.video_details));
