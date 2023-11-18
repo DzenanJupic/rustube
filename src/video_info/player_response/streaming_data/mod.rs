@@ -18,8 +18,7 @@ pub struct StreamingData {
     pub expires_in_seconds: u64,
     #[serde(default)]
     pub formats: Vec<RawFormat>,
-    pub hls_manifest_url: Option<String>,
-    pub dash_manifest_url: Option<String>
+    pub hls_manifest_url: Option<String>
 
 }
 

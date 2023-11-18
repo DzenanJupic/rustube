@@ -108,17 +108,15 @@ impl VideoDescrambler {
             .ok_or_else(|| Error::Custom(
                 "VideoInfo contained no StreamingData, which is essential for downloading.".into()
             ))?;
-
-        if let Some(ref adaptive_fmts_raw) = self.video_info.adaptive_fmts_raw {
-            // fixme: this should probably be part of fetch.
-            apply_descrambler_adaptive_fmts(streaming_data, adaptive_fmts_raw)?;
-        }
-
-        apply_signature(streaming_data, &self.js)?;
         let mut streams = Vec::new();
         if self.video_info.player_response.video_details.is_live_content {
-            Self::hls_and_dash_url(&self, &mut streams).await;
-        } else {
+            if let Some(ref adaptive_fmts_raw) = self.video_info.adaptive_fmts_raw {
+                // fixme: this should probably be part of fetch.
+                apply_descrambler_adaptive_fmts(streaming_data, adaptive_fmts_raw)?;
+            }
+    
+            apply_signature(streaming_data, &self.js)?;
+            
             Self::initialize_streams(
                 streaming_data,
                 &mut streams,
@@ -126,6 +124,7 @@ impl VideoDescrambler {
                 &self.video_info.player_response.video_details,
             );
         }
+        Self::hls_descramble(&self, &mut streams).await;
         Ok(Video {
             video_info: self.video_info,
             streams,
@@ -179,7 +178,7 @@ impl VideoDescrambler {
         }
     }
 
-    pub async fn hls_and_dash_url(&self, streams: &mut Vec<Stream>) {
+    pub async fn hls_descramble(&self, streams: &mut Vec<Stream>) {
         let streaming_data = self.video_info.player_response.streaming_data
             .as_ref()
             .ok_or_else(|| Error::Custom(
@@ -188,10 +187,6 @@ impl VideoDescrambler {
         if streaming_data.hls_manifest_url.is_some() {
             let url_hls = streaming_data.hls_manifest_url.as_ref().unwrap();
             Self::get_prise_hls(&self, streams, url_hls.to_string()).await
-        }
-        if streaming_data.dash_manifest_url.is_some() {
-            let _url_dash = streaming_data.dash_manifest_url.as_ref().unwrap();
-            todo!()
         }
     }
 
