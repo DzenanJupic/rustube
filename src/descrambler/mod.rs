@@ -144,7 +144,7 @@ impl VideoDescrambler {
         for i  in n.variants {
             let codex = i.codecs;
             if codex.is_none() { continue; }
-            let codex_out = codex.unwrap();
+            let codex_out = codex.unwrap().replace(",", ", ");
             let re = Regex::new(r"/itag/(\d+)/").unwrap();
             let itag_raw = &re.captures(&i.uri).unwrap()[1];
             let mut qlt = "hd720";
