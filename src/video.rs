@@ -211,6 +211,26 @@ impl Video {
             .min_by_key(|stream| stream.width)
     }
 
+    /// The [`Stream`] with the best video quality and can have audio or not.
+    #[inline]
+    pub fn best_video_mix(&self) -> Option<&Stream> {
+        self
+            .streams
+            .iter()
+            .filter(|stream| stream.includes_video_track)
+            .max_by_key(|stream| stream.width)
+    }
+
+    /// The [`Stream`] with the worst video quality and can have audio or not.
+    #[inline]
+    pub fn worst_video_mix(&self) -> Option<&Stream> {
+        self
+            .streams
+            .iter()
+            .filter(|stream| stream.includes_video_track)
+            .min_by_key(|stream| stream.width)
+    }
+
     /// The [`Stream`] with the best audio quality.
     /// This stream is guaranteed to contain only a audio but no video track.    
     #[inline]
@@ -230,6 +250,26 @@ impl Video {
             .streams
             .iter()
             .filter(|stream| stream.includes_audio_track && !stream.includes_video_track)
+            .min_by_key(|stream| stream.bitrate)
+    }
+
+    /// The [`Stream`] with the best audio quality and can have audio or not.
+    #[inline]
+    pub fn best_audio_mix(&self) -> Option<&Stream> {
+        self
+            .streams
+            .iter()
+            .filter(|stream| stream.includes_audio_track)
+            .max_by_key(|stream| stream.bitrate)
+    }
+
+    /// The [`Stream`] with the worst audio quality and can have audio or not.
+    #[inline]
+    pub fn worst_audio_mix(&self) -> Option<&Stream> {
+        self
+            .streams
+            .iter()
+            .filter(|stream| stream.includes_audio_track)
             .min_by_key(|stream| stream.bitrate)
     }
 }
