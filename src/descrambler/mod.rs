@@ -132,13 +132,7 @@ impl VideoDescrambler {
     }
 
     async fn get_prise_hls(&self, streams: &mut Vec<Stream>, hls_manifest_url:String) {
-        let test = self.client.get("https://httpbin.org/get")
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3645.1 Safari/537.36")
-        .send().await;
-        println!("{}", test.unwrap().text().await.unwrap());
         let req_out = self.client.get(hls_manifest_url)
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3645.1 Safari/537.36")
-        .header("Accept-Language", "en-us,en;q=0.5")
         .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
         .send().await;
         if req_out.is_err() {

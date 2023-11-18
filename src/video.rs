@@ -40,7 +40,7 @@ use crate::video_info::player_response::video_details::VideoDetails;
 /// let url = Url::parse("https://youtube.com/watch?iv=5jlI4uzZGjU")?;
 /// let fetcher: VideoFetcher = VideoFetcher::from_url(&url)?;
 /// let descrambler: VideoDescrambler = fetcher.fetch().await?;  
-/// let video: Video = descrambler.descramble()?;
+/// let video: Video = descrambler.descramble().await?;
 ///# Ok(())
 ///# }
 /// ``` 
@@ -54,7 +54,8 @@ use crate::video_info::player_response::video_details::VideoDetails;
 /// let video: Video = VideoFetcher::from_url(&url)?
 ///    .fetch()
 ///    .await?
-///    .descramble()?;
+///    .descramble()
+///    .await?;
 ///# Ok(())
 ///# }
 /// ``` 

@@ -77,7 +77,7 @@
 //!# let descrambler = VideoFetcher::from_id(id.into_owned())?
 //!#    .fetch()
 //!#    .await?;
-//! let video = descrambler.descramble()?;
+//! let video = descrambler.descramble().await??;
 //! let path_to_video = video.best_quality().unwrap().download().await?;
 //!# Ok(())
 //!# }
