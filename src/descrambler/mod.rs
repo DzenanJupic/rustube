@@ -142,7 +142,6 @@ impl VideoDescrambler {
         if req_bytes.is_err() {
             return;
         }
-        println!("{}", String::from_utf8(req_bytes.as_ref().unwrap().to_vec()).unwrap());
         let MasterPlaylist(n) = m3u8_rs::parse_playlist_res(&req_bytes.unwrap()).unwrap() else { return; };
         for i  in n.variants {
             let codex = i.codecs;
@@ -174,7 +173,9 @@ impl VideoDescrambler {
                     "tiny"
                 };
             }
-            let out = serde_json::json!({"fps": i.frame_rate.unwrap() as u8, "signatureCipher": format!("url={}", serde_qs::to_string(&i.uri.replace("%", "%25")).unwrap()), "itag": itag_raw.parse::<u64>().unwrap(), "quality": qlt, "mimeType": format!("video/mp4; codecs=\"{}\"", codex_out), "projectionType": "RECTANGULAR", "width": width, "height": height, "bitrate": i.bandwidth});
+            let mut url_qr = serde_qs::to_string(&i.uri).unwrap();
+            url_qr = serde_qs::to_string(&url_qr.as_str()).unwrap();
+            let out = serde_json::json!({"fps": i.frame_rate.unwrap() as u8, "signatureCipher": format!("url={}", url_qr), "itag": itag_raw.parse::<u64>().unwrap(), "quality": qlt, "mimeType": format!("video/mp4; codecs=\"{}\"", codex_out), "projectionType": "RECTANGULAR", "width": width, "height": height, "bitrate": i.bandwidth});
             let raw_f = serde_json::from_value::<RawFormat>(out).unwrap();
             let stream = Stream::from_raw_format(raw_f, self.client.clone(), Arc::clone(&self.video_info.player_response.video_details));
             streams.push(stream);
