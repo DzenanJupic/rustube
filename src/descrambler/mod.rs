@@ -142,7 +142,7 @@ impl VideoDescrambler {
         if req_bytes.is_err() {
             return;
         }
-        println!("{}", String::from_utf8(req_bytes.unwrap()).unwrap());
+        println!("{}", String::from_utf8(req_bytes.as_ref().unwrap().to_vec()).unwrap());
         let MasterPlaylist(n) = m3u8_rs::parse_playlist_res(&req_bytes.unwrap()).unwrap() else { return; };
         for i  in n.variants {
             let codex = i.codecs;
