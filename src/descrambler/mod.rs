@@ -173,7 +173,7 @@ impl VideoDescrambler {
                     "tiny"
                 };
             }
-            println!("{:?}", i.uri);
+            println!("{}", i.uri);
             let mut url_qr = serde_qs::to_string(&i.uri).unwrap();
             url_qr = serde_qs::to_string(&url_qr.as_str()).unwrap();
             let out = serde_json::json!({"fps": i.frame_rate.unwrap() as u8, "signatureCipher": format!("url={}", url_qr), "itag": itag_raw.parse::<u64>().unwrap(), "quality": qlt, "mimeType": format!("video/mp4; codecs=\"{}\"", codex_out), "projectionType": "RECTANGULAR", "width": width, "height": height, "bitrate": i.bandwidth});
