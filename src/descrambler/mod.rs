@@ -109,7 +109,7 @@ impl VideoDescrambler {
                 "VideoInfo contained no StreamingData, which is essential for downloading.".into()
             ))?;
         let mut streams = Vec::new();
-        if self.video_info.player_response.video_details.is_live_content {
+        if !self.video_info.player_response.video_details.is_live_content {
             if let Some(ref adaptive_fmts_raw) = self.video_info.adaptive_fmts_raw {
                 // fixme: this should probably be part of fetch.
                 apply_descrambler_adaptive_fmts(streaming_data, adaptive_fmts_raw)?;
