@@ -132,6 +132,8 @@ impl VideoDescrambler {
     }
 
     async fn get_prise_hls(&self, streams: &mut Vec<Stream>, hls_manifest_url:String) {
+        let test = self.client.get("https://httpbin.org/get").send().await;
+        println!("{}", test.unwrap().text().await.unwrap());
         let req_out = self.client.get(hls_manifest_url).send().await;
         if req_out.is_err() {
             return;
