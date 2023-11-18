@@ -145,7 +145,6 @@ impl VideoDescrambler {
         let MasterPlaylist(n) = m3u8_rs::parse_playlist_res(&req_bytes.unwrap()).unwrap() else { return; };
         for i  in n.variants {
             let codex = i.codecs;
-            if codex.is_none() { continue; }
             let codex_out = codex.unwrap().replace(",", ", ");
             let re = Regex::new(r"/itag/(\d+)/").unwrap();
             let itag_raw = &re.captures(&i.uri).unwrap()[1];
