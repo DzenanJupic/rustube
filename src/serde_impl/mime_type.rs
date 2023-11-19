@@ -18,7 +18,7 @@ pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<MimeType, <D as Des
     // deserializing into a &str gives back an error
     let s = String::deserialize(deserializer)?;
 
-    let (mime_type, codecs) = PATTERN
+    let (mime_type, mut codecs) = PATTERN
         .captures(&s)
         .ok_or_else(|| D::Error::invalid_value(
             Unexpected::Str(&s),
@@ -40,9 +40,12 @@ pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<MimeType, <D as Des
             Unexpected::Str(mime_type),
             &r#"a valid mime type with the format `(\w+/\w+);\scodecs="([a-zA-Z-0-9.,\s]*)"`"#,
         ))?;
-
+    let codecs_s = codecs.strip_suffix(" ");
+    if codecs_s.is_some() {
+        codecs = codecs_s.unwrap();
+    }
     let codecs = codecs
-        .split(", ")
+        .split(",")
         .map(str::to_owned)
         .collect();
 
