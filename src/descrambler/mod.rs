@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use reqwest::Client;
 use url::Url;
-
 use cipher::Cipher;
 use regex::Regex;
 
