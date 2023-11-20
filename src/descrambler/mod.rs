@@ -5,7 +5,6 @@ use url::Url;
 
 use cipher::Cipher;
 use regex::Regex;
-use m3u8_rs::Playlist::MasterPlaylist;
 
 use crate::{IdBuf, Stream, Video, VideoDetails, VideoInfo};
 use crate::error::Error;
@@ -142,7 +141,7 @@ impl VideoDescrambler {
         if req_bytes.is_err() {
             return;
         }
-        let MasterPlaylist(n) = m3u8_rs::parse_playlist_res(&req_bytes.unwrap()).unwrap() else { return; };
+        let n = m3u8_rs::parse_master_playlist(&req_bytes.unwrap()).unwrap().1;
         for i  in n.variants {
             let codex = i.codecs;
             let codex_out = codex.unwrap();
