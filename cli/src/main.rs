@@ -69,7 +69,7 @@ async fn download(args: DownloadArgs) -> Result<()> {
     let callback = Callback::new()
         .connect_on_progress_closure(|cargs| {
             // update progress bar
-            pb.add(cargs.current_chunk.saturating_sub(cargs.current_chunk) as u64);
+            pb.set(cargs.current_chunk as u64);
         });
 
     stream
