@@ -1,21 +1,10 @@
 # <div align="center"> rustube </div>
 
-<div align="center">
-
-[![crates.io](https://img.shields.io/crates/v/rustube?style=flat-square)](https://crates.io/crates/rustube)
-[![docs.rs](https://img.shields.io/docsrs/rustube?style=flat-square)](https://docs.rs/rustube)
-[![licence](https://img.shields.io/crates/l/rustube?style=flat-square)](https://github.com/DzenanJupic/rustube)
-
-![build](https://img.shields.io/github/workflow/status/DzenanJupic/rustube/Check%20and%20Build%20code%20on%20all%20major%20operating%20systems?style=flat-square)
-![YT download](https://img.shields.io/github/workflow/status/DzenanJupic/rustube/Test%20downloading?label=YT%20download&style=flat-square)
-
-</div>
-
 ---
 
-A complete (WIP), and easy to use YouTube downloader.
-> **Note**: 0.3.5 is a temporary fix to adapt to changes in the YouTube api (#38). Unfortunately this fix does not
-> work for age restricted videos. We are working on a fix for that in #39.
+> **Note**: This fork and was maintained by Fantasy Team
+> 
+> it uses for Fantasy Bot "songbird_node" to get YouTube audio and video
 
 ## Overview
 
