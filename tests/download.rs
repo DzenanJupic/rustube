@@ -8,7 +8,7 @@ use rustube::VideoFetcher;
 #[macro_use]
 mod common;
 
-#[test_env_log::test(tokio::test)]
+#[test_log::test(tokio::test)]
 #[ignore]
 async fn download() {
     let id = random_id(PRE_SIGNED);
@@ -24,7 +24,7 @@ async fn download() {
     correct_path!(path, expected_path);
 }
 
-#[test_env_log::test(tokio::test)]
+#[test_log::test(tokio::test)]
 #[ignore]
 async fn download_age_restricted_to_dir() {
     let id = random_id(AGE_RESTRICTED);
@@ -60,7 +60,7 @@ fn blocking_download_to_dir() {
     correct_path!(path, expected_path);
 }
 
-#[test_env_log::test(tokio::test)]
+#[test_log::test(tokio::test)]
 #[ignore]
 async fn download_to_dir() {
     let id = random_id(PRE_SIGNED);
@@ -76,7 +76,7 @@ async fn download_to_dir() {
     correct_path!(path, expected_path);
 }
 
-#[test_env_log::test(tokio::test)]
+#[test_log::test(tokio::test)]
 #[ignore]
 async fn download_to() {
     let id = random_id(PRE_SIGNED);

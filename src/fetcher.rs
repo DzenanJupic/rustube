@@ -600,9 +600,8 @@ pub fn recommended_cookies() -> reqwest::cookie::Jar {
 
 pub fn recommended_headers() -> reqwest::header::HeaderMap {
     let mut headers = reqwest::header::HeaderMap::new();
-
-    headers.insert(reqwest::header::ACCEPT_LANGUAGE, "en-US,en".parse().unwrap());
-    headers.insert(reqwest::header::USER_AGENT, "Mozilla/5.0".parse().unwrap());
-
+    headers.insert(reqwest::header::USER_AGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3645.1 Safari/537.36".parse().unwrap());
+    headers.insert(reqwest::header::ACCEPT_LANGUAGE, "en-us,en;q=0.5".parse().unwrap());
+    headers.insert(reqwest::header::ACCEPT_ENCODING, "gzip, deflate".parse().unwrap());
     headers
 }
