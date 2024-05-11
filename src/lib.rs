@@ -201,6 +201,7 @@ extern crate alloc;
 #[cfg(feature = "tokio")]
 pub use tokio;
 pub use url;
+pub use reqwest;
 
 #[cfg(feature = "descramble")]
 pub use crate::descrambler::VideoDescrambler;
