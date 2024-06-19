@@ -81,7 +81,7 @@ pub(crate) fn find_object_from_startpoint(html: &str, start_point: usize) -> Opt
     Some(full_obj)
 }
 
-pub(crate) fn parese_playlist_videos(obj_data: &str) -> (Vec<Value>, Option<String>) {
+pub(crate) fn parese_playlist_videos(obj_data: &str) -> (Vec<PlaylistVideo>, Option<String>) {
     let initial_data: Value = serde_json::from_str(&obj_data).unwrap();
     let videos;
     let section_contents = initial_data["contents"][
