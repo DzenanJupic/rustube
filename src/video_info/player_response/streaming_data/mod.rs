@@ -194,6 +194,8 @@ pub enum QualityLabel {
     P1080Hz60HDR,
     #[serde(rename = "1440p")]
     P1440,
+    #[serde(rename = "1440p50")]
+    P1440Hz50,
     #[serde(rename = "1440p60")]
     P1440Hz60,
     #[serde(rename = "1440p60 HDR")]
