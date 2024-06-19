@@ -259,6 +259,15 @@ pub mod video;
 #[cfg(feature = "fetch")]
 mod serde_impl;
 
+mod helper;
+
+pub mod playlist;
+
+pub mod playlist_info;
+
+pub mod channel;
+
+pub use crate::playlist::Playlist;
 /// The absolute most straightforward way of downloading a YouTube video in high quality!
 ///
 /// Takes an arbitrary video identifier, like any video URL, or the video id, and downloads
