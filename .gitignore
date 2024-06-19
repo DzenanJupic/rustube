@@ -3,3 +3,4 @@ Cargo.lock
 /.idea
 **/temp*
 *.mp4
+.vscode
