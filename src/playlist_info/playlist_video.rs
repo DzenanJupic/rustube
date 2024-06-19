@@ -7,21 +7,17 @@ use crate::{video_info::player_response::video_details::Thumbnail, IdBuf};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaylistVideo {
-    #[serde(serialize_with = "serialize_index")]
     #[serde(deserialize_with = "deserialize_index")]
     pub index: u64,
     pub video_id: IdBuf,
-    #[serde(serialize_with = "serialize_run")]
     #[serde(deserialize_with = "deserialize_run")]
     pub title: String,
     #[serde_as(as = "JsonString")]
     pub length_seconds: u64,
     #[serde(rename = "thumbnail")]
-    #[serde(serialize_with = "Thumbnail::serialize_vec")]
     #[serde(deserialize_with = "Thumbnail::deserialize_vec")]
     pub thumbnails: Vec<Thumbnail>,
     #[serde(rename = "shortBylineText")]
-    #[serde(serialize_with = "serialize_run")]
     #[serde(deserialize_with = "deserialize_run")]
     pub author: String,
 }
