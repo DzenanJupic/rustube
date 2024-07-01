@@ -130,6 +130,7 @@ async fn get_video(id: IdBuf) -> Result<Video> {
         .await
         .context("Could not fetch the video information")?
         .descramble()
+        .await
         .context("Could not descramble the video information")
 }
 

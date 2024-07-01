@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use reqwest::Client;
 use url::Url;
-
 use cipher::Cipher;
+use regex::Regex;
 
 use crate::{IdBuf, Stream, Video, VideoDetails, VideoInfo};
 use crate::error::Error;
@@ -11,6 +11,12 @@ use crate::video_info::player_response::streaming_data::RawFormat;
 use crate::video_info::player_response::streaming_data::StreamingData;
 
 mod cipher;
+
+#[derive(Clone, Debug, derivative::Derivative)]
+pub struct HlsAndDash {
+    pub dash_url: Option<String>,
+    pub hls_url: Option<String>,
+}
 
 /// A descrambler used to decrypt the data fetched by [`VideoFetcher`].
 ///
@@ -94,31 +100,94 @@ impl VideoDescrambler {
     /// - When descrambling the videos signatures fails.
     #[log_derive::logfn(ok = "Trace", err = "Error")]
     #[log_derive::logfn_inputs(Trace)]
-    pub fn descramble(mut self) -> crate::Result<Video> {
+    pub async fn descramble(mut self) -> crate::Result<Video> {
         let streaming_data = self.video_info.player_response.streaming_data
             .as_mut()
             .ok_or_else(|| Error::Custom(
                 "VideoInfo contained no StreamingData, which is essential for downloading.".into()
             ))?;
-
-        if let Some(ref adaptive_fmts_raw) = self.video_info.adaptive_fmts_raw {
-            // fixme: this should probably be part of fetch.
-            apply_descrambler_adaptive_fmts(streaming_data, adaptive_fmts_raw)?;
-        }
-
-        apply_signature(streaming_data, &self.js)?;
         let mut streams = Vec::new();
-        Self::initialize_streams(
-            streaming_data,
-            &mut streams,
-            &self.client,
-            &self.video_info.player_response.video_details,
-        );
-
+        if !self.video_info.player_response.video_details.is_live_content {
+            if let Some(ref adaptive_fmts_raw) = self.video_info.adaptive_fmts_raw {
+                // fixme: this should probably be part of fetch.
+                apply_descrambler_adaptive_fmts(streaming_data, adaptive_fmts_raw)?;
+            }
+    
+            apply_signature(streaming_data, &self.js)?;
+            
+            Self::initialize_streams(
+                streaming_data,
+                &mut streams,
+                &self.client,
+                &self.video_info.player_response.video_details,
+            );
+        }
+        Self::hls_descramble(&self, &mut streams).await;
         Ok(Video {
             video_info: self.video_info,
             streams,
         })
+    }
+
+    async fn get_prise_hls(&self, streams: &mut Vec<Stream>, hls_manifest_url:String) {
+        let req_out = self.client.get(hls_manifest_url)
+        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+        .send().await;
+        if req_out.is_err() {
+            return;
+        }
+        let req_bytes = req_out.unwrap().bytes().await;
+        if req_bytes.is_err() {
+            return;
+        }
+        let n = m3u8_rs::parse_master_playlist(&req_bytes.unwrap()).unwrap().1;
+        for i  in n.variants {
+            let codex = i.codecs;
+            let codex_out = codex.unwrap();
+            let re = Regex::new(r"/itag/(\d+)/").unwrap();
+            let itag_raw = &re.captures(&i.uri).unwrap()[1];
+            let mut qlt = "hd720";
+            let (mut width, mut height) = (None, None);
+            if i.resolution.is_some() {
+                let r = i.resolution.unwrap();
+                width = Some(r.width);
+                height = Some(r.height);
+                qlt = if r.height >= 2160 {
+                    "hd2160"
+                } else if r.height >= 1440 {
+                    "hd1440"
+                } else if r.height >= 1080 {
+                    "hd1080"
+                } else if r.height >= 720 {
+                    "hd720"
+                } else if r.height >= 480 {
+                    "large"
+                } else if r.height >= 360 {
+                    "medium"
+                } else if r.height >= 240 {
+                    "small"
+                } else {
+                    "tiny"
+                };
+            }
+            let url_qr = url_escape::encode_component(&i.uri);
+            let out = serde_json::json!({"fps": i.frame_rate.unwrap() as u8, "signatureCipher": format!("url={}", url_qr), "itag": itag_raw.parse::<u64>().unwrap(), "quality": qlt, "mimeType": format!("video/mp4; codecs=\"{}\"", codex_out), "projectionType": "RECTANGULAR", "width": width, "height": height, "bitrate": i.bandwidth});
+            let raw_f = serde_json::from_value::<RawFormat>(out).unwrap();
+            let stream = Stream::from_raw_format(raw_f, self.client.clone(), Arc::clone(&self.video_info.player_response.video_details));
+            streams.push(stream);
+        }
+    }
+
+    pub async fn hls_descramble(&self, streams: &mut Vec<Stream>) {
+        let streaming_data = self.video_info.player_response.streaming_data
+            .as_ref()
+            .ok_or_else(|| Error::Custom(
+                "VideoInfo contained no StreamingData, which is essential for downloading.".into()
+            )).unwrap();
+        if streaming_data.hls_manifest_url.is_some() {
+            let url_hls = streaming_data.hls_manifest_url.as_ref().unwrap();
+            Self::get_prise_hls(&self, streams, url_hls.to_string()).await
+        }
     }
 
     /// The [`VideoInfo`] of the video.

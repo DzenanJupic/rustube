@@ -77,7 +77,7 @@
 //!# let descrambler = VideoFetcher::from_id(id.into_owned())?
 //!#    .fetch()
 //!#    .await?;
-//! let video = descrambler.descramble()?;
+//! let video = descrambler.descramble().await?;
 //! let path_to_video = video.best_quality().unwrap().download().await?;
 //!# Ok(())
 //!# }
@@ -259,6 +259,21 @@ pub mod video;
 
 #[cfg(feature = "fetch")]
 mod serde_impl;
+
+mod helper;
+
+pub mod playlist;
+
+pub mod playlist_info;
+
+pub mod channel_info;
+
+pub mod channel;
+
+pub use crate::channel::Channel;
+
+pub use crate::playlist::Playlist;
+
 
 /// The absolute most straightforward way of downloading a YouTube video in high quality!
 ///

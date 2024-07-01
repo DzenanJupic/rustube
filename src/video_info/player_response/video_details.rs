@@ -30,7 +30,6 @@ pub struct VideoDetails {
     pub length_seconds: u64,
     pub short_description: String,
     #[serde(rename = "thumbnail")]
-    #[serde(serialize_with = "Thumbnail::serialize_vec")]
     #[serde(deserialize_with = "Thumbnail::deserialize_vec")]
     pub thumbnails: Vec<Thumbnail>,
     pub title: String,

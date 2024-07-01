@@ -40,7 +40,7 @@ use crate::video_info::player_response::video_details::VideoDetails;
 /// let url = Url::parse("https://youtube.com/watch?iv=5jlI4uzZGjU")?;
 /// let fetcher: VideoFetcher = VideoFetcher::from_url(&url)?;
 /// let descrambler: VideoDescrambler = fetcher.fetch().await?;  
-/// let video: Video = descrambler.descramble()?;
+/// let video: Video = descrambler.descramble().await?;
 ///# Ok(())
 ///# }
 /// ``` 
@@ -54,7 +54,8 @@ use crate::video_info::player_response::video_details::VideoDetails;
 /// let video: Video = VideoFetcher::from_url(&url)?
 ///    .fetch()
 ///    .await?
-///    .descramble()?;
+///    .descramble()
+///    .await?;
 ///# Ok(())
 ///# }
 /// ``` 
@@ -98,11 +99,11 @@ impl Video {
     /// - When [`VideoDescrambler::descramble`](crate::VideoDescrambler::descramble) fails.
     #[inline]
     #[cfg(all(feature = "download", feature = "regex"))]
-    pub async fn from_url(url: &url::Url) -> crate::Result<Self> {
-        crate::VideoFetcher::from_url(url)?
+    pub async fn from_url(url: url::Url) -> crate::Result<Self> {
+        crate::VideoFetcher::from_url(&url)?
             .fetch()
             .await?
-            .descramble()
+            .descramble().await
     }
 
     /// Creates a [`Video`] from an [`Id`].
@@ -115,7 +116,7 @@ impl Video {
         crate::VideoFetcher::from_id(id)?
             .fetch()
             .await?
-            .descramble()
+            .descramble().await
     }
 
     /// The [`VideoInfo`] of the video.
@@ -210,6 +211,26 @@ impl Video {
             .min_by_key(|stream| stream.width)
     }
 
+    /// The [`Stream`] with the best video quality and can have audio or not.
+    #[inline]
+    pub fn best_video_mix(&self) -> Option<&Stream> {
+        self
+            .streams
+            .iter()
+            .filter(|stream| stream.includes_video_track)
+            .max_by_key(|stream| stream.width)
+    }
+
+    /// The [`Stream`] with the worst video quality and can have audio or not.
+    #[inline]
+    pub fn worst_video_mix(&self) -> Option<&Stream> {
+        self
+            .streams
+            .iter()
+            .filter(|stream| stream.includes_video_track)
+            .min_by_key(|stream| stream.width)
+    }
+
     /// The [`Stream`] with the best audio quality.
     /// This stream is guaranteed to contain only a audio but no video track.    
     #[inline]
@@ -229,6 +250,26 @@ impl Video {
             .streams
             .iter()
             .filter(|stream| stream.includes_audio_track && !stream.includes_video_track)
+            .min_by_key(|stream| stream.bitrate)
+    }
+
+    /// The [`Stream`] with the best audio quality and can have audio or not.
+    #[inline]
+    pub fn best_audio_mix(&self) -> Option<&Stream> {
+        self
+            .streams
+            .iter()
+            .filter(|stream| stream.includes_audio_track)
+            .max_by_key(|stream| stream.bitrate)
+    }
+
+    /// The [`Stream`] with the worst audio quality and can have audio or not.
+    #[inline]
+    pub fn worst_audio_mix(&self) -> Option<&Stream> {
+        self
+            .streams
+            .iter()
+            .filter(|stream| stream.includes_audio_track)
             .min_by_key(|stream| stream.bitrate)
     }
 }

@@ -63,6 +63,7 @@ macro_rules! video {
                     .expect("Failed to fetch the video")
             )
                     .descramble()
+                    .await
                     .expect("Failed to descramble the video")
         )
     };
