@@ -13,6 +13,6 @@ pub struct PlaylistInfo {
     pub thumbnails: Vec<Thumbnail>,
     pub title: String,
     pub description: String,
-    #[serde(rename = "urlCanonical")]
+    #[serde(rename(deserialize = "urlCanonical"))]
     pub page_url: String
 }

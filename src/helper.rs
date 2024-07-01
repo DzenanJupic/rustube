@@ -1,7 +1,7 @@
 use regex::Regex;
 use serde_json::Value;
 
-use crate::playlist_info::{playlist_video::PlaylistVideo, PlaylistInfo};
+use crate::{channel_info::{channel_video::ChannelVideo, ChannelInfo}, playlist_info::{playlist_video::PlaylistVideo, PlaylistInfo}};
 
 pub(crate) fn initial_data(watch_html: &str) -> Option<String> {
     let regex_pattern = vec![
@@ -123,5 +123,40 @@ pub(crate) fn parese_playlist_metadata(obj_data: &str) -> Result<PlaylistInfo, c
     let initial_data: Value = serde_json::from_str(&obj_data)?;
     let playlist_info_v = initial_data["microformat"]["microformatDataRenderer"].clone();
     let playlist_info: PlaylistInfo = serde_json::from_value(playlist_info_v).unwrap();
+    Ok(playlist_info)
+}
+
+pub(crate) fn parese_channel_videos(obj_data: &str, channel_name: String) -> (Vec<ChannelVideo>, Option<String>) {
+    let initial_data: Value = serde_json::from_str(&obj_data).unwrap();
+    let mut videos = initial_data["contents"][
+        "twoColumnBrowseResultsRenderer"][
+        "tabs"][1]["tabRenderer"]["content"]["richGridRenderer"]["contents"].clone();
+    if videos.is_null() {
+        videos = initial_data["onResponseReceivedActions"][0]["appendContinuationItemsAction"]["continuationItems"].clone();
+    }
+    let mut videos_raw = videos.as_array().unwrap().to_owned();
+    let mut results = Vec::new();
+    let continuation = videos_raw[videos_raw.len() - 1]["continuationItemRenderer"]["continuationEndpoint"]["continuationCommand"]["token"].clone();
+    let mut continuation_id = None;
+    if let Some(continuation) = continuation.as_str() {
+        let continuation_index = videos_raw.len() - 1;
+        videos_raw = videos_raw[..continuation_index].to_vec();
+        continuation_id = Some(continuation.to_string());
+    }
+    for video in videos_raw {
+        let pvideo = serde_json::from_value::<ChannelVideo>(video["richItemRenderer"]["content"]["videoRenderer"].clone());
+        if pvideo.is_err() { 
+            continue; 
+        }
+        results.push(pvideo.unwrap().add_author(channel_name.clone()));
+    }
+    
+    (results, continuation_id)
+}
+
+pub(crate) fn parese_channel_metadata(obj_data: &str) -> Result<ChannelInfo, crate::Error> {
+    let initial_data: Value = serde_json::from_str(&obj_data)?;
+    let playlist_info_v = initial_data["microformat"]["microformatDataRenderer"].clone();
+    let playlist_info: ChannelInfo = serde_json::from_value(playlist_info_v).unwrap();
     Ok(playlist_info)
 }

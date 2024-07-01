@@ -1,25 +1,28 @@
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_with::{serde_as, json::JsonString};
 
 use crate::{video_info::player_response::video_details::Thumbnail, IdBuf};
 
-#[serde_as]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PlaylistVideo {
-    #[serde(deserialize_with = "deserialize_index")]
-    pub index: u64,
+pub struct ChannelVideo {
     pub video_id: IdBuf,
     #[serde(deserialize_with = "deserialize_run")]
     pub title: String,
-    #[serde_as(as = "JsonString")]
+    #[serde(rename(deserialize = "lengthText"))]
+    #[serde(deserialize_with = "deserialize_length")]
     pub length_seconds: u64,
     #[serde(rename = "thumbnail")]
     #[serde(deserialize_with = "Thumbnail::deserialize_vec")]
     pub thumbnails: Vec<Thumbnail>,
-    #[serde(rename(deserialize = "shortBylineText"))]
-    #[serde(deserialize_with = "deserialize_run")]
+    #[serde(default)]
     pub author: String,
+}
+
+impl ChannelVideo {
+    pub(crate) fn add_author(&mut self, author: String) -> Self {
+        self.author = author;
+        self.to_owned()
+    }
 }
 
 fn deserialize_run<'de, D>(deserializer: D) -> Result<String, D::Error>
@@ -45,7 +48,7 @@ struct Run {
     text: String,
 }
 
-fn deserialize_index<'de, D>(deserializer: D) -> Result<u64, D::Error>
+fn deserialize_length<'de, D>(deserializer: D) -> Result<u64, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -56,5 +59,16 @@ where
     }
 
     let index = Index::deserialize(deserializer)?;
-    index.simple_text.parse::<u64>().map_err(serde::de::Error::custom)
+
+    let parts: Vec<&str> = index.simple_text.split(':').collect();
+    let mut out_sec = 0;
+    let mut multiplier = 1;
+
+    for part in parts.iter().rev() {
+        let value: u64 = part.parse().unwrap();
+        out_sec += value * multiplier;
+        multiplier *= 60;
+    }
+
+    Ok(out_sec)
 }

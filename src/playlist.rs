@@ -1,27 +1,18 @@
+use std::collections::HashMap;
+
 use reqwest::Client;
-use serde::{ser::SerializeTuple, Serialize};
+use serde::Serialize;
 use crate::{fetcher::{recommended_cookies, recommended_headers}, helper::{initial_data, parese_playlist_metadata, parese_playlist_videos}, playlist_info::{playlist_video::PlaylistVideo, req_json::ContinuationReq, PlaylistInfo}};
 
 
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Playlist {
     playlist_info: PlaylistInfo,
     videos: Vec<PlaylistVideo>,
 }
 
-impl Serialize for Playlist {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where
-        S: serde::Serializer {
-        let mut map = serializer.serialize_tuple(self.videos.len())?;
-        for i in &self.videos {
-            map.serialize_element(&i)?;
-        }
-        map.end()
-    }
-}
-
-fn crate_client() -> crate::Result<reqwest::Client> {
+pub(crate) fn crate_client() -> crate::Result<reqwest::Client> {
     let cookie_jar = recommended_cookies();
     let headers = recommended_headers();
 
@@ -34,17 +25,9 @@ fn crate_client() -> crate::Result<reqwest::Client> {
 
 impl Playlist {
 
-    pub async fn get(id: &str) -> crate::Result<Self> {
-        let client = crate_client().unwrap();
-        let req = client.get(format!("https://www.youtube.com/playlist?list={}", id)).send().await?.error_for_status()?;
-        let body = req.text().await?;
-        let init_obj = initial_data(&body);
+    pub(crate) async fn get_videos(init_obj: String) -> crate::Result<Vec<PlaylistVideo>> {
         let mut vec_videos = Vec::new();
-        if init_obj.is_none() {
-            return Err(crate::Error::Custom("Failed to parse initial data".into()));
-        }
-        let mut init_obj = init_obj.unwrap();
-        let playlist_info = parese_playlist_metadata(&init_obj)?;
+        let mut init_obj = init_obj;
         loop {
             let (videos, continuation) = parese_playlist_videos(&init_obj);
             vec_videos.extend(videos);
@@ -56,7 +39,34 @@ impl Playlist {
             if init_obj_r.is_err() { break; }
             init_obj = init_obj_r.unwrap();
         }
+        Ok(vec_videos)
+    }
+
+    pub async fn from_id(id: &str) -> crate::Result<Self> {
+        let client = crate_client().unwrap();
+        let req = client.get(format!("https://www.youtube.com/playlist?list={}", id)).send().await?;
+        if !req.status().is_client_error() {
+            return Err(crate::Error::BadIdFormat);
+        }
+        let body = req.text().await?;
+        let init_obj = initial_data(&body);
+        if init_obj.is_none() {
+            return Err(crate::Error::Custom("Failed to parse initial data".into()));
+        }
+        let init_obj = init_obj.unwrap();
+        let playlist_info = parese_playlist_metadata(&init_obj)?;
+        let vec_videos = Playlist::get_videos(init_obj).await?;
         Ok(Self { videos: vec_videos, playlist_info })
+    }
+
+    pub async fn from_url(url: &url::Url) -> crate::Result<Self> {
+        let hash_query: HashMap<_, _> = url.query_pairs().into_owned().collect();
+        let id_raw = hash_query.get("list");
+        if id_raw.is_none() {
+            return Err(crate::Error::BadIdFormat);
+        }
+        let id = id_raw.unwrap();
+        Self::from_id(id).await
     }
 
     pub(crate) async fn get_from_continuation(continuation: &str) -> crate::Result<String> {
